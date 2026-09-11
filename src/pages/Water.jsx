@@ -178,6 +178,300 @@ const waterGlassStyles = `
     height: 100px;
   }
 }
+
+/* =========================================================
+   COMPLETE WATER PAGE STYLES
+   These styles are intentionally self-contained so the Water
+   page does not depend on App.css.
+========================================================= */
+
+.water-card,
+.water-status-card {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.water-card {
+  padding: 28px;
+  margin-top: 20px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(100, 120, 150, 0.16);
+  box-shadow: 0 12px 35px rgba(25, 45, 80, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.water-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 8px;
+}
+
+.water-header h2 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.25;
+  color: #172033;
+}
+
+.water-header p {
+  margin: 7px 0 0;
+  color: #687386;
+  font-size: 14px;
+}
+
+.water-icon {
+  color: #2999ed;
+  flex-shrink: 0;
+}
+
+.water-main-value {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 6px;
+  text-align: center;
+}
+
+.water-main-value strong {
+  font-size: clamp(38px, 6vw, 58px);
+  line-height: 1;
+  font-weight: 800;
+  color: #172033;
+}
+
+.water-main-value span {
+  font-size: 18px;
+  font-weight: 600;
+  color: #758095;
+}
+
+.water-progress {
+  width: 100%;
+  height: 14px;
+  margin-top: 24px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e8edf5;
+}
+
+.water-progress-fill {
+  height: 100%;
+  min-width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #35a9ef, #66c9ff);
+  transition: width 0.5s ease;
+}
+
+.water-progress-info {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 9px;
+  color: #69758a;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.water-target-section,
+.water-amount-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(100, 120, 150, 0.12);
+}
+
+.water-target-section label,
+.water-amount-section label {
+  color: #273246;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.water-target-section input,
+.water-amount-section select {
+  width: 190px;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 9px 12px;
+  border: 1px solid #d6deea;
+  border-radius: 10px;
+  background: #fff;
+  color: #202b3d;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.water-target-section input:focus,
+.water-amount-section select:focus {
+  border-color: #4baaf0;
+  box-shadow: 0 0 0 3px rgba(75, 170, 240, 0.14);
+}
+
+.water-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.water-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 17px;
+  border: 0;
+  border-radius: 11px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+}
+
+.water-actions button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.water-actions button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.water-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.water-add-button {
+  color: #fff;
+  background: linear-gradient(135deg, #278fe5, #48b8f5);
+  box-shadow: 0 7px 18px rgba(39, 143, 229, 0.22);
+}
+
+.water-remove-button {
+  color: #334155;
+  background: #edf2f7;
+}
+
+.water-reset-button {
+  color: #9b4d4d;
+  background: #fff0f0;
+}
+
+.water-status-card {
+  margin-top: 20px;
+  padding: 24px 28px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(100, 120, 150, 0.14);
+  box-shadow: 0 10px 30px rgba(25, 45, 80, 0.06);
+}
+
+.water-status-card h2 {
+  margin: 0 0 20px;
+  color: #172033;
+  font-size: 21px;
+}
+
+.water-status-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.water-status-grid > div {
+  min-width: 0;
+  padding: 18px;
+  border-radius: 15px;
+  background: rgba(241, 246, 251, 0.8);
+}
+
+.water-status-grid span {
+  display: block;
+  margin-bottom: 7px;
+  color: #718096;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.water-status-grid strong {
+  display: block;
+  color: #172033;
+  font-size: 20px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  .water-status-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .water-card,
+  .water-status-card {
+    padding: 20px;
+    border-radius: 17px;
+  }
+
+  .water-header h2 {
+    font-size: 20px;
+  }
+
+  .water-main-value strong {
+    font-size: 42px;
+  }
+
+  .water-progress-info {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .water-target-section,
+  .water-amount-section {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  .water-target-section input,
+  .water-amount-section select {
+    width: 100%;
+  }
+
+  .water-actions {
+    flex-direction: column;
+  }
+
+  .water-actions button {
+    width: 100%;
+  }
+
+  .water-status-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .water-status-grid > div {
+    padding: 14px;
+  }
+}
+
+@media (max-width: 400px) {
+  .water-status-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 `;
 
 /* =========================================================

@@ -6447,3 +6447,1635 @@ a:hover svg,
   -webkit-text-fill-color: transparent !important;
   color: transparent !important;
 }
+
+/* =========================================================
+   PHASE 1 — NEW MODULE SUPPORT
+   Added to the current Taskbar CSS without removing any
+   existing styles.
+========================================================= */
+
+.module-page textarea {
+  width: 100%;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition),
+    background var(--transition);
+}
+
+.module-page textarea:hover {
+  border-color: #cbd5e1;
+}
+
+.module-page textarea:focus {
+  outline: none;
+  background: #ffffff;
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.09);
+}
+
+.module-page .form-group small {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.module-page input[type="checkbox"] {
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.module-page button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.module-page button:disabled:hover {
+  transform: none;
+  filter: none;
+}
+
+.notification-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 13px;
+  border-radius: 10px;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.module-page .topic-information {
+  min-width: 0;
+}
+
+.module-page .topic-information strong,
+.module-page .topic-information span {
+  overflow-wrap: anywhere;
+}
+
+/* =========================================================
+   PHASE 1 — NOTES / TARGETS / REMINDERS / TODO / STUDY
+========================================================= */
+
+.phase1-list {
+  display: grid;
+  gap: 12px;
+}
+
+.phase1-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--border-light);
+  border-radius: 14px;
+  background: var(--surface-soft);
+  transition:
+    transform var(--transition),
+    box-shadow var(--transition),
+    border-color var(--transition);
+}
+
+.phase1-item:hover {
+  transform: translateY(-2px);
+  border-color: #d5deea;
+  box-shadow: var(--shadow-sm);
+}
+
+.phase1-item-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.phase1-item-content strong,
+.phase1-item-content span,
+.phase1-item-content p {
+  overflow-wrap: anywhere;
+}
+
+.phase1-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.phase1-empty {
+  padding: 30px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.phase1-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.phase1-completed {
+  opacity: 0.68;
+}
+
+.phase1-completed .phase1-item-title {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.phase1-search {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.phase1-search input {
+  width: 100%;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--text);
+  outline: none;
+}
+
+.phase1-search input:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.09);
+}
+
+.phase1-inline-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.phase1-inline-row > * {
+  min-width: 0;
+}
+
+.phase1-time-info {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.phase1-disabled-placeholder {
+  opacity: 0.58;
+  cursor: not-allowed !important;
+}
+
+/* =========================================================
+   PHASE 1 — MOBILE SUPPORT
+========================================================= */
+
+@media (max-width: 900px) {
+  .module-page .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .module-page .page-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .module-page .page-header .add-topic-button {
+    width: 100%;
+  }
+
+  .module-page .stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .module-page .section-card,
+  .module-page .learning-section,
+  .module-page .module-form-card {
+    padding: 18px;
+  }
+
+  .module-page .grid-form {
+    grid-template-columns: 1fr;
+  }
+
+  .module-page .grid-form .full-width {
+    grid-column: auto;
+  }
+
+  .module-page .topic-row {
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .module-page .topic-information {
+    min-width: 0;
+  }
+
+  .phase1-item {
+    flex-direction: column;
+  }
+
+  .phase1-item-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 420px) {
+  .module-page .topic-row {
+    flex-direction: column;
+  }
+
+  .module-page .topic-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .phase1-item-actions {
+    justify-content: stretch;
+  }
+
+  .phase1-item-actions button {
+    flex: 1;
+  }
+}
+
+
+/* =========================================================
+   FINAL TASKBAR APP SHELL FIX
+   IMPORTANT:
+   App.jsx uses className="app-shell"
+   NOT className="app".
+========================================================= */
+
+.app-shell {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  min-height: 100vh !important;
+  position: relative;
+}
+
+/* Desktop sidebar */
+.app-shell > .sidebar {
+  position: sticky !important;
+  top: 0 !important;
+  left: 0 !important;
+
+  flex: 0 0 255px !important;
+  width: 255px !important;
+  min-width: 255px !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+
+  z-index: 100 !important;
+}
+
+/* Main content takes remaining width */
+.app-shell > .main-content {
+  flex: 1 1 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+
+  position: relative !important;
+  margin: 0 !important;
+
+  overflow-x: hidden !important;
+}
+
+/* Keep the decorative background inside the content area.
+   Do NOT use position: fixed here. */
+.app-shell > .main-content::before,
+.app-shell > .main-content::after {
+  position: absolute !important;
+  pointer-events: none !important;
+}
+
+/* Navigation names used by the current App.jsx */
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 900px) {
+  .app-shell {
+    flex-direction: column !important;
+  }
+
+  .app-shell > .sidebar {
+    position: relative !important;
+
+    width: 100% !important;
+    min-width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+
+    flex: none !important;
+  }
+
+  .app-shell > .main-content {
+    width: 100% !important;
+    flex: none !important;
+  }
+}
+
+/* =========================================================
+   TASKBAR FINAL VISUAL OVERRIDES
+   Spider-Man background BELOW the main layout
+   + Learning active-state cleanup
+   + 17 noticeable sidebar icon click animations
+   ========================================================= */
+
+/* ---------------------------------------------------------
+   1. MAIN CONTENT BACKGROUND
+   The page/layout stays on top. The Spider-Man artwork sits
+   underneath the layout toward the bottom of the main area.
+   --------------------------------------------------------- */
+
+body {
+  background: #dfe7f0 !important;
+}
+
+.app-shell {
+  position: relative !important;
+  isolation: isolate !important;
+  background: transparent !important;
+}
+
+.app-shell > .main-content {
+  position: relative !important;
+  isolation: isolate !important;
+  background: #dfe7f0 !important;
+  overflow-x: hidden !important;
+}
+
+/* Clear image layer at the bottom of the main content.
+   It is BEHIND all page components. */
+.app-shell > .main-content::before {
+  content: "" !important;
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  top: auto !important;
+  height: 480px !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+
+  background-image: url("/spiderman-bg.jpg") !important;
+  background-repeat: no-repeat !important;
+  background-position: center bottom !important;
+  background-size: cover !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+/* Remove the old decorative white/blue overlays. */
+.app::before,
+.app-shell::before,
+.app-shell > .main-content::after {
+  background: none !important;
+  opacity: 0 !important;
+  display: none !important;
+  content: none !important;
+}
+
+/* Keep every actual page/layout above the artwork. */
+.app-shell > .main-content > * {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* ---------------------------------------------------------
+   2. LEARNING ACTIVE ITEM — NO BLUE/PURPLE BACKGROUND
+   Only Learning loses the filled active background.
+   All other sidebar active states remain unchanged.
+   --------------------------------------------------------- */
+
+.sidebar-nav .sidebar-link:nth-child(2).active {
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  color: #cbd5e1 !important;
+}
+
+.sidebar-nav .sidebar-link:nth-child(2).active:hover {
+  background: rgba(255, 255, 255, 0.07) !important;
+  color: white !important;
+}
+
+.sidebar-nav .sidebar-link:nth-child(2).active::before {
+  height: 70% !important;
+  background: #60a5fa !important;
+}
+
+/* ---------------------------------------------------------
+   3. PROGRESS BARS
+   Empty track stays empty/light. Only the fill gets color.
+   --------------------------------------------------------- */
+
+.progress-bar,
+.progress-track,
+.skill-progress-bar-wrap .progress-bar,
+.goal-progress,
+.water-progress-track,
+.report-progress-bar {
+  background: #e7edf5 !important;
+  background-image: none !important;
+}
+
+.progress-fill,
+.skill-progress-bar-wrap .progress-bar > *,
+.goal-progress-fill,
+.water-progress-fill,
+.report-progress-bar > * {
+  background-image: linear-gradient(90deg, #5f8ff0, #7c3aed) !important;
+}
+
+/* ---------------------------------------------------------
+   4. 17 SIDEBAR ICON CLICK ANIMATIONS
+   App.jsx uses Lucide SVG icons. These selectors target the
+   corresponding navigation position without changing JSX.
+   The animation is triggered when the item is active.
+   --------------------------------------------------------- */
+
+.sidebar-nav .sidebar-link svg {
+  transform-origin: center center;
+  will-change: transform, filter, opacity;
+}
+
+/* HOME — house pop */
+.sidebar-nav .sidebar-link:nth-child(1).active svg {
+  animation: taskbarHome .75s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes taskbarHome {
+  0% { transform: scale(1); }
+  25% { transform: translateY(-4px) scale(1.18) rotate(-3deg); }
+  45% { transform: translateY(1px) scale(.94) rotate(2deg); }
+  65% { transform: translateY(-2px) scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+/* LEARNING — book opening */
+.sidebar-nav .sidebar-link:nth-child(2).active svg {
+  animation: taskbarLearning .8s ease-out both;
+}
+@keyframes taskbarLearning {
+  0% { transform: perspective(80px) rotateY(0) scale(1); }
+  30% { transform: perspective(80px) rotateY(-24deg) scale(1.12); }
+  55% { transform: perspective(80px) rotateY(18deg) scale(1.08); }
+  78% { transform: perspective(80px) rotateY(-8deg) scale(1.04); }
+  100% { transform: perspective(80px) rotateY(0) scale(1); }
+}
+
+/* TIMETABLE — calendar flip */
+.sidebar-nav .sidebar-link:nth-child(3).active svg {
+  animation: taskbarCalendar .8s ease-out both;
+}
+@keyframes taskbarCalendar {
+  0% { transform: rotateX(0) scale(1); }
+  30% { transform: rotateX(65deg) scale(1.08); }
+  55% { transform: rotateX(-35deg) scale(1.13); }
+  75% { transform: rotateX(12deg) scale(1.05); }
+  100% { transform: rotateX(0) scale(1); }
+}
+
+/* GOALS — target pulse */
+.sidebar-nav .sidebar-link:nth-child(4).active svg {
+  animation: taskbarGoal .75s ease-out both;
+}
+@keyframes taskbarGoal {
+  0% { transform: scale(.82); filter: drop-shadow(0 0 0 rgba(96,165,250,0)); }
+  35% { transform: scale(1.28); filter: drop-shadow(0 0 8px rgba(96,165,250,.9)); }
+  60% { transform: scale(.92); }
+  82% { transform: scale(1.1); filter: drop-shadow(0 0 5px rgba(96,165,250,.5)); }
+  100% { transform: scale(1); filter: none; }
+}
+
+/* DIET — apple bounce */
+.sidebar-nav .sidebar-link:nth-child(5).active svg {
+  animation: taskbarDiet .8s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes taskbarDiet {
+  0% { transform: translateY(0) scale(1); }
+  25% { transform: translateY(-7px) rotate(-8deg) scale(1.12); }
+  45% { transform: translateY(2px) rotate(7deg) scale(.96); }
+  65% { transform: translateY(-4px) rotate(-4deg) scale(1.06); }
+  100% { transform: translateY(0) rotate(0) scale(1); }
+}
+
+/* WATER — drop ripple */
+.sidebar-nav .sidebar-link:nth-child(6).active svg {
+  animation: taskbarWater .8s ease-out both;
+}
+@keyframes taskbarWater {
+  0% { transform: translateY(-5px) scale(.82); opacity: .55; }
+  35% { transform: translateY(3px) scale(1.2); opacity: 1; }
+  55% { transform: translateY(-1px) scale(.96); }
+  75% { transform: translateY(1px) scale(1.08); }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* SCREEN TIME — phone wake */
+.sidebar-nav .sidebar-link:nth-child(7).active svg {
+  animation: taskbarPhone .75s ease-out both;
+}
+@keyframes taskbarPhone {
+  0%, 100% { transform: rotate(0) scale(1); }
+  20% { transform: rotate(-10deg) scale(1.1); }
+  40% { transform: rotate(10deg) scale(1.12); }
+  60% { transform: rotate(-6deg) scale(1.06); }
+  80% { transform: rotate(3deg) scale(1.02); }
+}
+
+/* ACTIVITIES — heartbeat */
+.sidebar-nav .sidebar-link:nth-child(8).active svg {
+  animation: taskbarActivity .85s ease-in-out both;
+}
+@keyframes taskbarActivity {
+  0%, 100% { transform: scale(1); }
+  18% { transform: scale(1.08) translateX(-2px); }
+  28% { transform: scale(.92) translateX(2px); }
+  40% { transform: scale(1.2) translateX(-1px); }
+  52% { transform: scale(.96) translateX(1px); }
+  68% { transform: scale(1.08); }
+}
+
+/* ASSESSMENTS — checklist tick */
+.sidebar-nav .sidebar-link:nth-child(9).active svg {
+  animation: taskbarAssessment .8s ease-out both;
+}
+@keyframes taskbarAssessment {
+  0% { transform: scale(1); }
+  28% { transform: translateX(-3px) scale(1.12); }
+  45% { transform: translateX(4px) scale(1.06); }
+  62% { transform: translateX(-2px) scale(1.12); }
+  80% { transform: translateX(0) scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+/* QUICK TASKS — lightning strike */
+.sidebar-nav .sidebar-link:nth-child(10).active svg {
+  animation: taskbarLightning .7s ease-out both;
+}
+@keyframes taskbarLightning {
+  0% { transform: scale(.8) rotate(-8deg); filter: brightness(1); }
+  22% { transform: scale(1.25) rotate(5deg); filter: brightness(1.8) drop-shadow(0 0 7px rgba(96,165,250,.9)); }
+  38% { transform: scale(.9) rotate(-4deg); }
+  55% { transform: scale(1.16) rotate(2deg); filter: brightness(1.45); }
+  100% { transform: scale(1) rotate(0); filter: none; }
+}
+
+/* QUICK NOTES — writing motion */
+.sidebar-nav .sidebar-link:nth-child(11).active svg {
+  animation: taskbarNotes .8s ease-out both;
+}
+@keyframes taskbarNotes {
+  0% { transform: translateX(-4px) rotate(-12deg); }
+  25% { transform: translateX(4px) rotate(8deg) scale(1.1); }
+  50% { transform: translateX(-3px) rotate(-6deg) scale(1.08); }
+  75% { transform: translateX(2px) rotate(4deg) scale(1.04); }
+  100% { transform: translateX(0) rotate(0) scale(1); }
+}
+
+/* DAILY TARGETS — target hit */
+.sidebar-nav .sidebar-link:nth-child(12).active svg {
+  animation: taskbarDailyTarget .8s ease-out both;
+}
+@keyframes taskbarDailyTarget {
+  0% { transform: scale(.72) translateX(7px); }
+  30% { transform: scale(1.2) translateX(-2px); filter: drop-shadow(0 0 8px rgba(96,165,250,.8)); }
+  48% { transform: scale(.9) translateX(2px); }
+  68% { transform: scale(1.1) translateX(0); }
+  100% { transform: scale(1); filter: none; }
+}
+
+/* REMINDERS — bell shake */
+.sidebar-nav .sidebar-link:nth-child(13).active svg {
+  animation: taskbarBell .8s ease-in-out both;
+}
+@keyframes taskbarBell {
+  0%, 100% { transform: rotate(0); }
+  15% { transform: rotate(12deg); }
+  30% { transform: rotate(-12deg); }
+  45% { transform: rotate(9deg); }
+  60% { transform: rotate(-7deg); }
+  75% { transform: rotate(4deg); }
+}
+
+/* TO-DO LIST — checkbox pop */
+.sidebar-nav .sidebar-link:nth-child(14).active svg {
+  animation: taskbarTodo .8s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes taskbarTodo {
+  0% { transform: scale(.78) rotate(-4deg); }
+  30% { transform: scale(1.22) rotate(3deg); }
+  50% { transform: scale(.94) rotate(-2deg); }
+  70% { transform: scale(1.1) rotate(1deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+/* STUDY SESSIONS — clock hand spin */
+.sidebar-nav .sidebar-link:nth-child(15).active svg {
+  animation: taskbarClock .85s ease-out both;
+}
+@keyframes taskbarClock {
+  0% { transform: rotate(0) scale(1); }
+  65% { transform: rotate(145deg) scale(1.1); }
+  82% { transform: rotate(185deg) scale(1.04); }
+  100% { transform: rotate(180deg) scale(1); }
+}
+
+/* REPORTS — graph rise */
+.sidebar-nav .sidebar-link:nth-child(16).active svg {
+  animation: taskbarReports .85s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes taskbarReports {
+  0% { transform: translateY(5px) scaleY(.65) scaleX(.94); opacity: .65; }
+  35% { transform: translateY(-4px) scaleY(1.16) scaleX(1.08); opacity: 1; }
+  58% { transform: translateY(2px) scaleY(.94); }
+  78% { transform: translateY(-2px) scaleY(1.06); }
+  100% { transform: translateY(0) scaleY(1) scaleX(1); }
+}
+
+/* PROFILE — avatar pop */
+.sidebar-nav .sidebar-link:nth-child(17).active svg {
+  animation: taskbarProfile .8s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes taskbarProfile {
+  0% { transform: scale(.7); opacity: .55; }
+  35% { transform: scale(1.22); opacity: 1; filter: drop-shadow(0 0 7px rgba(96,165,250,.65)); }
+  55% { transform: scale(.92); }
+  75% { transform: scale(1.08); }
+  100% { transform: scale(1); filter: none; }
+}
+
+/* Re-triggerable animation when the user clicks another item.
+   NavLink active state controls the animation naturally. */
+.sidebar-nav .sidebar-link.active svg {
+  backface-visibility: hidden;
+}
+
+/* Respect accessibility preferences. */
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-nav .sidebar-link,
+  .sidebar-nav .sidebar-link svg,
+  .app-shell > .main-content {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+
+/* =========================================================
+   SPIDER-MAN FINAL THEME — RED + BLACK
+   IMPORTANT:
+   - ORIGINAL ICON COLORS ARE PRESERVED.
+   - No global SVG color is changed.
+   - Learning blue/purple UI is changed to red/black.
+   - Light text is made dark where it sits on white cards.
+   ========================================================= */
+
+:root {
+  /* Keep original primary so existing icons retain their
+     original blue/icon behavior. */
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --primary-light: #eff6ff;
+
+  --spider-red: #e50914;
+  --spider-red-light: #ff3030;
+  --spider-dark-red: #760008;
+  --spider-black: #050505;
+  --spider-black-2: #120000;
+}
+
+/* =========================================================
+   1. BODY + SPIDER-MAN BACKGROUND
+   ========================================================= */
+
+html,
+body,
+#root {
+  background: #000000 !important;
+}
+
+body {
+  color: #111827 !important;
+  background:
+    radial-gradient(
+      circle at 85% 10%,
+      rgba(229, 9, 20, .18),
+      transparent 30%
+    ),
+    linear-gradient(
+      135deg,
+      #000000 0%,
+      #080000 50%,
+      #1b0000 100%
+    ) !important;
+}
+
+.app-shell {
+  background: transparent !important;
+}
+
+.app-shell > .main-content {
+  position: relative !important;
+  isolation: isolate !important;
+  background:
+    url("/spiderman-bg.jpg") center bottom / cover no-repeat fixed,
+    #000000 !important;
+  overflow-x: hidden !important;
+}
+
+/* No white/blue overlay */
+.app-shell > .main-content::before,
+.app-shell > .main-content::after,
+.app::before,
+.app-shell::before {
+  content: none !important;
+  display: none !important;
+}
+
+/* Keep all page wrappers transparent */
+.app-shell > .main-content > * {
+  position: relative !important;
+  z-index: 2 !important;
+  background-color: transparent !important;
+}
+
+/* =========================================================
+   2. SIDEBAR — RED + BLACK
+   ========================================================= */
+
+.sidebar {
+  background:
+    radial-gradient(
+      circle at 15% 5%,
+      rgba(229, 9, 20, .20),
+      transparent 30%
+    ),
+    linear-gradient(
+      180deg,
+      #000000 0%,
+      #090000 55%,
+      #1a0000 100%
+    ) !important;
+
+  border-right-color: rgba(229, 9, 20, .35) !important;
+}
+
+/* Keep original icon colors: only text is styled */
+.sidebar a {
+  color: #f1f5f9 !important;
+  font-weight: 600 !important;
+}
+
+.sidebar a:hover {
+  color: #ffffff !important;
+  background: rgba(229, 9, 20, .14) !important;
+}
+
+/* Red active navigation */
+.sidebar a.active {
+  color: #ffffff !important;
+  background:
+    linear-gradient(
+      135deg,
+      #ff3030 0%,
+      #e50914 42%,
+      #780008 72%,
+      #170000 100%
+    ) !important;
+  box-shadow:
+    0 8px 24px rgba(229, 9, 20, .34) !important;
+}
+
+/* Left active indicator — original icon is untouched */
+.sidebar a.active::before {
+  background: #ffffff !important;
+}
+
+/* Sidebar brand */
+.sidebar h2 {
+  background:
+    linear-gradient(
+      135deg,
+      #ffffff 0%,
+      #ff3030 45%,
+      #8b0000 100%
+    ) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+}
+
+/* =========================================================
+   3. ALL PAGE TITLES — RED/BLACK GRADIENT
+   ========================================================= */
+
+.page-header h1,
+.home-header h1 {
+  background:
+    linear-gradient(
+      90deg,
+      #ffffff 0%,
+      #ff3030 38%,
+      #e50914 68%,
+      #700000 100%
+    ) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: #e50914 !important;
+  text-shadow: 0 4px 20px rgba(229, 9, 20, .16);
+}
+
+/* Page descriptions: dark enough to read */
+.page-header p,
+.home-subtitle,
+.topic-header p {
+  color: #334155 !important;
+}
+
+.home-greeting {
+  color: #e50914 !important;
+}
+
+/* =========================================================
+   4. WHITE CARDS — DARK TEXT
+   ========================================================= */
+
+.card,
+.section-card,
+.home-card,
+.learning-stat,
+.learning-overview,
+.learning-section,
+.add-topic-card,
+.goal-form-card,
+.profile-form-card,
+.water-overview,
+.goal-card,
+.module-form-card,
+.stat-card,
+.assessment-item,
+.datetime-card,
+.report-card,
+.report-panel {
+  background: rgba(255, 255, 255, .97) !important;
+  color: #111827 !important;
+  border-color: rgba(229, 9, 20, .20) !important;
+}
+
+/* Headings inside white cards */
+.card h1,
+.card h2,
+.card h3,
+.card h4,
+.section-card h1,
+.section-card h2,
+.section-card h3,
+.section-card h4,
+.home-card h1,
+.home-card h2,
+.home-card h3,
+.home-card h4,
+.learning-stat strong,
+.learning-stat h2,
+.learning-overview h2,
+.learning-section h2,
+.goal-card h2,
+.goal-card h3,
+.stat-card strong,
+.report-card h2,
+.report-card h3,
+.report-panel h2,
+.report-panel h3 {
+  color: #111827 !important;
+}
+
+/* Light/gray text made readable */
+.card p,
+.section-card p,
+.home-card p,
+.learning-stat span,
+.learning-overview > p,
+.learning-progress-header span,
+.goal-card p,
+.stat-card span,
+.form-group small,
+.topic-header p,
+.topic-row span,
+.goal-details > div,
+.water-label,
+.water-date,
+.water-section-header p,
+.report-card p,
+.report-panel p {
+  color: #475569 !important;
+}
+
+/* =========================================================
+   5. LEARNING — REMOVE BLUE/PURPLE UI
+      WITHOUT CHANGING ICON COLORS
+   ========================================================= */
+
+/* Learning headings/text should be red */
+.learning-page .page-header h1,
+.learning-page .learning-overview h2,
+.learning-page .learning-section h2,
+.learning-page .topic-header h2,
+.learning-page .learning-progress-header h2,
+.learning-page .learning-stat strong,
+.learning-page .learning-stat .stat-value,
+.learning-page .learning-section .section-title h2 {
+  color: #e50914 !important;
+  background: none !important;
+  -webkit-text-fill-color: #e50914 !important;
+}
+
+/* Learning descriptive text remains dark */
+.learning-page .learning-overview > p,
+.learning-page .learning-progress-header span,
+.learning-page .topic-header p,
+.learning-page .learning-stat span {
+  color: #475569 !important;
+}
+
+/* Learning buttons */
+.learning-page .primary-button,
+.learning-page .add-topic-button,
+.learning-page .save-topic-button,
+.learning-page .import-button {
+  color: #ffffff !important;
+  background:
+    linear-gradient(
+      135deg,
+      #ff3030,
+      #e50914 48%,
+      #760008 100%
+    ) !important;
+  border-color: #e50914 !important;
+  box-shadow: 0 7px 20px rgba(229, 9, 20, .28) !important;
+}
+
+.learning-page .primary-button:hover,
+.learning-page .add-topic-button:hover,
+.learning-page .save-topic-button:hover,
+.learning-page .import-button:hover {
+  background:
+    linear-gradient(
+      135deg,
+      #ff4a4a,
+      #e50914,
+      #650006
+    ) !important;
+}
+
+/* Learning progress — RED instead of blue/purple */
+.learning-page .progress-fill,
+.learning-page .skill-progress-bar-wrap .progress-bar > *,
+.learning-page .goal-progress-fill {
+  background:
+    linear-gradient(
+      90deg,
+      #760008 0%,
+      #e50914 50%,
+      #ff3030 100%
+    ) !important;
+  box-shadow: 0 0 12px rgba(229, 9, 20, .30) !important;
+}
+
+/* Progress track stays neutral */
+.learning-page .progress-bar,
+.learning-page .progress-track,
+.learning-page .skill-progress-bar-wrap .progress-bar {
+  background: #e5e7eb !important;
+  background-image: none !important;
+}
+
+/* Learning select controls */
+.learning-page .topic-header select,
+.learning-page .topic-row select {
+  color: #111827 !important;
+  background: #ffffff !important;
+  border-color: #d1d5db !important;
+}
+
+.learning-page .topic-header select:hover,
+.learning-page .topic-row select:hover {
+  border-color: #e50914 !important;
+}
+
+.learning-page .topic-header select:focus,
+.learning-page .topic-row select:focus {
+  border-color: #e50914 !important;
+  box-shadow: 0 0 0 4px rgba(229, 9, 20, .10) !important;
+}
+
+/* Learning topic rows */
+.learning-page .topic-row:hover {
+  background: rgba(229, 9, 20, .06) !important;
+}
+
+/* Learning action/link text */
+.learning-page a:not(.sidebar a),
+.learning-page .view-button {
+  color: #c50712 !important;
+}
+
+/* IMPORTANT: no SVG/icon color rule here.
+   Original icon colors remain unchanged. */
+
+/* =========================================================
+   6. RED THEME FOR OTHER BLUE/PURPLE CONTROLS
+   ========================================================= */
+
+.primary-button,
+.add-topic-button,
+.save-topic-button,
+.import-button {
+  color: #ffffff !important;
+  background:
+    linear-gradient(
+      135deg,
+      #ff3030,
+      #e50914 48%,
+      #760008
+    ) !important;
+  box-shadow: 0 7px 20px rgba(229, 9, 20, .25) !important;
+}
+
+.primary-button:hover,
+.add-topic-button:hover,
+.save-topic-button:hover,
+.import-button:hover {
+  background:
+    linear-gradient(
+      135deg,
+      #ff4a4a,
+      #e50914,
+      #650006
+    ) !important;
+}
+
+/* Report tabs */
+.report-tab.active {
+  color: #ffffff !important;
+  background:
+    linear-gradient(
+      135deg,
+      #ff3030,
+      #e50914,
+      #760008
+    ) !important;
+  box-shadow: 0 8px 22px rgba(229, 9, 20, .28) !important;
+}
+
+/* Links */
+.view-button {
+  color: #c50712 !important;
+}
+
+/* Progress across the application */
+.progress-fill,
+.goal-progress-fill,
+.water-progress-fill {
+  background:
+    linear-gradient(
+      90deg,
+      #760008,
+      #e50914,
+      #ff3030
+    ) !important;
+}
+
+/* Input focus */
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #e50914 !important;
+  box-shadow: 0 0 0 4px rgba(229, 9, 20, .10) !important;
+}
+
+/* =========================================================
+   7. CARD RED HOVER
+   ========================================================= */
+
+.home-card:hover,
+.section-card:hover,
+.learning-stat:hover,
+.learning-overview:hover,
+.learning-section:hover,
+.goal-card:hover,
+.stat-card:hover,
+.profile-form-card:hover,
+.report-card:hover,
+.report-panel:hover {
+  border-color: rgba(229, 9, 20, .38) !important;
+  box-shadow:
+    0 20px 50px rgba(0,0,0,.30),
+    0 0 24px rgba(229, 9, 20, .10) !important;
+}
+
+/* =========================================================
+   8. MOBILE
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .app-shell > .main-content {
+    background-attachment: scroll !important;
+    background-position: center bottom !important;
+    background-size: cover !important;
+  }
+}
+
+
+/* =========================================================
+   FINAL CORRECTION — PRESERVE ORIGINAL ICON COLORS
+   ========================================================= */
+
+/* NEVER recolor icons/SVGs here. Existing icon colors from the
+   original CSS are intentionally preserved. */
+
+/* =========================================================
+   LEARNING: PERCENTAGE LABEL
+   The percentage is a direct child of .skill-progress-bar-wrap,
+   so the older generic > * gradient was accidentally painting
+   its background. Remove that background and make the number red.
+   ========================================================= */
+
+.learning-page .skill-progress-percent {
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #e50914 !important;
+  -webkit-text-fill-color: #e50914 !important;
+  border: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+/* Prevent the generic progress-child gradient from affecting
+   the percentage label. */
+.learning-page .skill-progress-bar-wrap > .skill-progress-percent {
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #e50914 !important;
+}
+
+/* Learning progress bar itself stays red/black. */
+.learning-page .skill-progress-bar-wrap .progress-bar {
+  background: #e5e7eb !important;
+  background-image: none !important;
+}
+
+.learning-page .skill-progress-bar-wrap .progress-bar > *:not(.skill-progress-percent) {
+  background:
+    linear-gradient(
+      90deg,
+      #760008 0%,
+      #e50914 52%,
+      #ff3030 100%
+    ) !important;
+}
+
+/* =========================================================
+   REPORTS: REMOVE ALL BLUE/PURPLE UI
+   ICON COLORS ARE NOT TOUCHED.
+   ========================================================= */
+
+/* Report tab buttons */
+.reports-page > div[style*="flex-wrap"] > button {
+  color: #334155 !important;
+  border-color: #d7dce3 !important;
+}
+
+.reports-page > div[style*="flex-wrap"] > button:hover {
+  border-color: #e50914 !important;
+  box-shadow: 0 12px 26px rgba(229,9,20,.12) !important;
+}
+
+/* Active report tab */
+.reports-page > div[style*="flex-wrap"] > button[style*="background: rgb(37, 99, 235)"],
+.reports-page > div[style*="flex-wrap"] > button[style*="#2563eb"],
+.reports-page .report-tab.active {
+  background:
+    linear-gradient(
+      135deg,
+      #ff3030 0%,
+      #e50914 48%,
+      #760008 100%
+    ) !important;
+  background-image:
+    linear-gradient(
+      135deg,
+      #ff3030 0%,
+      #e50914 48%,
+      #760008 100%
+    ) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  box-shadow: 0 12px 28px rgba(229,9,20,.30) !important;
+}
+
+/* Report numbers/text that were blue */
+.reports-page .report-large-number,
+.reports-page .report-overview .report-card:nth-child(1) strong,
+.reports-page .history-item > div:last-child strong {
+  color: #e50914 !important;
+  -webkit-text-fill-color: #e50914 !important;
+  background: none !important;
+  background-image: none !important;
+  text-shadow: 0 8px 25px rgba(229,9,20,.12) !important;
+}
+
+/* Report progress bar */
+.reports-page .report-progress-bar,
+.reports-page .report-progress {
+  background:
+    linear-gradient(
+      90deg,
+      #760008,
+      #e50914,
+      #ff3030
+    ) !important;
+  background-size: 200% 100% !important;
+}
+
+/* Neutral report progress track */
+.reports-page .report-progress {
+  background: #e8eef7 !important;
+  background-image: none !important;
+}
+
+/* Report history — remove blue active styling */
+.reports-page .history-item:hover {
+  border-color: rgba(229,9,20,.30) !important;
+  box-shadow: 0 12px 25px rgba(229,9,20,.08) !important;
+}
+
+.reports-page .history-item.active {
+  background:
+    linear-gradient(
+      135deg,
+      #fff5f5,
+      #ffffff
+    ) !important;
+  border-color: #ff9a9a !important;
+  box-shadow: 0 12px 28px rgba(229,9,20,.12) !important;
+}
+
+.reports-page .history-item.active::before {
+  background: #e50914 !important;
+}
+
+/* Report mini-stat hover */
+.reports-page .report-mini-stats > div:hover {
+  border-color: #ffb0b0 !important;
+  box-shadow: 0 12px 25px rgba(229,9,20,.08) !important;
+}
+
+/* Report decorative panels/backgrounds */
+.reports-page .report-overview .report-card:nth-child(1) {
+  background:
+    linear-gradient(
+      145deg,
+      #fff1f2,
+      #ffffff 68%
+    ) !important;
+  border-color: rgba(229,9,20,.25) !important;
+}
+
+/* Any report links */
+.reports-page a:not(.sidebar a) {
+  color: #c50712 !important;
+}
+
+/* IMPORTANT:
+   No .reports-page svg selector is present.
+   Therefore every report icon keeps its original color. */
+
+/* =========================================================
+   REMOVE REMAINING BLUE/PURPLE THEME FROM LEARNING UI
+   (without touching SVG/icon colors)
+   ========================================================= */
+
+.learning-page .goal-skill {
+  background: #fff1f2 !important;
+  background-image: none !important;
+  color: #c50712 !important;
+}
+
+.learning-page .skill-progress-row:hover {
+  background: rgba(229,9,20,.045) !important;
+}
+
+.learning-page .skill-progress-info span {
+  color: #475569 !important;
+}
+
+/* =========================================================
+   ORIGINAL ICON COLORS — EXPLICITLY PROTECTED
+   ========================================================= */
+
+/* Do not use color/background/filter on SVGs.
+   This block only prevents inherited text color from overriding
+   icon components that rely on their original/current CSS color. */
+.sidebar .sidebar-link svg,
+.reports-page svg,
+.learning-page svg {
+  /* color intentionally not specified */
+  background: transparent !important;
+}
+
+
+/* =========================================================
+   FINAL PIXEL-PERFECT ICON + TITLE CORRECTION
+   ========================================================= */
+
+/*
+   IMPORTANT:
+   DO NOT SET color on SVGs here.
+   Every SVG/Lucide icon keeps the color defined by the
+   original application CSS/component.
+*/
+
+/* =========================================================
+   PAGE NAMES — RED + BLACK GRADIENT
+   Icons are intentionally NOT included in these selectors.
+   ========================================================= */
+
+.page-header h1,
+.home-header h1 {
+  background:
+    linear-gradient(
+      90deg,
+      #ff3b3b 0%,
+      #e50914 42%,
+      #8b0000 72%,
+      #000000 100%
+    ) !important;
+
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+
+  -webkit-text-fill-color: transparent !important;
+
+  /* Fallback for browsers without text clipping */
+  color: #e50914 !important;
+
+  text-shadow:
+    0 3px 12px rgba(229, 9, 20, .18) !important;
+}
+
+/*
+   Header SVGs must NOT inherit the red title color.
+   Restore the original cascade by removing the forced title
+   text color from SVGs. No replacement color is assigned.
+*/
+.page-header h1 svg,
+.home-header h1 svg {
+  -webkit-text-fill-color: initial !important;
+  background: none !important;
+  background-image: none !important;
+}
+
+/* =========================================================
+   ALL 17 PAGE NAMES
+   Same red → dark-red → black treatment.
+   ========================================================= */
+
+.page-header h1,
+.home-header h1,
+.learning-page h1,
+.timetable-page h1,
+.goals-page h1,
+.diet-page h1,
+.water-page h1,
+.screen-time-page h1,
+.activities-page h1,
+.assessments-page h1,
+.quick-tasks-page h1,
+.quick-notes-page h1,
+.daily-targets-page h1,
+.reminders-page h1,
+.todo-page h1,
+.study-sessions-page h1,
+.reports-page h1,
+.profile-page h1 {
+  background:
+    linear-gradient(
+      90deg,
+      #ff3b3b 0%,
+      #e50914 42%,
+      #8b0000 72%,
+      #000000 100%
+    ) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  text-shadow:
+    0 3px 12px rgba(229, 9, 20, .18) !important;
+}
+
+/* =========================================================
+   REPORTS — RED + BLACK UI ONLY
+   ICONS ARE EXCLUDED.
+   ========================================================= */
+
+/* Tabs */
+.reports-page .report-tab.active,
+.reports-page button.active {
+  background:
+    linear-gradient(
+      135deg,
+      #ff3030 0%,
+      #e50914 45%,
+      #760008 75%,
+      #000000 100%
+    ) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+}
+
+/* Report action buttons */
+.reports-page > .page-header button {
+  color: #111827 !important;
+}
+
+.reports-page > .page-header button:hover {
+  border-color: #e50914 !important;
+}
+
+/* Report blue numbers */
+.reports-page .history-item > div:last-child strong,
+.reports-page .report-card .percentage,
+.reports-page .report-card .value {
+  color: #e50914 !important;
+  -webkit-text-fill-color: #e50914 !important;
+  background: none !important;
+  background-image: none !important;
+}
+
+/* Report cards stay white */
+.reports-page .report-card,
+.reports-page .report-panel {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255,255,255,.98),
+      rgba(248,248,248,.96)
+    ) !important;
+  color: #111827 !important;
+}
+
+/* Report text stays dark */
+.reports-page .report-card span,
+.reports-page .report-card p,
+.reports-page .report-panel p {
+  color: #475569 !important;
+}
+
+/* Report progress */
+.reports-page .report-progress-bar > *,
+.reports-page .report-progress-fill {
+  background:
+    linear-gradient(
+      90deg,
+      #760008,
+      #e50914,
+      #ff3030
+    ) !important;
+}
+
+/*
+   DO NOT add .reports-page svg { color: ... }
+   because report icons must retain their original colors.
+*/
+
+/* =========================================================
+   LEARNING — PERCENTAGE IS PLAIN WHITE + RED TEXT
+   ========================================================= */
+
+.learning-page .skill-progress-percent,
+.learning-page .skill-progress-bar-wrap > .skill-progress-percent {
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #e50914 !important;
+  -webkit-text-fill-color: #e50914 !important;
+  border: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+/* Learning track */
+.learning-page .skill-progress-bar-wrap .progress-bar {
+  background: #e5e7eb !important;
+  background-image: none !important;
+}
+
+/* Learning fill */
+.learning-page .skill-progress-bar-wrap .progress-bar > *:not(.skill-progress-percent),
+.learning-page .progress-fill,
+.learning-page .goal-progress-fill {
+  background:
+    linear-gradient(
+      90deg,
+      #760008 0%,
+      #e50914 52%,
+      #ff3030 100%
+    ) !important;
+}
+
+/* Learning text */
+.learning-page .skill-progress-info,
+.learning-page .skill-progress-info span,
+.learning-page .learning-progress-header span {
+  color: #334155 !important;
+}
+
+/*
+   Learning icons: no color declaration.
+   Original colors remain untouched.
+*/
+
+/* =========================================================
+   REMOVE ANY UNWANTED BLUE/PURPLE REPORT DECORATION
+   ========================================================= */
+
+.reports-page .report-overview .report-card:nth-child(1) {
+  background:
+    linear-gradient(
+      145deg,
+      #fff5f5,
+      #ffffff 70%
+    ) !important;
+  border-color: rgba(229,9,20,.22) !important;
+}
+
+/* Active history item */
+.reports-page .history-item.active {
+  background:
+    linear-gradient(
+      145deg,
+      #fff5f5,
+      #ffffff
+    ) !important;
+  border-color: rgba(229,9,20,.30) !important;
+}
+
+.reports-page .history-item.active::before {
+  background: #e50914 !important;
+}
+
+/* =========================================================
+   ICON COLOR SAFETY
+   No color/filter/background-color is assigned to SVGs.
+   ========================================================= */
+
+/* Keep icon background transparent without recoloring icons. */
+.page-header h1 svg,
+.home-header h1 svg {
+  background-color: transparent !important;
+}

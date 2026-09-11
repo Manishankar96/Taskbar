@@ -24,6 +24,7 @@ import {
   getGoals,
   getWater,
   getScreenTime,
+  getStudySessions,
   getActivities,
   getQuickTasks,
   getStreak,
@@ -39,15 +40,11 @@ import {
 function getToday() {
   const date = new Date();
 
-  const year = date.getFullYear();
-  const month = String(
+  return `${date.getFullYear()}-${String(
     date.getMonth() + 1
-  ).padStart(2, "0");
-  const day = String(
+  ).padStart(2, "0")}-${String(
     date.getDate()
-  ).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
+  ).padStart(2, "0")}`;
 }
 
 
@@ -55,33 +52,21 @@ function getDateDaysAgo(days) {
   const date = new Date();
 
   date.setHours(0, 0, 0, 0);
-  date.setDate(
-    date.getDate() - days
-  );
+  date.setDate(date.getDate() - days);
 
-  const year = date.getFullYear();
-  const month = String(
+  return `${date.getFullYear()}-${String(
     date.getMonth() + 1
-  ).padStart(2, "0");
-  const day = String(
+  ).padStart(2, "0")}-${String(
     date.getDate()
-  ).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
+  ).padStart(2, "0")}`;
 }
 
 
 function getLastDays(count) {
   const dates = [];
 
-  for (
-    let i = count - 1;
-    i >= 0;
-    i--
-  ) {
-    dates.push(
-      getDateDaysAgo(i)
-    );
+  for (let i = count - 1; i >= 0; i -= 1) {
+    dates.push(getDateDaysAgo(i));
   }
 
   return dates;
@@ -91,65 +76,50 @@ function getLastDays(count) {
 function formatDate(dateString) {
   return new Date(
     `${dateString}T00:00:00`
-  ).toLocaleDateString(
-    "en-IN",
-    {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    }
-  );
+  ).toLocaleDateString("en-IN", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 
 function shortDate(dateString) {
   return new Date(
     `${dateString}T00:00:00`
-  ).toLocaleDateString(
-    "en-IN",
-    {
-      day: "numeric",
-      month: "short",
-    }
-  );
+  ).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+  });
 }
 
 
 function weekday(dateString) {
   return new Date(
     `${dateString}T00:00:00`
-  ).toLocaleDateString(
-    "en-IN",
-    {
-      weekday: "short",
-    }
-  );
+  ).toLocaleDateString("en-IN", {
+    weekday: "short",
+  });
 }
 
 
 function safeNumber(value) {
   const number = Number(value);
 
-  return Number.isFinite(number)
-    ? number
-    : 0;
+  return Number.isFinite(number) ? number : 0;
 }
 
 
 function formatMinutes(minutes) {
-  const value =
-    safeNumber(minutes);
+  const value = safeNumber(minutes);
 
   if (value <= 0) {
     return "0m";
   }
 
-  const hours =
-    Math.floor(value / 60);
-
-  const mins =
-    Math.round(value % 60);
+  const hours = Math.floor(value / 60);
+  const mins = Math.round(value % 60);
 
   if (hours > 0) {
     return `${hours}h ${mins}m`;
@@ -160,100 +130,75 @@ function formatMinutes(minutes) {
 
 
 function formatLitres(ml) {
-  const value =
-    safeNumber(ml);
-
-  return `${(
-    value / 1000
-  ).toFixed(1)} L`;
+  return `${(safeNumber(ml) / 1000).toFixed(1)} L`;
 }
 
 
-function sumField(
-  items,
-  fields
-) {
+function sumField(items, fields) {
   if (!Array.isArray(items)) {
     return 0;
   }
 
-  return items.reduce(
-    (total, item) => {
-
-      for (
-        const field of fields
-      ) {
-        if (
-          item?.[field] !==
-          undefined
-        ) {
-          return (
-            total +
-            safeNumber(
-              item[field]
-            )
-          );
-        }
+  return items.reduce((total, item) => {
+    for (const field of fields) {
+      if (item?.[field] !== undefined) {
+        return total + safeNumber(item[field]);
       }
+    }
 
-      return total;
-    },
-    0
-  );
+    return total;
+  }, 0);
 }
 
 
 /* =========================================================
-   WATER CALCULATION
-
-   Supports both old and new
-   water data formats.
+   STUDY TIME
+   Study Time comes ONLY from Study Sessions.
 ========================================================= */
 
-function getWaterForDate(
-  waterRows,
-  date
-) {
-  if (
-    !Array.isArray(
-      waterRows
-    )
-  ) {
+function getStudyMinutesForDate(studySessions, date) {
+  if (!Array.isArray(studySessions)) {
     return 0;
   }
 
+  return studySessions
+    .filter((session) => session?.date === date)
+    .reduce((total, session) => {
+      return (
+        total +
+        Math.max(
+          0,
+          safeNumber(
+            session?.duration ??
+              session?.minutes ??
+              session?.time
+          )
+        )
+      );
+    }, 0);
+}
 
-  const rows =
-    waterRows.filter(
-      (row) =>
-        row &&
-        row.date === date
-    );
 
+/* =========================================================
+   WATER
+========================================================= */
 
-  /*
-    New format:
+function getWaterForDate(waterRows, date) {
+  if (!Array.isArray(waterRows)) {
+    return 0;
+  }
 
-    {
-      id: "2026-09-09",
-      date: "2026-09-09",
-      target: 2500,
-      consumed: 3250
-    }
-  */
+  const rows = waterRows.filter(
+    (row) => row && row.date === date
+  );
 
-  const dailyRecord =
-    rows.find(
-      (row) =>
-        row.consumed !==
-          undefined ||
-        row.consumedMl !==
-          undefined
-    );
-
+  const dailyRecord = rows.find(
+    (row) =>
+      row.consumed !== undefined ||
+      row.consumedMl !== undefined
+  );
 
   if (dailyRecord) {
-
     return Math.max(
       0,
       safeNumber(
@@ -263,135 +208,58 @@ function getWaterForDate(
     );
   }
 
+  return rows.reduce((total, row) => {
+    return (
+      total +
+      safeNumber(
+        row.amountMl ??
+          row.amount ??
+          row.water ??
+          row.quantity ??
+          row.ml
+      )
+    );
+  }, 0);
+}
 
-  /*
-    Old format:
 
-    {
-      id: 123,
-      date: "2026-09-09",
-      amountMl: 250
-    }
-  */
+function getWaterTargetForDate(waterRows, date) {
+  if (!Array.isArray(waterRows)) {
+    return 0;
+  }
 
-  return rows.reduce(
-    (
-      total,
-      row
-    ) => {
-
-      return (
-        total +
+  return Math.max(
+    ...waterRows
+      .filter((row) => row?.date === date)
+      .map((row) =>
         safeNumber(
-          row.amountMl ??
-            row.amount ??
-            row.water ??
-            row.quantity ??
-            row.ml
+          row?.target ??
+            row?.targetMl ??
+            row?.dailyTargetMl
         )
-      );
-
-    },
+      ),
     0
   );
 }
 
 
 /* =========================================================
-   HISTORY CARD
+   TOPICS / TASKS
 ========================================================= */
 
-function HistoryCard({
-  report,
-  selected,
-  onClick,
-}) {
-
+function isCompleted(item) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        width: "100%",
-        textAlign: "left",
-        border: selected
-          ? "2px solid #2563eb"
-          : "1px solid #e2e8f0",
-        borderRadius: "14px",
-        padding: "16px",
-        background:
-          selected
-            ? "#f8fbff"
-            : "#ffffff",
-        cursor: "pointer",
-        marginBottom: "10px",
-      }}
-    >
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent:
-            "space-between",
-          gap: "10px",
-        }}
-      >
-
-        <strong>
-          {formatDate(
-            report.date
-          )}
-        </strong>
-
-        <span>
-          {
-            report.learning
-              ?.completed || 0
-          } topics
-        </span>
-
-      </div>
+    item?.completed === true ||
+    item?.status === "completed" ||
+    item?.isCompleted === true
+  );
+}
 
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(3, 1fr)",
-          gap: "10px",
-          marginTop: "10px",
-          fontSize: "13px",
-          color: "#64748b",
-        }}
-      >
-
-        <span>
-          Study:{" "}
-          {formatMinutes(
-            report.summary
-              ?.studyMinutes || 0
-          )}
-        </span>
-
-        <span>
-          Water:{" "}
-          {formatLitres(
-            report.water
-              ?.consumedMl || 0
-          )}
-        </span>
-
-        <span>
-          Tasks:{" "}
-          {
-            report.quickTasks
-              ?.completed || 0
-          }
-        </span>
-
-      </div>
-
-    </button>
+function isDateForItem(item, date) {
+  return (
+    item?.date === date ||
+    item?.completedAt === date
   );
 }
 
@@ -401,77 +269,29 @@ function HistoryCard({
 ========================================================= */
 
 function Reports() {
+  const [topics, setTopics] = useState([]);
+  const [goals, setGoals] = useState([]);
+  const [water, setWater] = useState([]);
+  const [screenTime, setScreenTime] = useState([]);
+  const [studySessions, setStudySessions] = useState([]);
+  const [activities, setActivities] = useState([]);
+  const [quickTasks, setQuickTasks] = useState([]);
 
-  const [
-    topics,
-    setTopics,
-  ] = useState([]);
-
-  const [
-    goals,
-    setGoals,
-  ] = useState([]);
-
-  const [
-    water,
-    setWater,
-  ] = useState([]);
-
-  const [
-    screenTime,
-    setScreenTime,
-  ] = useState([]);
-
-  const [
-    activities,
-    setActivities,
-  ] = useState([]);
-
-  const [
-    quickTasks,
-    setQuickTasks,
-  ] = useState([]);
-
-  const [
-    streak,
-    setStreak,
-  ] = useState({
+  const [streak, setStreak] = useState({
     current: 0,
     best: 0,
   });
 
-  const [
-    dailyReports,
-    setDailyReports,
-  ] = useState([]);
+  const [dailyReports, setDailyReports] = useState([]);
 
-  const [
-    loading,
-    setLoading,
-  ] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const [
-    refreshing,
-    setRefreshing,
-  ] = useState(false);
+  const [tab, setTab] = useState("Daily");
+  const [selectedHistoryDate, setSelectedHistoryDate] =
+    useState(null);
 
-  const [
-    tab,
-    setTab,
-  ] = useState("Daily");
-
-  const [
-    selectedHistoryDate,
-    setSelectedHistoryDate,
-  ] = useState(null);
-
-
-  const [
-    today,
-    setToday,
-  ] = useState(
-    getToday()
-  );
+  const [today, setToday] = useState(getToday());
 
 
   /* =======================================================
@@ -479,58 +299,40 @@ function Reports() {
   ======================================================= */
 
   useEffect(() => {
+    const timer = setInterval(() => {
+      const newToday = getToday();
 
-    const timer =
-      setInterval(() => {
+      setToday((oldToday) =>
+        oldToday === newToday ? oldToday : newToday
+      );
+    }, 30000);
 
-        const newToday =
-          getToday();
-
-        setToday(
-          (oldToday) =>
-            oldToday ===
-            newToday
-              ? oldToday
-              : newToday
-        );
-
-      }, 30000);
-
-
-    return () =>
-      clearInterval(timer);
-
+    return () => clearInterval(timer);
   }, []);
 
 
   /* =======================================================
-     LOAD EVERYTHING
-  ======================================================= */
+     LOAD DATA
+======================================================= */
 
-  async function loadReports(
-    showRefresh = false
-  ) {
-
+  async function loadReports(showRefresh = false) {
     try {
-
       if (showRefresh) {
         setRefreshing(true);
       }
 
-
       /*
-        Build missing historical
-        reports.
+        Historical reports are rebuilt for previous dates.
+        Today's report is intentionally calculated live below.
       */
-
       await ensureDailyReportHistory();
-
 
       const [
         topicData,
         goalData,
         waterData,
         screenData,
+        studyData,
         activityData,
         taskData,
         streakData,
@@ -540,584 +342,677 @@ function Reports() {
         getGoals(),
         getWater(),
         getScreenTime(),
+        getStudySessions(),
         getActivities(),
         getQuickTasks(),
         getStreak(),
         getDailyReports(),
       ]);
 
-
       setTopics(
-        Array.isArray(
-          topicData
-        )
-          ? topicData
-          : []
+        Array.isArray(topicData) ? topicData : []
       );
-
 
       setGoals(
-        Array.isArray(
-          goalData
-        )
-          ? goalData
-          : []
+        Array.isArray(goalData) ? goalData : []
       );
-
 
       setWater(
-        Array.isArray(
-          waterData
-        )
-          ? waterData
-          : []
+        Array.isArray(waterData) ? waterData : []
       );
-
 
       setScreenTime(
-        Array.isArray(
-          screenData
-        )
-          ? screenData
-          : []
+        Array.isArray(screenData) ? screenData : []
       );
 
+      setStudySessions(
+        Array.isArray(studyData) ? studyData : []
+      );
 
       setActivities(
-        Array.isArray(
-          activityData
-        )
-          ? activityData
-          : []
+        Array.isArray(activityData) ? activityData : []
       );
-
 
       setQuickTasks(
-        Array.isArray(
-          taskData
-        )
-          ? taskData
-          : []
+        Array.isArray(taskData) ? taskData : []
       );
 
-
       if (
-        Array.isArray(
-          streakData
-        ) &&
-        streakData.length
+        Array.isArray(streakData) &&
+        streakData.length > 0
       ) {
-
-        setStreak(
-          streakData[0]
-        );
-
+        setStreak(streakData[0]);
       } else {
-
         setStreak({
           current: 0,
           best: 0,
         });
-
       }
-
 
       setDailyReports(
-        Array.isArray(
-          reportData
-        )
-          ? reportData
-          : []
+        Array.isArray(reportData) ? reportData : []
       );
-
-
-      if (
-        Array.isArray(
-          reportData
-        ) &&
-        reportData.length
-      ) {
-
-        setSelectedHistoryDate(
-          (oldDate) =>
-            oldDate ||
-            reportData[0].date
-        );
-
-      }
-
     } catch (error) {
-
-      console.error(
-        "Reports loading error:",
-        error
-      );
-
+      console.error("Reports loading error:", error);
     } finally {
-
       setLoading(false);
       setRefreshing(false);
-
     }
   }
 
 
   /* =======================================================
      INITIAL LOAD
-  ======================================================= */
+======================================================= */
 
   useEffect(() => {
-
     loadReports();
-
   }, [today]);
 
 
   /* =======================================================
      AUTO SYNC
 
-     This makes Reports update when
-     Water/Home changes.
-  ======================================================= */
+     Water, Learning, Tasks, Activities and Study Sessions
+     can change from another page. Re-read the data so the
+     Daily score and today's History stay synchronized.
+======================================================= */
 
   useEffect(() => {
+    const timer = setInterval(() => {
+      loadReports();
+    }, 5000);
 
-    const timer =
-      setInterval(() => {
-
-        loadReports();
-
-      }, 5000);
-
-
-    return () =>
-      clearInterval(timer);
-
+    return () => clearInterval(timer);
   }, []);
 
 
   /* =======================================================
-     DAILY DATA
-  ======================================================= */
+     DAILY LIVE DATA
+======================================================= */
 
-  const daily =
-    useMemo(() => {
+  const daily = useMemo(() => {
+    const waterToday = getWaterForDate(
+      water,
+      today
+    );
 
-      const waterToday =
-        getWaterForDate(
-          water,
-          today
-        );
+    const waterTarget = getWaterTargetForDate(
+      water,
+      today
+    );
 
+    const screenToday = screenTime.filter(
+      (item) => item?.date === today
+    );
 
-      
-      const waterRowsToday =
-        water.filter(
-          (item) =>
-            item?.date === today
-        );
-const screenToday =
-        screenTime.filter(
-          (item) =>
-            item?.date ===
-            today
-        );
+    const activityToday = activities.filter(
+      (item) => item?.date === today
+    );
 
+    const studyMinutes =
+      getStudyMinutesForDate(
+        studySessions,
+        today
+      );
 
-      const activityToday =
-        activities.filter(
-          (item) =>
-            item?.date ===
-            today
-        );
+    const screenMinutes = sumField(
+      screenToday,
+      ["minutes", "duration", "time"]
+    );
 
+    const learningCompleted =
+      topics.filter(
+        (topic) =>
+          isDateForItem(topic, today) &&
+          isCompleted(topic)
+      ).length;
 
-      const studyMinutes =
-        sumField(
-          screenToday,
-          [
-            "minutes",
-            "duration",
-            "time",
-          ]
-        );
+    const todayTasks = quickTasks.filter(
+      (task) => isDateForItem(task, today)
+    );
 
+    const tasksCompleted =
+      todayTasks.filter(isCompleted).length;
 
-      const screenMinutes =
-        studyMinutes;
+    const goalValues = goals.map((goal) => {
+      if (goal?.status === "completed") {
+        return 100;
+      }
 
-
-      const learningCompleted =
-        topics.filter(
-          (topic) =>
-            (
-              topic?.date ===
-              today ||
-              topic?.completedAt ===
-              today
-            ) &&
-            (
-              topic.completed ===
-                true ||
-              topic.status ===
-                "completed" ||
-              topic.isCompleted ===
-                true
-            )
-        ).length;
-
-
-      const tasksCompleted =
-        quickTasks.filter(
-          (task) =>
-            (
-              task?.date ===
-              today ||
-              task?.completedAt ===
-              today
-            ) &&
-            (
-              task.completed ===
-                true ||
-              task.status ===
-                "completed" ||
-              task.isCompleted ===
-                true
-            )
-        ).length;
-
-
-      const goalValues =
-        goals.map(
-          (goal) => {
-
-            if (
-              goal.status ===
-              "completed"
-            ) {
-              return 100;
-            }
-
-            const value =
-              safeNumber(
-                goal.progress
-              );
-
-            return Math.min(
-              100,
-              Math.max(
-                0,
-                value
-              )
-            );
-          }
-        );
-
-
-      const avgGoal =
-        goalValues.length
-          ? Math.round(
-              goalValues.reduce(
-                (
-                  sum,
-                  value
-                ) =>
-                  sum + value,
-                0
-              ) /
-                goalValues.length
-            )
-          : 0;
-
-
-      const waterTarget =
+      return Math.min(
+        100,
         Math.max(
-          ...waterRowsToday.map((item) =>
-            safeNumber(
-              item?.target ??
-                item?.targetMl ??
-                item?.dailyTargetMl
-            )
-          ),
-          0
-        );
+          0,
+          safeNumber(goal?.progress)
+        )
+      );
+    });
 
-      const waterConsumed =
-        waterRowsToday.length > 0
-          ? waterRowsToday.reduce(
-              (sum, item) =>
-                sum +
-                safeNumber(
-                  item?.consumed ??
-                    item?.consumedMl ??
-                    item?.amountMl ??
-                    item?.amount
-                ),
+    const avgGoal =
+      goalValues.length > 0
+        ? Math.round(
+            goalValues.reduce(
+              (sum, value) => sum + value,
               0
+            ) / goalValues.length
+          )
+        : 0;
+
+    const waterPercentage =
+      waterTarget > 0
+        ? Math.min(
+            100,
+            Math.round(
+              (waterToday / waterTarget) * 100
             )
-          : safeNumber(waterToday);
+          )
+        : 0;
 
-
-
-      const waterPercentage =
-        waterTarget > 0
-          ? Math.min(
-              100,
-              Math.round(
-                (waterConsumed / waterTarget) *
-                  100
-              )
-            )
-          : 0;
-
-
-      const activityMinutes =
-        sumField(
-          activityToday,
-          [
-            "duration",
-            "minutes",
-            "time",
-          ]
-        );
-
-
-      const todayTasks =
-        quickTasks.filter(
-          (task) =>
-            task?.date === today ||
-            task?.completedAt === today
-        );
-
-
-      const taskCompletionRate =
-        todayTasks.length > 0
-          ? Math.round(
-              (tasksCompleted /
-                todayTasks.length) *
-                100
-            )
-          : tasksCompleted > 0
+    const taskCompletionRate =
+      todayTasks.length > 0
+        ? Math.round(
+            (tasksCompleted /
+              todayTasks.length) *
+              100
+          )
+        : tasksCompleted > 0
           ? 100
           : 0;
 
+    /*
+      SAME formula used by db.js for historical reports.
+    */
+    const productivityScore = Math.min(
+      100,
+      Math.max(
+        0,
+        Math.round(
+          learningCompleted > 0 ? 25 : 0
+        ) +
+          Math.round(avgGoal * 0.20) +
+          Math.round(
+            taskCompletionRate * 0.20
+          ) +
+          Math.round(
+            waterPercentage * 0.15
+          ) +
+          (activityToday.length > 0 &&
+          sumField(
+            activityToday,
+            ["duration", "minutes", "time"]
+          ) > 0
+            ? 10
+            : 0) +
+          (studyMinutes > 0 ? 10 : 0)
+      )
+    );
 
-      const productivityScore =
-        Math.min(
-          100,
-          Math.max(
-            0,
-            Math.round(
-              learningCompleted > 0
-                ? 25
-                : 0
-            ) +
-              Math.round(
-                avgGoal * 0.20
-              ) +
-              Math.round(
-                taskCompletionRate *
-                  0.20
-              ) +
-              Math.round(
-                waterPercentage *
-                  0.15
-              ) +
-              (
-                activityMinutes > 0
-                  ? 10
-                  : 0
-              ) +
-              (
-                studyMinutes > 0
-                  ? 10
-                  : 0
-              )
-          )
-        );
-
-
-      return {
-        waterToday,
-        screenMinutes,
-        studyMinutes,
+    return {
+      waterToday,
+      waterTarget,
+      screenMinutes,
+      studyMinutes,
+      activityToday,
+      activityMinutes: sumField(
         activityToday,
-        learningCompleted,
-        tasksCompleted,
-        avgGoal,
-        productivityScore,
-      };
+        ["duration", "minutes", "time"]
+      ),
+      learningCompleted,
+      tasksCompleted,
+      avgGoal,
+      productivityScore,
+    };
+  }, [
+    today,
+    topics,
+    goals,
+    water,
+    screenTime,
+    studySessions,
+    activities,
+    quickTasks,
+  ]);
 
-    }, [
-      water,
-      today,
-      screenTime,
-      activities,
-      topics,
-      quickTasks,
-      goals,
-    ]);
+
+  /* =======================================================
+     TODAY LIVE REPORT
+
+     This object is NOT stored in IndexedDB.
+     It is created from the latest dashboard data.
+======================================================= */
+
+  const todayLiveReport = useMemo(() => {
+    return {
+      id: `live-${today}`,
+      date: today,
+
+      learning: {
+        completed: daily.learningCompleted,
+      },
+
+      quickTasks: {
+        completed: daily.tasksCompleted,
+      },
+
+      summary: {
+        topicsCompleted:
+          daily.learningCompleted,
+        tasksCompleted:
+          daily.tasksCompleted,
+        avgGoalProgress:
+          daily.avgGoal,
+        studyMinutes:
+          daily.studyMinutes,
+        screenMinutes:
+          daily.screenMinutes,
+        waterConsumed:
+          daily.waterToday,
+        activityMinutes:
+          daily.activityMinutes,
+        productivityScore:
+          daily.productivityScore,
+      },
+
+      productivityScore:
+        daily.productivityScore,
+
+      water: {
+        consumedMl:
+          daily.waterToday,
+        target:
+          daily.waterTarget,
+      },
+    };
+  }, [today, daily]);
+
+
+  /* =======================================================
+     HISTORY DISPLAY
+
+     IMPORTANT:
+     - Today is ALWAYS represented by live data.
+     - Previous days come from saved dailyReports.
+     - If an old today record exists, it is replaced by the
+       live today record so it cannot show stale 0%.
+======================================================= */
+
+  const historyReports = useMemo(() => {
+    const previousReports =
+      Array.isArray(dailyReports)
+        ? dailyReports.filter(
+            (report) =>
+              report?.date !== today
+          )
+        : [];
+
+    return [
+      todayLiveReport,
+      ...previousReports,
+    ].sort((a, b) =>
+      String(b.date).localeCompare(
+        String(a.date)
+      )
+    );
+  }, [
+    dailyReports,
+    today,
+    todayLiveReport,
+  ]);
+
+
+  /* =======================================================
+     SELECTED HISTORY DATE
+======================================================= */
+
+  useEffect(() => {
+    if (historyReports.length === 0) {
+      setSelectedHistoryDate(null);
+      return;
+    }
+
+    setSelectedHistoryDate((oldDate) => {
+      if (
+        oldDate &&
+        historyReports.some(
+          (report) =>
+            report.date === oldDate
+        )
+      ) {
+        return oldDate;
+      }
+
+      return historyReports[0].date;
+    });
+  }, [historyReports]);
+
+
+  /* =======================================================
+     SELECTED HISTORY REPORT
+======================================================= */
+
+  const selectedReport = useMemo(() => {
+    if (!selectedHistoryDate) {
+      return null;
+    }
+
+    return (
+      historyReports.find(
+        (report) =>
+          report.date ===
+          selectedHistoryDate
+      ) || null
+    );
+  }, [
+    historyReports,
+    selectedHistoryDate,
+  ]);
+
+
+  /* =======================================================
+     HISTORY HELPERS
+
+     Today's values come from current live data.
+     Previous dates come from stored report + raw data.
+======================================================= */
+
+  const selectedHistoryValues = useMemo(() => {
+    if (!selectedReport) {
+      return {
+        topics: 0,
+        tasks: 0,
+        goal: 0,
+        study: 0,
+        screen: 0,
+        water: 0,
+        activity: 0,
+        productivity: 0,
+      };
+    }
+
+    const date = selectedReport.date;
+    const isToday = date === today;
+
+    if (isToday) {
+      return {
+        topics:
+          daily.learningCompleted,
+        tasks:
+          daily.tasksCompleted,
+        goal:
+          daily.avgGoal,
+        study:
+          daily.studyMinutes,
+        screen:
+          daily.screenMinutes,
+        water:
+          daily.waterToday,
+        activity:
+          daily.activityMinutes,
+        productivity:
+          daily.productivityScore,
+      };
+    }
+
+    const storedTopics =
+      safeNumber(
+        selectedReport.summary
+          ?.topicsCompleted ??
+          selectedReport.topicsCompleted ??
+          selectedReport.learning?.completed
+      );
+
+    const storedTasks =
+      safeNumber(
+        selectedReport.summary
+          ?.tasksCompleted ??
+          selectedReport.tasksCompleted ??
+          selectedReport.quickTasks?.completed
+      );
+
+    const storedGoal =
+      safeNumber(
+        selectedReport.summary
+          ?.avgGoalProgress ??
+          selectedReport.avgGoalProgress ??
+          selectedReport.goalProgress
+      );
+
+    const study =
+      getStudyMinutesForDate(
+        studySessions,
+        date
+      );
+
+    const storedStudy =
+      safeNumber(
+        selectedReport.summary
+          ?.studyMinutes ??
+          selectedReport.studyMinutes
+      );
+
+    const screen =
+      sumField(
+        screenTime.filter(
+          (item) => item?.date === date
+        ),
+        ["minutes", "duration", "time"]
+      );
+
+    const storedScreen =
+      safeNumber(
+        selectedReport.summary
+          ?.screenMinutes ??
+          selectedReport.screenMinutes
+      );
+
+    const waterValue =
+      getWaterForDate(
+        water,
+        date
+      );
+
+    const storedWater =
+      safeNumber(
+        selectedReport.summary
+          ?.waterConsumed ??
+          selectedReport.waterConsumed ??
+          selectedReport.water?.consumedMl
+      );
+
+    const activity =
+      sumField(
+        activities.filter(
+          (item) => item?.date === date
+        ),
+        ["duration", "minutes", "time"]
+      );
+
+    const storedActivity =
+      safeNumber(
+        selectedReport.summary
+          ?.activityMinutes ??
+          selectedReport.activityMinutes
+      );
+
+    return {
+      topics: storedTopics,
+      tasks: storedTasks,
+      goal: storedGoal,
+      study: study > 0 ? study : storedStudy,
+      screen: screen > 0 ? screen : storedScreen,
+      water: waterValue > 0
+        ? waterValue
+        : storedWater,
+      activity:
+        activity > 0
+          ? activity
+          : storedActivity,
+      productivity:
+        safeNumber(
+          selectedReport.summary
+            ?.productivityScore ??
+            selectedReport.productivityScore
+        ),
+    };
+  }, [
+    selectedReport,
+    today,
+    daily,
+    water,
+    screenTime,
+    studySessions,
+    activities,
+  ]);
+
+
+  /* =======================================================
+     PRODUCTIVITY
+======================================================= */
+
+  const productivityScore =
+    daily.productivityScore;
+
+
+  const productivityMessage =
+    useMemo(() => {
+      if (productivityScore >= 90) {
+        return "Excellent day! 🔥";
+      }
+
+      if (productivityScore >= 75) {
+        return "Great work today! 💪";
+      }
+
+      if (productivityScore >= 50) {
+        return "Good progress. Keep going! 👍";
+      }
+
+      if (productivityScore >= 25) {
+        return "You can do better tomorrow. 🌱";
+      }
+
+      return "Let's make today productive! 🚀";
+    }, [productivityScore]);
 
 
   /* =======================================================
      WEEKLY
-  ======================================================= */
+======================================================= */
 
-  const weekDates =
-    useMemo(
-      () =>
-        getLastDays(7),
-      [today]
-    );
+  const weekDates = useMemo(
+    () => getLastDays(7),
+    [today]
+  );
 
 
-  const weeklyChart =
-    useMemo(() => {
-
-      return weekDates.map(
-        (date) => {
-
-          const screen =
-            sumField(
-              screenTime.filter(
-                (item) =>
-                  item?.date ===
-                  date
-              ),
-              [
-                "minutes",
-                "duration",
-                "time",
-              ]
-            );
-
-
-          const activity =
-            sumField(
-              activities.filter(
-                (item) =>
-                  item?.date ===
-                  date
-              ),
-              [
-                "duration",
-                "minutes",
-                "time",
-              ]
-            );
-
-
-          const waterMl =
-            getWaterForDate(
-              water,
-              date
-            );
-
-
-          return {
-
-            day:
-              weekday(
-                date
-              ),
-
-            screenTime:
-              Math.round(
-                (screen / 60) *
-                  10
-              ) / 10,
-
-            activity:
-              Math.round(
-                (activity / 60) *
-                  10
-              ) / 10,
-
-            water:
-              Math.round(
-                (waterMl / 1000) *
-                  10
-              ) / 10,
-
-          };
-
-        }
+  const weeklyChart = useMemo(() => {
+    return weekDates.map((date) => {
+      const screen = sumField(
+        screenTime.filter(
+          (item) => item?.date === date
+        ),
+        ["minutes", "duration", "time"]
       );
 
-    }, [
-      weekDates,
-      screenTime,
-      activities,
-      water,
-    ]);
+      const study =
+        getStudyMinutesForDate(
+          studySessions,
+          date
+        );
+
+      const activity = sumField(
+        activities.filter(
+          (item) => item?.date === date
+        ),
+        ["duration", "minutes", "time"]
+      );
+
+      const waterMl =
+        getWaterForDate(
+          water,
+          date
+        );
+
+      return {
+        day: weekday(date),
+        screenTime:
+          Math.round((screen / 60) * 10) / 10,
+        studyTime:
+          Math.round((study / 60) * 10) / 10,
+        activity:
+          Math.round((activity / 60) * 10) / 10,
+        water:
+          Math.round((waterMl / 1000) * 10) / 10,
+      };
+    });
+  }, [
+    weekDates,
+    screenTime,
+    studySessions,
+    activities,
+    water,
+  ]);
 
 
-  const weeklyWater =
-    useMemo(
-      () =>
-        weekDates.reduce(
-          (
-            total,
+  const weeklyWater = useMemo(
+    () =>
+      weekDates.reduce(
+        (total, date) =>
+          total +
+          getWaterForDate(
+            water,
             date
-          ) =>
-            total +
-            getWaterForDate(
-              water,
-              date
-            ),
-          0
-        ),
-      [
-        weekDates,
-        water,
-      ]
-    );
-
-
-  const weeklyScreen =
-    useMemo(
-      () =>
-        sumField(
-          screenTime.filter(
-            (item) =>
-              weekDates.includes(
-                item?.date
-              )
           ),
-          [
-            "minutes",
-            "duration",
-            "time",
-          ]
+        0
+      ),
+    [weekDates, water]
+  );
+
+
+  const weeklyScreen = useMemo(
+    () =>
+      sumField(
+        screenTime.filter(
+          (item) =>
+            weekDates.includes(
+              item?.date
+            )
         ),
-      [
-        screenTime,
-        weekDates,
-      ]
-    );
+        ["minutes", "duration", "time"]
+      ),
+    [screenTime, weekDates]
+  );
 
 
-  const weeklyActivities =
-    useMemo(
-      () =>
-        sumField(
-          activities.filter(
-            (item) =>
-              weekDates.includes(
-                item?.date
-              )
+  const weeklyStudy = useMemo(
+    () =>
+      weekDates.reduce(
+        (total, date) =>
+          total +
+          getStudyMinutesForDate(
+            studySessions,
+            date
           ),
-          [
-            "duration",
-            "minutes",
-            "time",
-          ]
+        0
+      ),
+    [studySessions, weekDates]
+  );
+
+
+  const weeklyActivities = useMemo(
+    () =>
+      sumField(
+        activities.filter(
+          (item) =>
+            weekDates.includes(
+              item?.date
+            )
         ),
-      [
-        activities,
-        weekDates,
-      ]
-    );
+        ["duration", "minutes", "time"]
+      ),
+    [activities, weekDates]
+  );
 
 
   const weeklyTopics =
@@ -1126,14 +1021,7 @@ const screenToday =
         weekDates.includes(
           topic?.completedAt
         ) &&
-        (
-          topic.completed ===
-            true ||
-          topic.status ===
-            "completed" ||
-          topic.isCompleted ===
-            true
-        )
+        isCompleted(topic)
     ).length;
 
 
@@ -1143,386 +1031,211 @@ const screenToday =
         weekDates.includes(
           task?.completedAt
         ) &&
-        (
-          task.completed ===
-            true ||
-          task.status ===
-            "completed" ||
-          task.isCompleted ===
-            true
-        )
+        isCompleted(task)
     ).length;
-      /* =======================================================
+
+
+  /* =======================================================
      MONTHLY
-  ======================================================= */
+======================================================= */
 
-  const monthDates =
-    useMemo(() => {
+  const monthDates = useMemo(() => {
+    const dates = [];
+    const now = new Date();
 
-      const dates = [];
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const daysInMonth =
+      new Date(
+        year,
+        month + 1,
+        0
+      ).getDate();
 
-      const now =
-        new Date();
+    for (
+      let day = 1;
+      day <= daysInMonth;
+      day += 1
+    ) {
+      dates.push(
+        `${year}-${String(
+          month + 1
+        ).padStart(2, "0")}-${String(
+          day
+        ).padStart(2, "0")}`
+      );
+    }
 
-      const year =
-        now.getFullYear();
+    return dates;
+  }, [today]);
 
-      const month =
-        now.getMonth();
 
-      const daysInMonth =
-        new Date(
-          year,
-          month + 1,
-          0
-        ).getDate();
+  const monthlyChart = useMemo(() => {
+    return monthDates.map((date) => {
+      const screen = sumField(
+        screenTime.filter(
+          (item) => item?.date === date
+        ),
+        ["minutes", "duration", "time"]
+      );
 
-      for (
-        let day = 1;
-        day <= daysInMonth;
-        day++
-      ) {
-
-        dates.push(
-          `${year}-${String(
-            month + 1
-          ).padStart(2, "0")}-${String(
-            day
-          ).padStart(2, "0")}`
+      const study =
+        getStudyMinutesForDate(
+          studySessions,
+          date
         );
 
-      }
-
-      return dates;
-
-    }, [today]);
-
-
-  const monthlyChart =
-    useMemo(() => {
-
-      return monthDates.map(
-        (date) => {
-
-          const screen =
-            sumField(
-              screenTime.filter(
-                (item) =>
-                  item?.date ===
-                  date
-              ),
-              [
-                "minutes",
-                "duration",
-                "time",
-              ]
-            );
-
-
-          const activity =
-            sumField(
-              activities.filter(
-                (item) =>
-                  item?.date ===
-                  date
-              ),
-              [
-                "duration",
-                "minutes",
-                "time",
-              ]
-            );
-
-
-          const waterMl =
-            getWaterForDate(
-              water,
-              date
-            );
-
-
-          return {
-
-            day:
-              shortDate(
-                date
-              ),
-
-            screenTime:
-              Math.round(
-                screen / 60
-              ),
-
-            activity:
-              Math.round(
-                activity / 60
-              ),
-
-            water:
-              Math.round(
-                waterMl / 100
-              ) / 10,
-
-          };
-
-        }
+      const activity = sumField(
+        activities.filter(
+          (item) => item?.date === date
+        ),
+        ["duration", "minutes", "time"]
       );
 
-    }, [
-      monthDates,
-      screenTime,
-      activities,
-      water,
-    ]);
+      const waterMl =
+        getWaterForDate(
+          water,
+          date
+        );
 
-
-  /* =======================================================
-     SELECTED HISTORY REPORT
-  ======================================================= */
-
-  const selectedReport =
-    useMemo(() => {
-
-      if (
-        !selectedHistoryDate
-      ) {
-        return null;
-      }
-
-      return (
-        dailyReports.find(
-          (report) =>
-            report.date ===
-            selectedHistoryDate
-        ) || null
-      );
-
-    }, [
-      dailyReports,
-      selectedHistoryDate,
-    ]);
-
-
-  /* =======================================================
-     PRODUCTIVITY SCORE
-  ======================================================= */
-
-  const productivityScore =
-    daily.productivityScore;
-
-
-  /* =======================================================
-     PRODUCTIVITY MESSAGE
-  ======================================================= */
-
-  const productivityMessage =
-    useMemo(() => {
-
-      if (
-        productivityScore >= 90
-      ) {
-        return "Excellent day! 🔥";
-      }
-
-      if (
-        productivityScore >= 75
-      ) {
-        return "Great work today! 💪";
-      }
-
-      if (
-        productivityScore >= 50
-      ) {
-        return "Good progress. Keep going! 👍";
-      }
-
-      if (
-        productivityScore >= 25
-      ) {
-        return "You can do better tomorrow. 🌱";
-      }
-
-      return "Let's make today productive! 🚀";
-
-    }, [
-      productivityScore,
-    ]);
+      return {
+        day: shortDate(date),
+        screenTime: Math.round(screen),
+        studyTime: Math.round(study),
+        activity: Math.round(activity),
+        water:
+          Math.round(
+            waterMl / 100
+          ) / 10,
+      };
+    });
+  }, [
+    monthDates,
+    screenTime,
+    studySessions,
+    activities,
+    water,
+  ]);
 
 
   /* =======================================================
      REFRESH
-  ======================================================= */
+======================================================= */
 
   async function handleRefresh() {
-
-    await loadReports(
-      true
-    );
-
+    await loadReports(true);
   }
 
 
   /* =======================================================
      LOADING
-  ======================================================= */
+======================================================= */
 
   if (loading) {
-
     return (
       <div className="reports-page">
-
         <div className="page-header">
-
           <div>
-
-            <h1>
-              📊 Reports
-            </h1>
-
-            <p>
-              Loading your reports...
-            </p>
-
+            <h1>📊 Reports</h1>
+            <p>Loading your reports...</p>
           </div>
 
-          <BarChart3
-            size={42}
-          />
-
+          <BarChart3 size={42} />
         </div>
-
       </div>
     );
-
   }
 
 
   /* =======================================================
      UI
-  ======================================================= */
+======================================================= */
 
   return (
-
     <div className="reports-page">
 
-      {/* ===================================================
-          HEADER
-      =================================================== */}
+      {/* HEADER */}
 
       <div className="page-header">
 
         <div>
-
-          <h1>
-            📊 Reports
-          </h1>
+          <h1>📊 Reports</h1>
 
           <p>
             Analyze your learning, habits
             and daily productivity.
           </p>
-
         </div>
-
 
         <button
           type="button"
-          onClick={
-            handleRefresh
-          }
-          disabled={
-            refreshing
-          }
+          onClick={handleRefresh}
+          disabled={refreshing}
           style={{
             display: "flex",
-            alignItems:
-              "center",
+            alignItems: "center",
             gap: "8px",
-            padding:
-              "10px 16px",
-            borderRadius:
-              "10px",
-            border:
-              "1px solid #e2e8f0",
-            background:
-              "#ffffff",
-            cursor:
-              refreshing
-                ? "default"
-                : "pointer",
+            padding: "10px 16px",
+            borderRadius: "10px",
+            border: "1px solid #e2e8f0",
+            background: "#ffffff",
+            cursor: refreshing
+              ? "default"
+              : "pointer",
           }}
         >
-
-          <RefreshCw
-            size={18}
-          />
+          <RefreshCw size={18} />
 
           {refreshing
             ? "Refreshing..."
             : "Refresh"}
-
         </button>
 
       </div>
 
 
-      {/* ===================================================
-          TABS
-      =================================================== */}
+      {/* TABS */}
 
       <div
         style={{
           display: "flex",
           gap: "8px",
           flexWrap: "wrap",
-          marginBottom:
-            "20px",
+          marginBottom: "20px",
         }}
       >
-
         {[
           "Daily",
           "Weekly",
           "Monthly",
           "History",
-        ].map(
-          (item) => (
-
-            <button
-              key={item}
-              type="button"
-              onClick={() =>
-                setTab(item)
-              }
-              style={{
-                padding:
-                  "10px 18px",
-                borderRadius:
-                  "10px",
-                border:
-                  tab === item
-                    ? "1px solid #2563eb"
-                    : "1px solid #e2e8f0",
-                background:
-                  tab === item
-                    ? "#2563eb"
-                    : "#ffffff",
-                color:
-                  tab === item
-                    ? "#ffffff"
-                    : "#334155",
-                fontWeight:
-                  600,
-                cursor:
-                  "pointer",
-              }}
-            >
-              {item}
-            </button>
-
-          )
-        )}
-
+        ].map((item) => (
+          <button
+            key={item}
+            type="button"
+            onClick={() => setTab(item)}
+            style={{
+              padding: "10px 18px",
+              borderRadius: "10px",
+              border:
+                tab === item
+                  ? "1px solid #2563eb"
+                  : "1px solid #e2e8f0",
+              background:
+                tab === item
+                  ? "#2563eb"
+                  : "#ffffff",
+              color:
+                tab === item
+                  ? "#ffffff"
+                  : "#334155",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            {item}
+          </button>
+        ))}
       </div>
 
 
@@ -1531,18 +1244,11 @@ const screenToday =
       =================================================== */}
 
       {tab === "Daily" && (
-
         <>
-
-          {/* OVERVIEW */}
-
           <section className="report-overview">
 
             <div className="report-card">
-
-              <BarChart3
-                size={25}
-              />
+              <BarChart3 size={25} />
 
               <span>
                 Productivity Score
@@ -1555,15 +1261,11 @@ const screenToday =
               <small>
                 {productivityMessage}
               </small>
-
             </div>
 
 
             <div className="report-card">
-
-              <span>
-                Learning
-              </span>
+              <span>Learning</span>
 
               <strong>
                 {daily.learningCompleted}
@@ -1572,15 +1274,11 @@ const screenToday =
               <small>
                 completed topics
               </small>
-
             </div>
 
 
             <div className="report-card">
-
-              <span>
-                Study Time
-              </span>
+              <span>Study Time</span>
 
               <strong>
                 {formatMinutes(
@@ -1589,30 +1287,24 @@ const screenToday =
               </strong>
 
               <small>
-                from Screen Time
+                from Study Sessions
               </small>
-
             </div>
 
 
             <div className="report-card">
+              <span>Water</span>
 
-              <span>
-                Water
-              </span>                <strong>
-                  {formatLitres(
-                    daily.waterToday
-                  )}
-                </strong>
-
+              <strong>
+                {formatLitres(
+                  daily.waterToday
+                )}
+              </strong>
             </div>
 
 
             <div className="report-card">
-
-              <span>
-                Screen Time
-              </span>
+              <span>Screen Time</span>
 
               <strong>
                 {formatMinutes(
@@ -1620,93 +1312,70 @@ const screenToday =
                 )}
               </strong>
 
+              <small>
+                all screen activity
+              </small>
             </div>
 
 
             <div className="report-card">
-
-              <span>
-                Activities
-              </span>
+              <span>Activities</span>
 
               <strong>
                 {formatMinutes(
-                  sumField(
-                    daily.activityToday,
-                    [
-                      "duration",
-                      "minutes",
-                      "time",
-                    ]
-                  )
+                  daily.activityMinutes
                 )}
               </strong>
-
             </div>
 
 
             <div className="report-card">
-
-              <span>
-                Tasks
-              </span>
+              <span>Tasks</span>
 
               <strong>
-                {
-                  daily.tasksCompleted
-                }
+                {daily.tasksCompleted}
               </strong>
 
               <small>
                 completed today
               </small>
-
             </div>
 
 
             <div className="report-card">
-
-              <Flame
-                size={25}
-              />
+              <Flame size={25} />
 
               <span>
                 Learning Streak
               </span>
 
               <strong>
-                {
-                  safeNumber(
-                    streak.current ??
-                      streak.currentStreak
-                  )
-                }{" "}
+                {safeNumber(
+                  streak.current ??
+                    streak.currentStreak
+                )}{" "}
                 days
               </strong>
 
               <small>
                 Best:{" "}
-                {
-                  safeNumber(
-                    streak.best ??
-                      streak.bestStreak
-                  )
-                }{" "}
+                {safeNumber(
+                  streak.best ??
+                    streak.bestStreak
+                )}{" "}
                 days
               </small>
-
             </div>
 
           </section>
 
 
-          {/* GOAL PROGRESS */}
+          {/* GOAL + WATER */}
 
           <section
             className="reports-grid"
             style={{
-              marginTop:
-                "24px",
+              marginTop: "24px",
             }}
           >
 
@@ -1715,38 +1384,27 @@ const screenToday =
               <div className="section-heading">
 
                 <div>
-
                   <h2>
                     🎯 Goal Progress
                   </h2>
 
                   <p>
-                    Current progress
-                    across your goals.
+                    Current progress across
+                    your goals.
                   </p>
-
                 </div>
 
               </div>
 
-
-              <div
-                className="report-large-number"
-              >
+              <div className="report-large-number">
                 {daily.avgGoal}%
               </div>
 
-
-              <p
-                className="report-description"
-              >
+              <p className="report-description">
                 Average goal progress.
               </p>
 
-
-              <div
-                className="report-progress"
-              >
+              <div className="report-progress">
 
                 <div
                   className="report-progress-bar"
@@ -1766,43 +1424,31 @@ const screenToday =
               <div className="section-heading">
 
                 <div>
-
-                  <h2>
-                    💧 Water
-                  </h2>
+                  <h2>💧 Water</h2>
 
                   <p>
                     Today's water intake.
                   </p>
-
                 </div>
 
               </div>
 
-
-              <div
-                className="report-large-number"
-              >
-                {
-                  Math.min(
-                    100,
-                    Math.round(
-                      (
-                        safeNumber(
-                          daily.waterToday
-                        ) /
-                        2500
-                      ) *
-                        100
+              <div className="report-large-number">
+                {daily.waterTarget > 0
+                  ? Math.min(
+                      100,
+                      Math.round(
+                        (
+                          daily.waterToday /
+                          daily.waterTarget
+                        ) *
+                          100
+                      )
                     )
-                  )
-                }%
+                  : 0}%
               </div>
 
-
-              <p
-                className="report-description"
-              >
+              <p className="report-description">
                 Stay hydrated throughout
                 the day.
               </p>
@@ -1812,13 +1458,12 @@ const screenToday =
           </section>
 
 
-          {/* SCREEN TIME */}
+          {/* SCREEN + STUDY */}
 
           <section
             className="reports-grid"
             style={{
-              marginTop:
-                "24px",
+              marginTop: "24px",
             }}
           >
 
@@ -1827,7 +1472,6 @@ const screenToday =
               <div className="section-heading">
 
                 <div>
-
                   <h2>
                     💻 Screen Time
                   </h2>
@@ -1836,114 +1480,20 @@ const screenToday =
                     Your screen usage
                     for today.
                   </p>
-
                 </div>
 
               </div>
 
-
-              <div
-                className="report-mini-stats"
-              >
-
-                <div>
-
-                  <span>
-                    Learning
-                  </span>
-
-                  <strong>
-                    {
-                      formatMinutes(
-                        sumField(
-                          screenTime.filter(
-                            (item) =>
-                              item?.date ===
-                              today
-                          ),
-                          ["learning"]
-                        )
-                      )
-                    }
-                  </strong>
-
-                </div>
-
-
-                <div>
-
-                  <span>
-                    Coding
-                  </span>
-
-                  <strong>
-                    {
-                      formatMinutes(
-                        sumField(
-                          screenTime.filter(
-                            (item) =>
-                              item?.date ===
-                              today
-                          ),
-                          ["coding"]
-                        )
-                      )
-                    }
-                  </strong>
-
-                </div>
-
-
-                <div>
-
-                  <span>
-                    Entertainment
-                  </span>
-
-                  <strong>
-                    {
-                      formatMinutes(
-                        sumField(
-                          screenTime.filter(
-                            (item) =>
-                              item?.date ===
-                              today
-                          ),
-                          [
-                            "entertainment",
-                          ]
-                        )
-                      )
-                    }
-                  </strong>
-
-                </div>
-
-
-                <div>
-
-                  <span>
-                    Other
-                  </span>
-
-                  <strong>
-                    {
-                      formatMinutes(
-                        sumField(
-                          screenTime.filter(
-                            (item) =>
-                              item?.date ===
-                              today
-                          ),
-                          ["other"]
-                        )
-                      )
-                    }
-                  </strong>
-
-                </div>
-
+              <div className="report-large-number">
+                {formatMinutes(
+                  daily.screenMinutes
+                )}
               </div>
+
+              <p className="report-description">
+                Includes all categories
+                recorded in Screen Time.
+              </p>
 
             </div>
 
@@ -1953,38 +1503,27 @@ const screenToday =
               <div className="section-heading">
 
                 <div>
-
                   <h2>
                     📚 Study Time
                   </h2>
 
                   <p>
-                    Learning and coding
-                    screen time.
+                    Your intentional study
+                    sessions for today.
                   </p>
-
                 </div>
 
               </div>
 
-
-              <div
-                className="report-large-number"
-              >
-                {
-                  formatMinutes(
-                    daily.studyMinutes
-                  )
-                }
+              <div className="report-large-number">
+                {formatMinutes(
+                  daily.studyMinutes
+                )}
               </div>
 
-
-              <p
-                className="report-description"
-              >
+              <p className="report-description">
                 Study time is calculated
-                from your Screen Time
-                records.
+                only from Study Sessions.
               </p>
 
             </div>
@@ -1997,52 +1536,41 @@ const screenToday =
           <section
             className="report-panel"
             style={{
-              marginTop:
-                "24px",
+              marginTop: "24px",
             }}
           >
 
             <div className="section-heading">
 
               <div>
-
                 <h2>
                   📅 7-Day Summary
                 </h2>
 
                 <p>
                   Compare your recent
-                  screen time, activity
-                  and water intake.
+                  screen time, study time,
+                  activity and water intake.
                 </p>
-
               </div>
 
             </div>
 
 
-            <div
-              className="report-chart"
-            >
+            <div className="report-chart">
 
               <ResponsiveContainer
                 width="100%"
                 height={320}
               >
 
-                <BarChart
-                  data={
-                    weeklyChart
-                  }
-                >
+                <BarChart data={weeklyChart}>
 
                   <CartesianGrid
                     strokeDasharray="3 3"
                   />
 
-                  <XAxis
-                    dataKey="day"
-                  />
+                  <XAxis dataKey="day" />
 
                   <YAxis />
 
@@ -2054,6 +1582,12 @@ const screenToday =
                     dataKey="screenTime"
                     name="Screen Time (h)"
                     fill="#2563eb"
+                  />
+
+                  <Bar
+                    dataKey="studyTime"
+                    name="Study Time (h)"
+                    fill="#9333ea"
                   />
 
                   <Bar
@@ -2075,96 +1609,68 @@ const screenToday =
             </div>
 
 
-            <div
-              className="report-mini-stats"
-            >
+            <div className="report-mini-stats">
 
               <div>
-
-                <span>
-                  Study / Screen
-                </span>
+                <span>Study Time</span>
 
                 <strong>
-                  {
-                    formatMinutes(
-                      weeklyScreen
-                    )
-                  }
+                  {formatMinutes(
+                    weeklyStudy
+                  )}
                 </strong>
-
               </div>
 
-
               <div>
-
-                <span>
-                  Activities
-                </span>
+                <span>Screen Time</span>
 
                 <strong>
-                  {
-                    formatMinutes(
-                      weeklyActivities
-                    )
-                  }
+                  {formatMinutes(
+                    weeklyScreen
+                  )}
                 </strong>
-
               </div>
 
-
               <div>
-
-                <span>
-                  Water
-                </span>
+                <span>Activities</span>
 
                 <strong>
-                  {
-                    formatLitres(
-                      weeklyWater
-                    )
-                  }
+                  {formatMinutes(
+                    weeklyActivities
+                  )}
                 </strong>
-
               </div>
 
-
               <div>
-
-                <span>
-                  Topics
-                </span>
+                <span>Water</span>
 
                 <strong>
-                  {
-                    weeklyTopics
-                  }
+                  {formatLitres(
+                    weeklyWater
+                  )}
                 </strong>
-
               </div>
 
-
               <div>
-
-                <span>
-                  Tasks
-                </span>
+                <span>Topics</span>
 
                 <strong>
-                  {
-                    weeklyTasks
-                  }
+                  {weeklyTopics}
                 </strong>
+              </div>
 
+              <div>
+                <span>Tasks</span>
+
+                <strong>
+                  {weeklyTasks}
+                </strong>
               </div>
 
             </div>
 
           </section>
-
         </>
-
       )}
 
 
@@ -2173,109 +1679,78 @@ const screenToday =
       =================================================== */}
 
       {tab === "Weekly" && (
-
         <section className="report-panel">
 
           <div className="section-heading">
 
             <div>
-
-              <h2>
-                📈 Weekly Report
-              </h2>
+              <h2>📈 Weekly Report</h2>
 
               <p>
-                Your activity over
-                the last 7 days.
+                Your activity over the
+                last 7 days.
               </p>
-
             </div>
 
           </div>
 
 
-          <div
-            className="report-mini-stats"
-          >
+          <div className="report-mini-stats">
 
             <div>
-
-              <span>
-                Screen Time
-              </span>
+              <span>Screen Time</span>
 
               <strong>
-                {
-                  formatMinutes(
-                    weeklyScreen
-                  )
-                }
+                {formatMinutes(
+                  weeklyScreen
+                )}
               </strong>
-
             </div>
 
-
             <div>
-
-              <span>
-                Activities
-              </span>
+              <span>Study Time</span>
 
               <strong>
-                {
-                  formatMinutes(
-                    weeklyActivities
-                  )
-                }
+                {formatMinutes(
+                  weeklyStudy
+                )}
               </strong>
-
             </div>
 
-
             <div>
-
-              <span>
-                Water
-              </span>
+              <span>Activities</span>
 
               <strong>
-                {
-                  formatLitres(
-                    weeklyWater
-                  )
-                }
+                {formatMinutes(
+                  weeklyActivities
+                )}
               </strong>
-
             </div>
 
-
             <div>
-
-              <span>
-                Topics
-              </span>
+              <span>Water</span>
 
               <strong>
-                {
-                  weeklyTopics
-                }
+                {formatLitres(
+                  weeklyWater
+                )}
               </strong>
-
             </div>
 
-
             <div>
-
-              <span>
-                Tasks
-              </span>
+              <span>Topics</span>
 
               <strong>
-                {
-                  weeklyTasks
-                }
+                {weeklyTopics}
               </strong>
+            </div>
 
+            <div>
+              <span>Tasks</span>
+
+              <strong>
+                {weeklyTasks}
+              </strong>
             </div>
 
           </div>
@@ -2284,8 +1759,7 @@ const screenToday =
           <div
             className="report-chart"
             style={{
-              marginTop:
-                "24px",
+              marginTop: "24px",
             }}
           >
 
@@ -2294,19 +1768,13 @@ const screenToday =
               height={360}
             >
 
-              <LineChart
-                data={
-                  weeklyChart
-                }
-              >
+              <LineChart data={weeklyChart}>
 
                 <CartesianGrid
                   strokeDasharray="3 3"
                 />
 
-                <XAxis
-                  dataKey="day"
-                />
+                <XAxis dataKey="day" />
 
                 <YAxis />
 
@@ -2319,6 +1787,14 @@ const screenToday =
                   dataKey="screenTime"
                   name="Screen Time (h)"
                   stroke="#2563eb"
+                  strokeWidth={3}
+                />
+
+                <Line
+                  type="monotone"
+                  dataKey="studyTime"
+                  name="Study Time (h)"
+                  stroke="#9333ea"
                   strokeWidth={3}
                 />
 
@@ -2345,7 +1821,6 @@ const screenToday =
           </div>
 
         </section>
-
       )}
 
 
@@ -2354,30 +1829,79 @@ const screenToday =
       =================================================== */}
 
       {tab === "Monthly" && (
-
         <section className="report-panel">
 
           <div className="section-heading">
 
             <div>
-
-              <h2>
-                📊 Monthly Report
-              </h2>
+              <h2>📊 Monthly Report</h2>
 
               <p>
                 Overview of this month's
                 activity.
               </p>
-
             </div>
 
           </div>
 
 
-          <div
-            className="report-chart"
-          >
+          <div className="report-mini-stats">
+
+            <div>
+              <span>Screen Time</span>
+
+              <strong>
+                {formatMinutes(
+                  monthlyChart.reduce(
+                    (total, item) =>
+                      total +
+                      safeNumber(
+                        item.screenTime
+                      ),
+                    0
+                  )
+                )}
+              </strong>
+            </div>
+
+            <div>
+              <span>Study Time</span>
+
+              <strong>
+                {formatMinutes(
+                  monthlyChart.reduce(
+                    (total, item) =>
+                      total +
+                      safeNumber(
+                        item.studyTime
+                      ),
+                    0
+                  )
+                )}
+              </strong>
+            </div>
+
+            <div>
+              <span>Activities</span>
+
+              <strong>
+                {formatMinutes(
+                  monthlyChart.reduce(
+                    (total, item) =>
+                      total +
+                      safeNumber(
+                        item.activity
+                      ),
+                    0
+                  )
+                )}
+              </strong>
+            </div>
+
+          </div>
+
+
+          <div className="report-chart">
 
             <ResponsiveContainer
               width="100%"
@@ -2385,9 +1909,7 @@ const screenToday =
             >
 
               <BarChart
-                data={
-                  monthlyChart
-                }
+                data={monthlyChart}
               >
 
                 <CartesianGrid
@@ -2412,6 +1934,12 @@ const screenToday =
                 />
 
                 <Bar
+                  dataKey="studyTime"
+                  name="Study Time (min)"
+                  fill="#9333ea"
+                />
+
+                <Bar
                   dataKey="activity"
                   name="Activity (min)"
                   fill="#22c55e"
@@ -2424,14 +1952,14 @@ const screenToday =
           </div>
 
         </section>
-
       )}
+
+
       {/* ===================================================
           HISTORY
       =================================================== */}
 
       {tab === "History" && (
-
         <section className="reports-history">
 
           <div className="report-panel">
@@ -2439,7 +1967,6 @@ const screenToday =
             <div className="section-heading">
 
               <div>
-
                 <h2>
                   🗂️ Report History
                 </h2>
@@ -2448,25 +1975,18 @@ const screenToday =
                   View your previous daily
                   reports.
                 </p>
-
               </div>
 
-              <History
-                size={28}
-              />
+              <History size={28} />
 
             </div>
 
 
-            {dailyReports.length === 0 ? (
+            {historyReports.length === 0 ? (
 
-              <div
-                className="empty-state"
-              >
+              <div className="empty-state">
 
-                <History
-                  size={42}
-                />
+                <History size={42} />
 
                 <h3>
                   No reports yet
@@ -2481,93 +2001,99 @@ const screenToday =
 
             ) : (
 
-              <div
-                className="history-layout"
-              >
+              <div className="history-layout">
 
-                <div
-                  className="history-list"
-                >
+                {/* HISTORY LIST */}
 
-                  {dailyReports.map(
-                    (report) => (
+                <div className="history-list">
 
-                      <button
-                        key={
-                          report.id ??
-                          report.date
-                        }
-                        type="button"
-                        onClick={() =>
-                          setSelectedHistoryDate(
-                            report.date
-                          )
-                        }
-                        className={
-                          selectedHistoryDate ===
-                          report.date
-                            ? "history-item active"
-                            : "history-item"
-                        }
-                      >
+                  {historyReports.map(
+                    (report) => {
 
-                        <div>
+                      const reportIsToday =
+                        report.date === today;
 
-                          <strong>
-                            {
-                              formatDate(
-                                report.date
-                              )
-                            }
-                          </strong>
-
-                          <span>
-                            {
-                              report.summary
-                                ?.topicsCompleted ??
-                              report.topicsCompleted ??
-                              0
-                            }{" "}
-                            topics completed
-                          </span>
-
-                        </div>
-
-
-                        <div>
-
-                          <strong>
-                            {
+                      const reportScore =
+                        reportIsToday
+                          ? daily.productivityScore
+                          : safeNumber(
                               report.summary
                                 ?.productivityScore ??
-                              report.productivityScore ??
-                              0
-                            }%
-                          </strong>
+                                report.productivityScore
+                            );
 
-                        </div>
+                      const reportTopics =
+                        reportIsToday
+                          ? daily.learningCompleted
+                          : safeNumber(
+                              report.summary
+                                ?.topicsCompleted ??
+                                report.topicsCompleted ??
+                                report.learning
+                                  ?.completed
+                            );
 
-                      </button>
+                      return (
+                        <button
+                          key={
+                            report.id ??
+                            report.date
+                          }
+                          type="button"
+                          onClick={() =>
+                            setSelectedHistoryDate(
+                              report.date
+                            )
+                          }
+                          className={
+                            selectedHistoryDate ===
+                            report.date
+                              ? "history-item active"
+                              : "history-item"
+                          }
+                        >
 
-                    )
+                          <div>
+
+                            <strong>
+                              {formatDate(
+                                report.date
+                              )}
+                            </strong>
+
+                            <span>
+                              {reportTopics}{" "}
+                              topics completed
+                            </span>
+
+                          </div>
+
+
+                          <div>
+
+                            <strong>
+                              {reportScore}%
+                            </strong>
+
+                          </div>
+
+                        </button>
+                      );
+                    }
                   )}
 
                 </div>
 
 
-                <div
-                  className="history-detail"
-                >
+                {/* HISTORY DETAIL */}
+
+                <div className="history-detail">
 
                   {!selectedReport ? (
 
-                    <div
-                      className="empty-state"
-                    >
+                    <div className="empty-state">
 
-                      <History
-                        size={38}
-                      />
+                      <History size={38} />
 
                       <h3>
                         Select a report
@@ -2584,22 +2110,21 @@ const screenToday =
 
                     <>
 
-                      <div
-                        className="section-heading"
-                      >
+                      <div className="section-heading">
 
                         <div>
 
                           <h2>
-                            {
-                              formatDate(
-                                selectedReport.date
-                              )
-                            }
+                            {formatDate(
+                              selectedReport.date
+                            )}
                           </h2>
 
                           <p>
-                            Daily report
+                            {selectedReport.date ===
+                            today
+                              ? "Live report for today"
+                              : "Saved daily report"}
                           </p>
 
                         </div>
@@ -2607,215 +2132,117 @@ const screenToday =
                       </div>
 
 
-                      <div
-                        className="report-mini-stats"
-                      >
+                      <div className="report-mini-stats">
 
                         <div>
-
                           <span>
                             Topics Completed
                           </span>
 
                           <strong>
                             {
-                              selectedReport
-                                .summary
-                                ?.topicsCompleted ??
-                              selectedReport
-                                .topicsCompleted ??
-                              0
+                              selectedHistoryValues
+                                .topics
                             }
                           </strong>
-
                         </div>
 
 
                         <div>
-
                           <span>
                             Tasks Completed
                           </span>
 
                           <strong>
                             {
-                              selectedReport
-                                .summary
-                                ?.tasksCompleted ??
-                              selectedReport
-                                .tasksCompleted ??
-                              0
+                              selectedHistoryValues
+                                .tasks
                             }
                           </strong>
-
                         </div>
 
 
                         <div>
-
                           <span>
                             Goal Progress
                           </span>
 
                           <strong>
                             {
-                              selectedReport
-                                .summary
-                                ?.avgGoalProgress ??
-                              selectedReport
-                                .avgGoalProgress ??
-                              0
+                              selectedHistoryValues
+                                .goal
                             }%
                           </strong>
-
                         </div>
 
 
                         <div>
-
                           <span>
                             Study Time
                           </span>
 
                           <strong>
-                            {
-                              formatMinutes(
-                                sumField(
-                                  screenTime.filter(
-                                    (item) =>
-                                      item?.date ===
-                                      selectedReport.date
-                                  ),
-                                  [
-                                    "minutes",
-                                    "duration",
-                                    "time"
-                                  ]
-                                ) ||
-                                safeNumber(
-                                  selectedReport
-                                    .summary
-                                    ?.studyMinutes ??
-                                  selectedReport
-                                    .studyMinutes ??
-                                  0
-                                )
-                              )
-                            }
+                            {formatMinutes(
+                              selectedHistoryValues
+                                .study
+                            )}
                           </strong>
-
                         </div>
 
 
                         <div>
-
                           <span>
                             Screen Time
                           </span>
 
                           <strong>
-                            {
-                              formatMinutes(
-                                sumField(
-                                  screenTime.filter(
-                                    (item) =>
-                                      item?.date ===
-                                      selectedReport.date
-                                  ),
-                                  [
-                                    "minutes",
-                                    "duration",
-                                    "time"
-                                  ]
-                                )
-                              )
-                            }
+                            {formatMinutes(
+                              selectedHistoryValues
+                                .screen
+                            )}
                           </strong>
-
                         </div>
 
 
                         <div>
-
                           <span>
                             Water
                           </span>
 
                           <strong>
-                            {
-                              formatLitres(
-                                getWaterForDate(
-                                  water,
-                                  selectedReport.date
-                                ) ||
-                                safeNumber(
-                                  selectedReport
-                                    .summary
-                                    ?.waterConsumed ??
-                                  selectedReport
-                                    .waterConsumed ??
-                                  0
-                                )
-                              )
-                            }
+                            {formatLitres(
+                              selectedHistoryValues
+                                .water
+                            )}
                           </strong>
-
                         </div>
 
 
                         <div>
-
                           <span>
                             Activity
                           </span>
 
                           <strong>
-                            {
-                              formatMinutes(
-                                sumField(
-                                  activities.filter(
-                                    (item) =>
-                                      item?.date ===
-                                      selectedReport.date
-                                  ),
-                                  [
-                                    "duration",
-                                    "minutes",
-                                    "time"
-                                  ]
-                                ) ||
-                                safeNumber(
-                                  selectedReport
-                                    .summary
-                                    ?.activityMinutes ??
-                                  selectedReport
-                                    .activityMinutes ??
-                                  0
-                                )
-                              )
-                            }
+                            {formatMinutes(
+                              selectedHistoryValues
+                                .activity
+                            )}
                           </strong>
-
                         </div>
 
 
                         <div>
-
                           <span>
                             Productivity
                           </span>
 
                           <strong>
                             {
-                              selectedReport
-                                .summary
-                                ?.productivityScore ??
-                              selectedReport
-                                .productivityScore ??
-                              0
+                              selectedHistoryValues
+                                .productivity
                             }%
                           </strong>
-
                         </div>
 
                       </div>
@@ -2824,8 +2251,7 @@ const screenToday =
                       <div
                         className="report-history-summary"
                         style={{
-                          marginTop:
-                            "24px",
+                          marginTop: "24px",
                         }}
                       >
 
@@ -2834,9 +2260,10 @@ const screenToday =
                         </h3>
 
                         <p>
-                          This report contains
-                          the activity recorded
-                          for this day.
+                          {selectedReport.date ===
+                          today
+                            ? "Today's report uses your latest dashboard data, so changes such as adding water are reflected automatically."
+                            : "This report contains the saved activity recorded for this day."}
                         </p>
 
                       </div>
@@ -2854,37 +2281,30 @@ const screenToday =
           </div>
 
         </section>
-
       )}
 
 
-      {/* ===================================================
-          FOOTER INFORMATION
-      =================================================== */}
+      {/* FOOTER */}
 
       <div
         className="reports-footer"
         style={{
-          marginTop:
-            "24px",
-          marginBottom:
-            "20px",
-          textAlign:
-            "center",
+          marginTop: "24px",
+          marginBottom: "20px",
+          textAlign: "center",
         }}
       >
 
         <p>
-          Reports update automatically
-          when your dashboard data changes.
+          Reports update automatically when
+          your dashboard data changes.
         </p>
 
       </div>
 
     </div>
-
   );
-
 }
+
 
 export default Reports;

@@ -36,6 +36,7 @@ import {
   getAssessments,
   getTimetable,
   getProfile,
+  getStudySessions,
   saveStreak,
 } from "../utils/db";
 
@@ -44,7 +45,6 @@ import {
   calculateWaterPercentage,
   calculateDaysRemaining,
   formatDaysRemaining,
-  calculateStreak,
   formatMinutes,
   formatLitres,
   getTodayLocalDateKey,
@@ -55,38 +55,20 @@ import {
 
 
 function Home() {
-  const [currentTime, setCurrentTime] =
-    useState(new Date());
+  const [currentTime, setCurrentTime] = useState(new Date());
 
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const [topics, setTopics] =
-    useState([]);
-
-  const [goals, setGoals] =
-    useState([]);
-
-  const [water, setWater] =
-    useState([]);
-
-  const [screenTime, setScreenTime] =
-    useState([]);
-
-  const [activities, setActivities] =
-    useState([]);
-
-  const [quickTasks, setQuickTasks] =
-    useState([]);
-
-  const [assessments, setAssessments] =
-    useState([]);
-
-  const [timetable, setTimetable] =
-    useState([]);
-
-  const [profile, setProfile] =
-    useState(null);
+  const [topics, setTopics] = useState([]);
+  const [goals, setGoals] = useState([]);
+  const [water, setWater] = useState([]);
+  const [screenTime, setScreenTime] = useState([]);
+  const [studySessions, setStudySessions] = useState([]);
+  const [activities, setActivities] = useState([]);
+  const [quickTasks, setQuickTasks] = useState([]);
+  const [assessments, setAssessments] = useState([]);
+  const [timetable, setTimetable] = useState([]);
+  const [profile, setProfile] = useState(null);
 
 
   /* =====================================================
@@ -114,6 +96,7 @@ function Home() {
           goalsData,
           waterData,
           screenTimeData,
+          studySessionsData,
           activitiesData,
           quickTasksData,
           assessmentsData,
@@ -124,6 +107,7 @@ function Home() {
           getGoals(),
           getWater(),
           getScreenTime(),
+          getStudySessions(),
           getActivities(),
           getQuickTasks(),
           getAssessments(),
@@ -152,6 +136,12 @@ function Home() {
         setScreenTime(
           Array.isArray(screenTimeData)
             ? screenTimeData
+            : []
+        );
+
+        setStudySessions(
+          Array.isArray(studySessionsData)
+            ? studySessionsData
             : []
         );
 
@@ -198,39 +188,36 @@ function Home() {
      TODAY
   ===================================================== */
 
-  const today =
-    getTodayLocalDateKey();
+  const today = getTodayLocalDateKey();
 
 
   /* =====================================================
      DATE
   ===================================================== */
 
-  const date =
-    currentTime.toLocaleDateString(
-      "en-IN",
-      {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }
-    );
+  const date = currentTime.toLocaleDateString(
+    "en-IN",
+    {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }
+  );
 
 
   /* =====================================================
      TIME
   ===================================================== */
 
-  const time =
-    currentTime.toLocaleTimeString(
-      "en-IN",
-      {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      }
-    );
+  const time = currentTime.toLocaleTimeString(
+    "en-IN",
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }
+  );
 
 
   /* =====================================================
@@ -238,8 +225,7 @@ function Home() {
   ===================================================== */
 
   const greeting = useMemo(() => {
-    const hour =
-      currentTime.getHours();
+    const hour = currentTime.getHours();
 
     if (hour < 12) {
       return "Good morning";
@@ -257,70 +243,50 @@ function Home() {
      LEARNING SUMMARY
   ===================================================== */
 
-  const learningStats =
-    useMemo(() => {
-      const activeTopics =
-        topics.filter(
-          (topic) =>
-            topic.status !== "future"
-        );
+  const learningStats = useMemo(() => {
+    const activeTopics = topics.filter(
+      (topic) =>
+        topic.status !== "future"
+    );
 
-      const completed =
-        activeTopics.filter(
-          (topic) =>
-            topic.status === "completed"
-        ).length;
+    const completed = activeTopics.filter(
+      (topic) =>
+        topic.status === "completed"
+    ).length;
 
-      const inProgress =
-        activeTopics.filter(
-          (topic) =>
-            topic.status === "in-progress"
-        ).length;
+    const inProgress = activeTopics.filter(
+      (topic) =>
+        topic.status === "in-progress"
+    ).length;
 
-      const remaining =
-        activeTopics.filter(
-          (topic) =>
-            topic.status === "remaining"
-        ).length;
+    const remaining = activeTopics.filter(
+      (topic) =>
+        topic.status === "remaining"
+    ).length;
 
-      const future =
-        topics.filter(
-          (topic) =>
-            topic.status === "future"
-        ).length;
+    const future = topics.filter(
+      (topic) =>
+        topic.status === "future"
+    ).length;
 
-      return {
-        total: activeTopics.length,
-        completed,
-        inProgress,
-        remaining,
-        future,
-        progress:
-          calculatePercentage(
-            completed,
-            activeTopics.length
-          ),
-      };
-    }, [topics]);
+    return {
+      total: activeTopics.length,
+      completed,
+      inProgress,
+      remaining,
+      future,
+      progress:
+        calculatePercentage(
+          completed,
+          activeTopics.length
+        ),
+    };
+  }, [topics]);
 
 
   /* =====================================================
      STREAK
-
-     A day is maintained when there is any real dashboard
-     activity on that date:
-       - Learning topic completed
-       - Water logged
-       - Activity logged
-       - Quick task completed
-       - Assessment completed
-       - Screen time logged
-
-     Current streak = consecutive maintained days ending
-     today (only if today is maintained).
-
-     Best streak = highest consecutive run ever.
-     ===================================================== */
+  ===================================================== */
 
   const streak = useMemo(() => {
     const dateSet = new Set();
@@ -330,51 +296,75 @@ function Home() {
 
       const raw = String(value);
 
-      // Date/time values such as 2026-09-10T08:30:00
-      const match = raw.match(/^(\\d{4}-\\d{2}-\\d{2})/);
+      const match = raw.match(
+        /^(\d{4}-\d{2}-\d{2})/
+      );
 
       if (match) {
         dateSet.add(match[1]);
         return;
       }
 
-      // Support other valid date values if present.
       const parsed = new Date(value);
 
       if (!Number.isNaN(parsed.getTime())) {
         const year = parsed.getFullYear();
-        const month = String(parsed.getMonth() + 1).padStart(2, "0");
-        const day = String(parsed.getDate()).padStart(2, "0");
-        dateSet.add(`${year}-${month}-${day}`);
+        const month = String(
+          parsed.getMonth() + 1
+        ).padStart(2, "0");
+        const day = String(
+          parsed.getDate()
+        ).padStart(2, "0");
+
+        dateSet.add(
+          `${year}-${month}-${day}`
+        );
       }
     };
+
 
     // Learning
     topics.forEach((topic) => {
       if (topic.status === "completed") {
-        addDate(topic.completedAt || topic.date);
+        addDate(
+          topic.completedAt ||
+          topic.date
+        );
       }
     });
+
 
     // Water
     water.forEach((record) => {
-      if (record && (
-        record.consumed !== undefined ||
-        record.consumedMl !== undefined ||
-        record.amountMl !== undefined ||
-        record.amount !== undefined ||
-        record.water !== undefined ||
-        record.quantity !== undefined ||
-        record.ml !== undefined
-      )) {
-        addDate(record.date || record.id);
+      if (
+        record &&
+        (
+          record.consumed !== undefined ||
+          record.consumedMl !== undefined ||
+          record.amountMl !== undefined ||
+          record.amount !== undefined ||
+          record.water !== undefined ||
+          record.quantity !== undefined ||
+          record.ml !== undefined
+        )
+      ) {
+        addDate(
+          record.date ||
+          record.id
+        );
       }
     });
 
+
     // Activities
     activities.forEach((activity) => {
-      addDate(activity.date || activity.createdAt || activity.completedAt);
+      addDate(
+        activity.date ||
+        activity.createdAt ||
+        activity.completedAt
+      );
     });
+
 
     // Quick tasks
     quickTasks.forEach((task) => {
@@ -386,6 +376,7 @@ function Home() {
         );
       }
     });
+
 
     // Assessments
     assessments.forEach((assessment) => {
@@ -401,6 +392,7 @@ function Home() {
       }
     });
 
+
     // Screen time
     screenTime.forEach((record) => {
       if (Number(record.minutes) > 0) {
@@ -408,51 +400,163 @@ function Home() {
       }
     });
 
-    const dates = Array.from(dateSet).sort();
+
+    // Study sessions
+    studySessions.forEach((session) => {
+      const minutes =
+        Number(
+          session.duration ??
+          session.minutes ??
+          session.time ??
+          0
+        );
+
+      if (minutes > 0) {
+        addDate(
+          session.date ||
+          session.createdAt
+        );
+      }
+    });
+
+
+    const dates =
+      Array.from(dateSet).sort();
+
 
     if (dates.length === 0) {
-      return { current: 0, best: 0 };
+      return {
+        current: 0,
+        best: 0,
+      };
     }
 
+
     const toDate = (key) => {
-      const [year, month, day] = key.split("-").map(Number);
-      return new Date(year, month - 1, day);
+      const [
+        year,
+        month,
+        day,
+      ] = key
+        .split("-")
+        .map(Number);
+
+      return new Date(
+        year,
+        month - 1,
+        day
+      );
     };
 
+
     const dayDiff = (a, b) => {
-      const ms = toDate(b).getTime() - toDate(a).getTime();
-      return Math.round(ms / 86400000);
+      const ms =
+        toDate(b).getTime() -
+        toDate(a).getTime();
+
+      return Math.round(
+        ms / 86400000
+      );
     };
+
 
     let best = 1;
     let run = 1;
 
-    for (let i = 1; i < dates.length; i += 1) {
-      if (dayDiff(dates[i - 1], dates[i]) === 1) {
+
+    for (
+      let i = 1;
+      i < dates.length;
+      i += 1
+    ) {
+      if (
+        dayDiff(
+          dates[i - 1],
+          dates[i]
+        ) === 1
+      ) {
         run += 1;
-        best = Math.max(best, run);
+        best = Math.max(
+          best,
+          run
+        );
       } else {
         run = 1;
       }
     }
 
-    // Current streak must be connected to TODAY.
-    // If today has no activity, the current streak is 0.
+
+    // Current streak is calendar-aware and fully automatic.
+    //
+    // Example:
+    // Day 1 -> activity
+    // Day 2 -> activity
+    // Day 3 -> new day (no activity yet)
+    // Current streak = 3.
+    //
+    // If Day 3 finishes without activity, then on Day 4
+    // the streak becomes 0 because Day 3 was missed.
     let current = 0;
 
-    if (dateSet.has(today)) {
-      current = 1;
+    const todayDate = toDate(today);
+    const yesterdayDate = new Date(todayDate);
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
 
-      for (let i = dates.length - 1; i > 0; i -= 1) {
-        if (dayDiff(dates[i - 1], dates[i]) === 1) {
-          current += 1;
-        } else {
-          break;
-        }
+    const getDateKey = (dateValue) =>
+      `${dateValue.getFullYear()}-${String(
+        dateValue.getMonth() + 1
+      ).padStart(2, "0")}-${String(
+        dateValue.getDate()
+      ).padStart(2, "0")}`;
+
+    const yesterdayKey = getDateKey(
+      yesterdayDate
+    );
+
+    // When today already has activity, count completed
+    // consecutive days including today.
+    if (dateSet.has(today)) {
+      let cursorDate = toDate(today);
+
+      while (dateSet.has(getDateKey(cursorDate))) {
+        current += 1;
+        cursorDate.setDate(
+          cursorDate.getDate() - 1
+        );
       }
     }
+    // When today has not been used yet, yesterday's
+    // consecutive streak is still alive during today.
+    // Today counts as the current streak day automatically.
+    else if (dateSet.has(yesterdayKey)) {
+      let cursorDate = toDate(
+        yesterdayKey
+      );
+      let completedDays = 0;
 
-    return { current, best };
+      while (
+        dateSet.has(
+          getDateKey(cursorDate)
+        )
+      ) {
+        completedDays += 1;
+        cursorDate.setDate(
+          cursorDate.getDate() - 1
+        );
+      }
+
+      current = completedDays + 1;
+    }
+
+    best = Math.max(
+      best,
+      current
+    );
+
+    return {
+      current,
+      best,
+    };
   }, [
     topics,
     water,
@@ -460,6 +564,7 @@ function Home() {
     quickTasks,
     assessments,
     screenTime,
+    studySessions,
     today,
   ]);
 
@@ -491,33 +596,57 @@ function Home() {
 
   /* =====================================================
      STUDY TIME TODAY
+
+     IMPORTANT:
+     Study Time comes ONLY from Study Sessions.
+
+     Screen Time is completely separate.
+
+     Learning/Coding screen-time records
+     are NOT counted here.
   ===================================================== */
 
-  const studyMinutesToday =
-    useMemo(
-      () =>
-        sumBy(
-          screenTime.filter(
-            (record) =>
-              record.date === today &&
-              (
-                record.category ===
-                  "Learning" ||
-                record.category ===
-                  "Coding"
-              )
-          ),
-          "minutes"
-        ),
-      [
-        screenTime,
-        today,
-      ]
+  const studyMinutesToday = useMemo(() => {
+    const todaySessions =
+      studySessions.filter(
+        (session) =>
+          session?.date === today
+      );
+
+    return todaySessions.reduce(
+      (total, session) => {
+        const minutes =
+          Number(
+            session?.duration ??
+            session?.minutes ??
+            session?.time ??
+            0
+          );
+
+        return (
+          total +
+          (
+            Number.isFinite(minutes)
+              ? Math.max(
+                  0,
+                  minutes
+                )
+              : 0
+          )
+        );
+      },
+      0
     );
+  }, [
+    studySessions,
+    today,
+  ]);
 
 
   /* =====================================================
      SCREEN TIME TODAY
+
+     Screen Time includes ALL screen-time categories.
   ===================================================== */
 
   const screenTimeMinutesToday =
@@ -539,27 +668,7 @@ function Home() {
 
   /* =====================================================
      WATER TODAY
-     
-     IMPORTANT:
-     Water page now stores today's data as:
-
-     {
-       id: "YYYY-MM-DD",
-       date: "YYYY-MM-DD",
-       target: 2500,
-       consumed: 3250
-     }
-
-     Older records may use amountMl.
-
-     If today's aggregate record exists,
-     ALWAYS use consumed from that record.
-
-     This prevents:
-       Water = 3250 ml
-       Home  = 3000 ml
-
-     ===================================================== */
+  ===================================================== */
 
   const todayWaterRecord =
     useMemo(() => {
@@ -611,10 +720,6 @@ function Home() {
   const consumedToday =
     useMemo(() => {
 
-      /*
-        New format
-      */
-
       if (todayWaterRecord) {
         const consumed =
           Number(
@@ -625,27 +730,20 @@ function Home() {
         return Number.isFinite(
           consumed
         )
-          ? Math.max(0, consumed)
+          ? Math.max(
+              0,
+              consumed
+            )
           : 0;
       }
 
-
-      /*
-        Old format compatibility.
-
-        Older Water page records may look like:
-
-        {
-          date: "2026-09-09",
-          amountMl: 250
-        }
-      */
 
       const todayRecords =
         water.filter(
           (record) =>
             record?.date === today
         );
+
 
       return todayRecords.reduce(
         (total, record) => {
@@ -847,49 +945,94 @@ function Home() {
     useMemo(() => {
 
       const keys =
-        getLastNLocalDateKeys(
-          7
-        );
+        getLastNLocalDateKeys(7);
 
       return keys.map(
-        (key) => ({
-          day:
-            getWeekdayLabel(
-              key
-            ),
+        (key) => {
 
-          screenTimeHrs:
-            Math.round(
-              (
-                sumBy(
-                  screenTime.filter(
-                    (record) =>
-                      record.date ===
-                      key
-                  ),
-                  "minutes"
-                ) / 60
-              ) * 10
-            ) / 10,
+          const dayStudySessions =
+            studySessions.filter(
+              (session) =>
+                session?.date === key
+            );
 
-          activityHrs:
-            Math.round(
-              (
-                sumBy(
-                  activities.filter(
-                    (activity) =>
-                      activity.date ===
-                      key
-                  ),
-                  "duration"
-                ) / 60
-              ) * 10
-            ) / 10,
-        })
+          const studyMinutes =
+            dayStudySessions.reduce(
+              (total, session) => {
+
+                const minutes =
+                  Number(
+                    session?.duration ??
+                    session?.minutes ??
+                    session?.time ??
+                    0
+                  );
+
+                return (
+                  total +
+                  (
+                    Number.isFinite(
+                      minutes
+                    )
+                      ? Math.max(
+                          0,
+                          minutes
+                        )
+                      : 0
+                  )
+                );
+              },
+              0
+            );
+
+
+          return {
+            day:
+              getWeekdayLabel(
+                key
+              ),
+
+            screenTimeHrs:
+              Math.round(
+                (
+                  sumBy(
+                    screenTime.filter(
+                      (record) =>
+                        record.date ===
+                        key
+                    ),
+                    "minutes"
+                  ) / 60
+                ) * 10
+              ) / 10,
+
+            studyTimeHrs:
+              Math.round(
+                (
+                  studyMinutes / 60
+                ) * 10
+              ) / 10,
+
+            activityHrs:
+              Math.round(
+                (
+                  sumBy(
+                    activities.filter(
+                      (activity) =>
+                        activity.date ===
+                        key
+                    ),
+                    "duration"
+                  ) / 60
+                ) * 10
+              ) / 10,
+          };
+        }
       );
 
     }, [
       screenTime,
+      studySessions,
       activities,
     ]);
 
@@ -1067,7 +1210,7 @@ function Home() {
           </h2>
 
           <span>
-            Today
+            From Study Sessions
           </span>
 
         </div>
@@ -1094,7 +1237,7 @@ function Home() {
           </h2>
 
           <span>
-            Today
+            All screen activity today
           </span>
 
         </div>
@@ -1557,6 +1700,13 @@ function Home() {
                 dataKey="screenTimeHrs"
                 name="Screen time (h)"
                 stroke="#2563eb"
+              />
+
+              <Line
+                type="monotone"
+                dataKey="studyTimeHrs"
+                name="Study time (h)"
+                stroke="#9333ea"
               />
 
               <Line

@@ -1,6 +1,29 @@
 import { useEffect } from "react";
-import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
-import "./App.css";
+import {
+  BrowserRouter,
+  NavLink,
+  Route,
+  Routes,
+} from "react-router-dom";
+
+import {
+  Home as HomeIcon,
+  BookOpen,
+  CalendarDays,
+  Target,
+  Apple,
+  Droplets,
+  Smartphone,
+  Activity,
+  ClipboardCheck,
+  Zap,
+  BarChart3,
+  UserCircle,
+  StickyNote,
+  ListTodo,
+  Bell,
+  Clock3,
+} from "lucide-react";
 
 import Home from "./pages/Home";
 import Learning from "./pages/Learning";
@@ -15,261 +38,453 @@ import QuickTasks from "./pages/QuickTasks";
 import Reports from "./pages/Reports";
 import Profile from "./pages/Profile";
 
+import QuickNotes from "./pages/QuickNotes";
+import DailyTargets from "./pages/DailyTargets";
+import Reminders from "./pages/Reminders";
+import TodoList from "./pages/TodoList";
+import StudySessions from "./pages/StudySessions";
+
 import {
   ensureDailyReportHistory,
   createDailyReportForDate,
 } from "./utils/db";
 
-// ============================================================
-// DATE HELPER
-// ============================================================
 
-function getLocalDateKey(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
-// ============================================================
-// GET PREVIOUS LOCAL DATE
-// ============================================================
-
-function getPreviousDateKey(date = new Date()) {
-  const previousDate = new Date(date);
-
-  previousDate.setDate(previousDate.getDate() - 1);
-
-  return getLocalDateKey(previousDate);
-}
-
-// ============================================================
-// DAILY REPORT MANAGER
-// ============================================================
-//
-// Responsibilities:
-//
-// 1. On application start:
-//    - Check historical daily reports.
-//    - Create missing reports for previous days.
-//
-// 2. If the user keeps the dashboard open across midnight:
-//    - Detect the new day.
-//    - Save yesterday as a daily report.
-//
-// 3. Keep the process running automatically.
-//
-// ============================================================
+/* =========================================================
+   DAILY REPORT MANAGER
+========================================================= */
 
 function DailyReportManager() {
   useEffect(() => {
-    let lastCheckedDate = getLocalDateKey();
+    let cancelled = false;
 
-    const updateDailyReports = async () => {
+    async function updateDailyReports() {
       try {
-        const today = getLocalDateKey();
-
-        // ------------------------------------------------------
-        // First load / new day
-        // ------------------------------------------------------
-
-        if (today !== lastCheckedDate) {
-          const previousDay = getPreviousDateKey();
-
-          // Save yesterday's final dashboard state.
-          await createDailyReportForDate(previousDay);
-
-          lastCheckedDate = today;
-        }
-
-        // ------------------------------------------------------
-        // Catch up any older missing reports.
-        // ------------------------------------------------------
-
         await ensureDailyReportHistory();
+
+        if (cancelled) return;
+
+        const previousDate =
+          getPreviousLocalDateKey();
+
+        await createDailyReportForDate(
+          previousDate
+        );
       } catch (error) {
         console.error(
-          "Failed to update daily report history:",
+          "Failed to update daily reports:",
           error
         );
       }
-    };
+    }
 
-    // Run immediately when the application starts.
     updateDailyReports();
 
-    // ----------------------------------------------------------
-    // Check once every minute.
-    //
-    // This allows the dashboard to detect midnight even when
-    // the user keeps the browser tab open.
-    // ----------------------------------------------------------
-
-    const intervalId = setInterval(() => {
-      updateDailyReports();
-    }, 60 * 1000);
-
-    // ----------------------------------------------------------
-    // Cleanup
-    // ----------------------------------------------------------
-
     return () => {
-      clearInterval(intervalId);
+      cancelled = true;
     };
   }, []);
 
   return null;
 }
 
-// ============================================================
-// MAIN APP
-// ============================================================
+
+/* =========================================================
+   GET PREVIOUS LOCAL DATE
+========================================================= */
+
+function getPreviousLocalDateKey() {
+  const date = new Date();
+
+  date.setDate(
+    date.getDate() - 1
+  );
+
+  const year =
+    date.getFullYear();
+
+  const month =
+    String(
+      date.getMonth() + 1
+    ).padStart(2, "0");
+
+  const day =
+    String(
+      date.getDate()
+    ).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+
+/* =========================================================
+   SIDEBAR NAVIGATION
+========================================================= */
+
+const navigation = [
+  {
+    label: "Home",
+    path: "/",
+    icon: HomeIcon,
+  },
+  {
+    label: "Learning",
+    path: "/learning",
+    icon: BookOpen,
+  },
+  {
+    label: "Timetable",
+    path: "/timetable",
+    icon: CalendarDays,
+  },
+  {
+    label: "Goals",
+    path: "/goals",
+    icon: Target,
+  },
+  {
+    label: "Diet",
+    path: "/diet",
+    icon: Apple,
+  },
+  {
+    label: "Water",
+    path: "/water",
+    icon: Droplets,
+  },
+  {
+    label: "Screen Time",
+    path: "/screen-time",
+    icon: Smartphone,
+  },
+  {
+    label: "Activities",
+    path: "/activities",
+    icon: Activity,
+  },
+  {
+    label: "Assessments",
+    path: "/assessments",
+    icon: ClipboardCheck,
+  },
+  {
+    label: "Quick Tasks",
+    path: "/quick-tasks",
+    icon: Zap,
+  },
+  {
+    label: "Quick Notes",
+    path: "/quick-notes",
+    icon: StickyNote,
+  },
+  {
+    label: "Daily Targets",
+    path: "/daily-targets",
+    icon: Target,
+  },
+  {
+    label: "Reminders",
+    path: "/reminders",
+    icon: Bell,
+  },
+  {
+    label: "To-Do List",
+    path: "/todo-list",
+    icon: ListTodo,
+  },
+  {
+    label: "Study Sessions",
+    path: "/study-sessions",
+    icon: Clock3,
+  },
+  {
+    label: "Reports",
+    path: "/reports",
+    icon: BarChart3,
+  },
+  {
+    label: "Profile",
+    path: "/profile",
+    icon: UserCircle,
+  },
+];
+
+
+/* =========================================================
+   APP LAYOUT
+========================================================= */
+
+function AppLayout() {
+  return (
+    <div className="app-shell">
+
+      {/* ===================================================
+          SIDEBAR
+      =================================================== */}
+
+      <aside className="sidebar">
+
+        <div className="sidebar-brand">
+
+          <h1>
+            Taskbar
+          </h1>
+
+          <span>
+            Personal Dashboard
+          </span>
+
+        </div>
+
+
+        <nav className="sidebar-nav">
+
+          {navigation.map(
+            ({
+              label,
+              path,
+              icon: Icon,
+            }) => (
+
+              <NavLink
+                key={path}
+                to={path}
+                end={path === "/"}
+                className={({
+                  isActive,
+                }) =>
+                  `sidebar-link ${
+                    isActive
+                      ? "active"
+                      : ""
+                  }`
+                }
+              >
+
+                <Icon
+                  size={19}
+                />
+
+                <span>
+                  {label}
+                </span>
+
+              </NavLink>
+
+            )
+          )}
+
+        </nav>
+
+      </aside>
+
+
+      {/* ===================================================
+          MAIN CONTENT
+      =================================================== */}
+
+      <main className="main-content">
+
+        <Routes>
+
+          {/* HOME */}
+
+          <Route
+            path="/"
+            element={
+              <Home />
+            }
+          />
+
+
+          {/* LEARNING */}
+
+          <Route
+            path="/learning"
+            element={
+              <Learning />
+            }
+          />
+
+
+          {/* TIMETABLE */}
+
+          <Route
+            path="/timetable"
+            element={
+              <Timetable />
+            }
+          />
+
+
+          {/* GOALS */}
+
+          <Route
+            path="/goals"
+            element={
+              <Goals />
+            }
+          />
+
+
+          {/* DIET */}
+
+          <Route
+            path="/diet"
+            element={
+              <Diet />
+            }
+          />
+
+
+          {/* =================================================
+              WATER
+              
+              IMPORTANT:
+              This now loads the REAL Water.jsx.
+          ================================================= */}
+
+          <Route
+            path="/water"
+            element={
+              <Water />
+            }
+          />
+
+
+          {/* SCREEN TIME */}
+
+          <Route
+            path="/screen-time"
+            element={
+              <ScreenTime />
+            }
+          />
+
+
+          {/* ACTIVITIES */}
+
+          <Route
+            path="/activities"
+            element={
+              <Activities />
+            }
+          />
+
+
+          {/* ASSESSMENTS */}
+
+          <Route
+            path="/assessments"
+            element={
+              <Assessments />
+            }
+          />
+
+
+          {/* QUICK TASKS */}
+
+          <Route
+            path="/quick-tasks"
+            element={
+              <QuickTasks />
+            }
+          />
+
+
+          {/* QUICK NOTES */}
+
+          <Route
+            path="/quick-notes"
+            element={
+              <QuickNotes />
+            }
+          />
+
+
+          {/* DAILY TARGETS */}
+
+          <Route
+            path="/daily-targets"
+            element={
+              <DailyTargets />
+            }
+          />
+
+
+          {/* REMINDERS */}
+
+          <Route
+            path="/reminders"
+            element={
+              <Reminders />
+            }
+          />
+
+
+          {/* TO-DO LIST */}
+
+          <Route
+            path="/todo-list"
+            element={
+              <TodoList />
+            }
+          />
+
+
+          {/* STUDY SESSIONS */}
+
+          <Route
+            path="/study-sessions"
+            element={
+              <StudySessions />
+            }
+          />
+
+
+          {/* REPORTS */}
+
+          <Route
+            path="/reports"
+            element={
+              <Reports />
+            }
+          />
+
+
+          {/* PROFILE */}
+
+          <Route
+            path="/profile"
+            element={
+              <Profile />
+            }
+          />
+
+        </Routes>
+
+      </main>
+
+    </div>
+  );
+}
+
+
+/* =========================================================
+   MAIN APP
+========================================================= */
 
 function App() {
   return (
     <BrowserRouter>
+
       <DailyReportManager />
 
-      <div className="app">
+      <AppLayout />
 
-        {/* ================================================== */}
-        {/* SIDEBAR                                            */}
-        {/* ================================================== */}
-
-        <aside className="sidebar">
-
-          <h2>My Dashboard</h2>
-
-          <nav>
-
-            <NavLink to="/">
-              🏠 Home
-            </NavLink>
-
-            <NavLink to="/learning">
-              📚 Learning
-            </NavLink>
-
-            <NavLink to="/timetable">
-              🗓️ Timetable
-            </NavLink>
-
-            <NavLink to="/goals">
-              🎯 Goals
-            </NavLink>
-
-            <NavLink to="/diet">
-              🥗 Diet
-            </NavLink>
-
-            <NavLink to="/water">
-              💧 Water
-            </NavLink>
-
-            <NavLink to="/screen-time">
-              📱 Screen Time
-            </NavLink>
-
-            <NavLink to="/activities">
-              ✍️ Activities
-            </NavLink>
-
-            <NavLink to="/assessments">
-              📝 Assessments
-            </NavLink>
-
-            <NavLink to="/quick-tasks">
-              ⚡ Quick Tasks
-            </NavLink>
-
-            <NavLink to="/reports">
-              📊 Reports
-            </NavLink>
-
-            <NavLink to="/profile">
-              👤 Profile
-            </NavLink>
-
-          </nav>
-
-        </aside>
-
-        {/* ================================================== */}
-        {/* MAIN CONTENT                                       */}
-        {/* ================================================== */}
-
-        <main className="main-content">
-
-          <Routes>
-
-            <Route
-              path="/"
-              element={<Home />}
-            />
-
-            <Route
-              path="/learning"
-              element={<Learning />}
-            />
-
-            <Route
-              path="/timetable"
-              element={<Timetable />}
-            />
-
-            <Route
-              path="/goals"
-              element={<Goals />}
-            />
-
-            <Route
-              path="/diet"
-              element={<Diet />}
-            />
-
-            <Route
-              path="/water"
-              element={<Water />}
-            />
-
-            <Route
-              path="/screen-time"
-              element={<ScreenTime />}
-            />
-
-            <Route
-              path="/activities"
-              element={<Activities />}
-            />
-
-            <Route
-              path="/assessments"
-              element={<Assessments />}
-            />
-
-            <Route
-              path="/quick-tasks"
-              element={<QuickTasks />}
-            />
-
-            <Route
-              path="/reports"
-              element={<Reports />}
-            />
-
-            <Route
-              path="/profile"
-              element={<Profile />}
-            />
-
-          </Routes>
-
-        </main>
-
-      </div>
     </BrowserRouter>
   );
 }
+
 
 export default App;

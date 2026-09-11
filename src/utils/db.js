@@ -1,7 +1,7 @@
 // src/utils/db.js
 
 const DB_NAME = "personalDashboardDB";
-const DB_VERSION = 6;
+const DB_VERSION = 7;
 
 const STORES = {
   topics: "topics",
@@ -16,6 +16,13 @@ const STORES = {
   streak: "streak",
   profile: "profile",
   dailyReports: "dailyReports",
+
+  // PHASE 1
+  quickNotes: "quickNotes",
+  dailyTargets: "dailyTargets",
+  reminders: "reminders",
+  todoList: "todoList",
+  studySessions: "studySessions",
 };
 
 let dbPromise = null;
@@ -25,23 +32,37 @@ let dbPromise = null;
 ========================================================= */
 
 function openDatabase() {
-  if (dbPromise) return dbPromise;
+  if (dbPromise) {
+    return dbPromise;
+  }
 
   dbPromise = new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    const request = indexedDB.open(
+      DB_NAME,
+      DB_VERSION
+    );
 
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
 
       Object.values(STORES).forEach((storeName) => {
         if (!db.objectStoreNames.contains(storeName)) {
-          db.createObjectStore(storeName, { keyPath: "id" });
+          db.createObjectStore(storeName, {
+            keyPath: "id",
+          });
         }
       });
     };
 
     request.onsuccess = () => {
-      resolve(request.result);
+      const database = request.result;
+
+      database.onversionchange = () => {
+        database.close();
+        dbPromise = null;
+      };
+
+      resolve(database);
     };
 
     request.onerror = () => {
@@ -64,12 +85,24 @@ export async function getItems(storeName) {
   const db = await openDatabase();
 
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(storeName, "readonly");
-    const store = transaction.objectStore(storeName);
+    const transaction = db.transaction(
+      storeName,
+      "readonly"
+    );
+
+    const store = transaction.objectStore(
+      storeName
+    );
+
     const request = store.getAll();
 
-    request.onsuccess = () => resolve(request.result || []);
-    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      resolve(request.result || []);
+    };
+
+    request.onerror = () => {
+      reject(request.error);
+    };
   });
 }
 
@@ -77,12 +110,24 @@ export async function getItem(storeName, id) {
   const db = await openDatabase();
 
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(storeName, "readonly");
-    const store = transaction.objectStore(storeName);
+    const transaction = db.transaction(
+      storeName,
+      "readonly"
+    );
+
+    const store = transaction.objectStore(
+      storeName
+    );
+
     const request = store.get(id);
 
-    request.onsuccess = () => resolve(request.result || null);
-    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      resolve(request.result || null);
+    };
+
+    request.onerror = () => {
+      reject(request.error);
+    };
   });
 }
 
@@ -90,12 +135,24 @@ export async function putItem(storeName, item) {
   const db = await openDatabase();
 
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(storeName, "readwrite");
-    const store = transaction.objectStore(storeName);
+    const transaction = db.transaction(
+      storeName,
+      "readwrite"
+    );
+
+    const store = transaction.objectStore(
+      storeName
+    );
+
     const request = store.put(item);
 
-    request.onsuccess = () => resolve(item);
-    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      resolve(item);
+    };
+
+    request.onerror = () => {
+      reject(request.error);
+    };
   });
 }
 
@@ -106,43 +163,57 @@ export async function deleteItem(storeName, id) {
   const db = await openDatabase();
 
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(storeName, "readwrite");
-    const store = transaction.objectStore(storeName);
+    const transaction = db.transaction(
+      storeName,
+      "readwrite"
+    );
+
+    const store = transaction.objectStore(
+      storeName
+    );
+
     const request = store.delete(id);
 
-    request.onsuccess = () => resolve(true);
-    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      resolve(true);
+    };
+
+    request.onerror = () => {
+      reject(request.error);
+    };
   });
 }
 
 /* =========================================================
-   FIXED SAVE ITEMS
-   ---------------------------------------------------------
-   IMPORTANT:
-   saveItems now treats the passed array as the COMPLETE
-   current list.
-
-   If an old item is missing from the new array, it is deleted
-   from IndexedDB.
-
-   This fixes:
-   Goal deleted -> refresh -> Goal appears again.
+   SAVE COMPLETE LIST
 ========================================================= */
 
 export async function saveItems(storeName, items) {
   const db = await openDatabase();
 
   if (!Array.isArray(items)) {
-    throw new Error("saveItems expects an array");
+    throw new Error(
+      "saveItems expects an array"
+    );
   }
 
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(storeName, "readwrite");
-    const store = transaction.objectStore(storeName);
+    const transaction = db.transaction(
+      storeName,
+      "readwrite"
+    );
 
-    transaction.oncomplete = () => resolve(items);
+    const store = transaction.objectStore(
+      storeName
+    );
 
-    transaction.onerror = () => reject(transaction.error);
+    transaction.oncomplete = () => {
+      resolve(items);
+    };
+
+    transaction.onerror = () => {
+      reject(transaction.error);
+    };
 
     transaction.onabort = () => {
       reject(
@@ -168,7 +239,11 @@ export async function saveItems(storeName, items) {
         getAllRequest.result || [];
 
       existingItems.forEach((existingItem) => {
-        if (!incomingIds.has(existingItem?.id)) {
+        if (
+          !incomingIds.has(
+            existingItem?.id
+          )
+        ) {
           store.delete(existingItem.id);
         }
       });
@@ -193,18 +268,24 @@ export async function clearStore(storeName) {
       "readwrite"
     );
 
-    const store =
-      transaction.objectStore(storeName);
+    const store = transaction.objectStore(
+      storeName
+    );
 
     const request = store.clear();
 
-    request.onsuccess = () => resolve(true);
-    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      resolve(true);
+    };
+
+    request.onerror = () => {
+      reject(request.error);
+    };
   });
 }
 
 /* =========================================================
-   PAGE DATA HELPERS
+   EXISTING PAGE HELPERS
 ========================================================= */
 
 export const getTopics = () =>
@@ -268,11 +349,108 @@ export const saveStreak = (items) =>
   saveItems(STORES.streak, items);
 
 /* =========================================================
+   QUICK NOTES
+========================================================= */
+
+export const getQuickNotes = () =>
+  getItems(STORES.quickNotes);
+
+export const saveQuickNotes = (items) =>
+  saveItems(STORES.quickNotes, items);
+
+export const addQuickNote = (note) =>
+  putItem(STORES.quickNotes, note);
+
+export const updateQuickNote = (note) =>
+  putItem(STORES.quickNotes, note);
+
+export const deleteQuickNote = (id) =>
+  deleteItem(STORES.quickNotes, id);
+
+/* =========================================================
+   DAILY TARGETS
+========================================================= */
+
+export const getDailyTargets = () =>
+  getItems(STORES.dailyTargets);
+
+export const saveDailyTargets = (items) =>
+  saveItems(STORES.dailyTargets, items);
+
+export const addDailyTarget = (target) =>
+  putItem(STORES.dailyTargets, target);
+
+export const updateDailyTarget = (target) =>
+  putItem(STORES.dailyTargets, target);
+
+export const deleteDailyTarget = (id) =>
+  deleteItem(STORES.dailyTargets, id);
+
+/* =========================================================
+   REMINDERS
+========================================================= */
+
+export const getReminders = () =>
+  getItems(STORES.reminders);
+
+export const saveReminders = (items) =>
+  saveItems(STORES.reminders, items);
+
+export const addReminder = (reminder) =>
+  putItem(STORES.reminders, reminder);
+
+export const updateReminder = (reminder) =>
+  putItem(STORES.reminders, reminder);
+
+export const deleteReminder = (id) =>
+  deleteItem(STORES.reminders, id);
+
+/* =========================================================
+   TODO LIST
+========================================================= */
+
+export const getTodoList = () =>
+  getItems(STORES.todoList);
+
+export const saveTodoList = (items) =>
+  saveItems(STORES.todoList, items);
+
+export const addTodoItem = (item) =>
+  putItem(STORES.todoList, item);
+
+export const updateTodoItem = (item) =>
+  putItem(STORES.todoList, item);
+
+export const deleteTodoItem = (id) =>
+  deleteItem(STORES.todoList, id);
+
+/* =========================================================
+   STUDY SESSIONS
+========================================================= */
+
+export const getStudySessions = () =>
+  getItems(STORES.studySessions);
+
+export const saveStudySessions = (items) =>
+  saveItems(STORES.studySessions, items);
+
+export const addStudySession = (session) =>
+  putItem(STORES.studySessions, session);
+
+export const updateStudySession = (session) =>
+  putItem(STORES.studySessions, session);
+
+export const deleteStudySession = (id) =>
+  deleteItem(STORES.studySessions, id);
+
+/* =========================================================
    PROFILE
 ========================================================= */
 
 export async function getProfile() {
-  const items = await getItems(STORES.profile);
+  const items = await getItems(
+    STORES.profile
+  );
 
   return items.length > 0
     ? items[0]
@@ -281,7 +459,9 @@ export async function getProfile() {
 
 export async function saveProfile(profile) {
   if (!profile) {
-    throw new Error("Profile data is required");
+    throw new Error(
+      "Profile data is required"
+    );
   }
 
   const profileData = {
@@ -316,7 +496,9 @@ function getLocalDateString(
 }
 
 function normalizeDate(value) {
-  if (!value) return null;
+  if (!value) {
+    return null;
+  }
 
   if (
     value instanceof Date &&
@@ -337,7 +519,11 @@ function normalizeDate(value) {
 
   const parsed = new Date(value);
 
-  if (Number.isNaN(parsed.getTime())) {
+  if (
+    Number.isNaN(
+      parsed.getTime()
+    )
+  ) {
     return null;
   }
 
@@ -352,7 +538,7 @@ function itemMatchesDate(
     return false;
   }
 
-  const possibleDateFields = [
+  const fields = [
     "date",
     "createdAt",
     "completedAt",
@@ -364,14 +550,12 @@ function itemMatchesDate(
     "endDate",
   ];
 
-  return possibleDateFields.some(
-    (field) => {
-      const normalized =
-        normalizeDate(item[field]);
-
-      return normalized === targetDate;
-    }
-  );
+  return fields.some((field) => {
+    return (
+      normalizeDate(item[field]) ===
+      targetDate
+    );
+  });
 }
 
 function safeNumber(value) {
@@ -383,12 +567,95 @@ function safeNumber(value) {
 }
 
 /* =========================================================
+   STUDY SESSION HELPERS
+========================================================= */
+
+function getStudySessionMinutes(
+  session
+) {
+  if (!session) {
+    return 0;
+  }
+
+  const directDuration = safeNumber(
+    session.duration ??
+      session.durationMinutes ??
+      session.minutes
+  );
+
+  if (directDuration > 0) {
+    return directDuration;
+  }
+
+  if (
+    session.startTime &&
+    session.endTime
+  ) {
+    const startParts = String(
+      session.startTime
+    )
+      .split(":")
+      .map(Number);
+
+    const endParts = String(
+      session.endTime
+    )
+      .split(":")
+      .map(Number);
+
+    if (
+      startParts.length >= 2 &&
+      endParts.length >= 2 &&
+      Number.isFinite(startParts[0]) &&
+      Number.isFinite(startParts[1]) &&
+      Number.isFinite(endParts[0]) &&
+      Number.isFinite(endParts[1])
+    ) {
+      const start =
+        startParts[0] * 60 +
+        startParts[1];
+
+      const end =
+        endParts[0] * 60 +
+        endParts[1];
+
+      let difference = end - start;
+
+      if (difference < 0) {
+        difference += 24 * 60;
+      }
+
+      return Math.max(
+        0,
+        difference
+      );
+    }
+  }
+
+  return 0;
+}
+
+function getStudySessionsForDate(
+  studySessions,
+  targetDate
+) {
+  return studySessions.filter(
+    (session) =>
+      itemMatchesDate(
+        session,
+        targetDate
+      )
+  );
+}
+
+/* =========================================================
    DAILY REPORTS
 ========================================================= */
 
 export async function getDailyReports() {
-  const reports =
-    await getItems(STORES.dailyReports);
+  const reports = await getItems(
+    STORES.dailyReports
+  );
 
   return reports.sort((a, b) =>
     String(b.date).localeCompare(
@@ -403,7 +670,9 @@ export async function getDailyReport(
   const dateString =
     normalizeDate(date);
 
-  if (!dateString) return null;
+  if (!dateString) {
+    return null;
+  }
 
   return getItem(
     STORES.dailyReports,
@@ -417,36 +686,34 @@ export async function deleteDailyReport(
   const dateString =
     normalizeDate(date);
 
-  if (!dateString) return false;
+  if (!dateString) {
+    return false;
+  }
 
   return deleteItem(
     STORES.dailyReports,
     dateString
   );
 }
+
 /* =========================================================
    SAVE DAILY REPORT
 ========================================================= */
 
-/*
-  Save one daily report.
-
-  Each date has exactly one report:
-  id = YYYY-MM-DD
-
-  The database keeps only the newest 50 reports.
-*/
-
-export async function saveDailyReport(report) {
-  if (!report || !report.date) {
+export async function saveDailyReport(
+  report
+) {
+  if (
+    !report ||
+    !report.date
+  ) {
     throw new Error(
       "Daily report date is required"
     );
   }
 
-  const date = normalizeDate(
-    report.date
-  );
+  const date =
+    normalizeDate(report.date);
 
   if (!date) {
     throw new Error(
@@ -465,7 +732,6 @@ export async function saveDailyReport(report) {
     reportData
   );
 
-  // Keep only latest 50
   const reports =
     await getDailyReports();
 
@@ -485,7 +751,7 @@ export async function saveDailyReport(report) {
 }
 
 /* =========================================================
-   DAILY REPORT SNAPSHOT BUILDER
+   DAILY REPORT BUILDER
 ========================================================= */
 
 export async function createDailyReportForDate(
@@ -511,6 +777,7 @@ export async function createDailyReportForDate(
     assessments,
     quickTasks,
     streak,
+    studySessions,
   ] = await Promise.all([
     getTopics(),
     getGoals(),
@@ -522,6 +789,7 @@ export async function createDailyReportForDate(
     getAssessments(),
     getQuickTasks(),
     getStreak(),
+    getStudySessions(),
   ]);
 
   /* -------------------------
@@ -553,6 +821,26 @@ export async function createDailyReportForDate(
             item.studyTime ??
             item.minutes ??
             item.duration
+        ),
+      0
+    );
+
+  /* -------------------------
+     STUDY SESSIONS
+  ------------------------- */
+
+  const dailyStudySessions =
+    getStudySessionsForDate(
+      studySessions,
+      date
+    );
+
+  const studySessionMinutes =
+    dailyStudySessions.reduce(
+      (total, session) =>
+        total +
+        getStudySessionMinutes(
+          session
         ),
       0
     );
@@ -656,10 +944,8 @@ export async function createDailyReportForDate(
   const dailyWaterRecord =
     dailyWater.find(
       (item) =>
-        item?.consumed !==
-          undefined ||
-        item?.consumedMl !==
-          undefined
+        item?.consumed !== undefined ||
+        item?.consumedMl !== undefined
     );
 
   const waterConsumed =
@@ -689,12 +975,11 @@ export async function createDailyReportForDate(
   ------------------------- */
 
   const dailyScreenTime =
-    screenTime.filter(
-      (item) =>
-        itemMatchesDate(
-          item,
-          date
-        )
+    screenTime.filter((item) =>
+      itemMatchesDate(
+        item,
+        date
+      )
     );
 
   const totalScreenMinutes =
@@ -720,16 +1005,8 @@ export async function createDailyReportForDate(
               ""
           ).toLowerCase();
 
-        return (
-          category.includes(
-            "coding"
-          ) ||
-          category.includes(
-            "study"
-          ) ||
-          category.includes(
-            "learning"
-          )
+        return category.includes(
+          "coding"
         );
       })
       .reduce(
@@ -748,12 +1025,11 @@ export async function createDailyReportForDate(
   ------------------------- */
 
   const dailyActivities =
-    activities.filter(
-      (item) =>
-        itemMatchesDate(
-          item,
-          date
-        )
+    activities.filter((item) =>
+      itemMatchesDate(
+        item,
+        date
+      )
     );
 
   const activityMinutes =
@@ -773,12 +1049,11 @@ export async function createDailyReportForDate(
   ------------------------- */
 
   const dailyAssessments =
-    assessments.filter(
-      (item) =>
-        itemMatchesDate(
-          item,
-          date
-        )
+    assessments.filter((item) =>
+      itemMatchesDate(
+        item,
+        date
+      )
     );
 
   const assessmentsCompleted =
@@ -801,12 +1076,11 @@ export async function createDailyReportForDate(
   ------------------------- */
 
   const dailyTasks =
-    quickTasks.filter(
-      (item) =>
-        itemMatchesDate(
-          item,
-          date
-        )
+    quickTasks.filter((item) =>
+      itemMatchesDate(
+        item,
+        date
+      )
     );
 
   const tasksCompleted =
@@ -816,6 +1090,92 @@ export async function createDailyReportForDate(
         item.status === "completed" ||
         item.isCompleted === true
     ).length;
+
+  /* =========================================================
+     PRODUCTIVITY SCORE
+
+     Same scoring model used by Reports.jsx
+  ========================================================= */
+
+  const waterTarget =
+    Math.max(
+      ...dailyWater.map(
+        (item) =>
+          safeNumber(
+            item?.target ??
+              item?.targetMl ??
+              item?.dailyTargetMl
+          )
+      ),
+      0
+    );
+
+  const waterPercentage =
+    waterTarget > 0
+      ? Math.min(
+          100,
+          Math.round(
+            (waterConsumed /
+              waterTarget) *
+              100
+          )
+        )
+      : 0;
+
+  const taskCompletionRate =
+    dailyTasks.length > 0
+      ? Math.round(
+          (tasksCompleted /
+            dailyTasks.length) *
+            100
+        )
+      : tasksCompleted > 0
+        ? 100
+        : 0;
+
+  const learningScore =
+    learningCompleted > 0
+      ? 25
+      : 0;
+
+  const goalScore =
+    Math.round(
+      averageGoalProgress * 0.20
+    );
+
+  const taskScore =
+    Math.round(
+      taskCompletionRate * 0.20
+    );
+
+  const waterScore =
+    Math.round(
+      waterPercentage * 0.15
+    );
+
+  const activityScore =
+    activityMinutes > 0
+      ? 10
+      : 0;
+
+  const studyScore =
+    studySessionMinutes > 0
+      ? 10
+      : 0;
+
+  const productivityScore =
+    Math.min(
+      100,
+      Math.max(
+        0,
+        learningScore +
+          goalScore +
+          taskScore +
+          waterScore +
+          activityScore +
+          studyScore
+      )
+    );
 
   /* -------------------------
      STREAK
@@ -839,9 +1199,9 @@ export async function createDailyReportForDate(
         streakData.best
     );
 
-  /* -------------------------
-     REPORT
-  ------------------------- */
+  /* =========================================================
+     FINAL REPORT
+  ========================================================= */
 
   const report = {
     id: date,
@@ -850,6 +1210,8 @@ export async function createDailyReportForDate(
 
     createdAt:
       new Date().toISOString(),
+
+    productivityScore,
 
     learning: {
       total:
@@ -860,6 +1222,14 @@ export async function createDailyReportForDate(
 
       studyMinutes:
         learningTime,
+    },
+
+    studySessions: {
+      count:
+        dailyStudySessions.length,
+
+      minutes:
+        studySessionMinutes,
     },
 
     goals: {
@@ -891,11 +1261,12 @@ export async function createDailyReportForDate(
       healthy:
         healthyDiet,
 
-      other: Math.max(
-        0,
-        dailyDiet.length -
-          healthyDiet
-      ),
+      other:
+        Math.max(
+          0,
+          dailyDiet.length -
+            healthyDiet
+        ),
     },
 
     water: {
@@ -952,7 +1323,8 @@ export async function createDailyReportForDate(
         dailyDiet.length +
         dailyActivities.length +
         dailyAssessments.length +
-        dailyTasks.length,
+        dailyTasks.length +
+        dailyStudySessions.length,
 
       totalCompleted:
         learningCompleted +
@@ -961,8 +1333,28 @@ export async function createDailyReportForDate(
         tasksCompleted,
 
       studyMinutes:
-        learningTime +
-        codingMinutes,
+        studySessionMinutes,
+
+      studySessionMinutes:
+        studySessionMinutes,
+
+      screenMinutes:
+        totalScreenMinutes,
+
+      waterConsumed:
+        waterConsumed,
+
+      activityMinutes:
+        activityMinutes,
+
+      learningCompleted:
+        learningCompleted,
+
+      tasksCompleted:
+        tasksCompleted,
+
+      productivityScore:
+        productivityScore,
     },
   };
 
@@ -970,33 +1362,24 @@ export async function createDailyReportForDate(
     report
   );
 }
+
 /* =========================================================
    DAILY HISTORY
 ========================================================= */
 
 /*
-  Creates missing historical daily reports.
+  IMPORTANT:
 
-  Important:
-  We only create a report for a date when at least one
-  tracking item actually exists for that date.
+  Every historical date containing data is rebuilt.
 
-  We do NOT invent fake zero-data reports.
+  We DO NOT trust an old productivityScore.
+
+  The report is recalculated from the actual data.
 */
 
 export async function ensureDailyReportHistory() {
   const today =
     getLocalDateString();
-
-  const existingReports =
-    await getDailyReports();
-
-  const existingDates =
-    new Set(
-      existingReports.map(
-        (report) => report.date
-      )
-    );
 
   const [
     topics,
@@ -1008,6 +1391,7 @@ export async function ensureDailyReportHistory() {
     activities,
     assessments,
     quickTasks,
+    studySessions,
   ] = await Promise.all([
     getTopics(),
     getGoals(),
@@ -1018,6 +1402,7 @@ export async function ensureDailyReportHistory() {
     getActivities(),
     getAssessments(),
     getQuickTasks(),
+    getStudySessions(),
   ]);
 
   const allItems = [
@@ -1030,6 +1415,7 @@ export async function ensureDailyReportHistory() {
     ...activities,
     ...assessments,
     ...quickTasks,
+    ...studySessions,
   ];
 
   const datesWithData =
@@ -1056,7 +1442,7 @@ export async function ensureDailyReportHistory() {
 
       if (
         date &&
-        date < today
+        date <= today
       ) {
         datesWithData.add(date);
       }
@@ -1064,36 +1450,93 @@ export async function ensureDailyReportHistory() {
   });
 
   /*
-    Rebuild every historical date
-    that has data.
+    Rebuild ALL dates.
 
-    This keeps historical reports
-    synchronized with the latest
-    stored data.
+    This is the important fix.
   */
 
   const datesToUpdate =
     [...datesWithData].sort();
 
-  for (const date of datesToUpdate) {
+  for (
+    const date of datesToUpdate
+  ) {
     await createDailyReportForDate(
       date
     );
   }
 
   /*
-    Final safety trim.
-    Keep only latest 50 reports.
+    Also rebuild already existing
+    reports, even if their source
+    data is no longer detected.
+  */
+
+  const existingReports =
+    await getDailyReports();
+
+  for (
+    const report of existingReports
+  ) {
+    if (
+      report?.date &&
+      report.date <= today &&
+      !datesWithData.has(
+        report.date
+      )
+    ) {
+      /*
+        Only rebuild if the report
+        contains meaningful tracking
+        information.
+      */
+
+      const hasStoredData =
+        safeNumber(
+          report?.activities
+            ?.durationMinutes
+        ) > 0 ||
+        safeNumber(
+          report?.water
+            ?.consumedMl
+        ) > 0 ||
+        safeNumber(
+          report?.studySessions
+            ?.minutes
+        ) > 0 ||
+        safeNumber(
+          report?.learning
+            ?.completed
+        ) > 0 ||
+        safeNumber(
+          report?.quickTasks
+            ?.completed
+        ) > 0;
+
+      if (hasStoredData) {
+        await createDailyReportForDate(
+          report.date
+        );
+      }
+    }
+  }
+
+  /*
+    Keep newest 50 reports.
   */
 
   const reports =
     await getDailyReports();
 
-  if (reports.length > 50) {
+  if (
+    reports.length > 50
+  ) {
     const oldReports =
       reports.slice(50);
 
-    for (const report of oldReports) {
+    for (
+      const report of oldReports
+    ) {
       await deleteItem(
         STORES.dailyReports,
         report.id
@@ -1122,6 +1565,13 @@ export async function exportAllData() {
     streak,
     profile,
     dailyReports,
+
+    // PHASE 1
+    quickNotes,
+    dailyTargets,
+    reminders,
+    todoList,
+    studySessions,
   ] = await Promise.all([
     getTopics(),
     getGoals(),
@@ -1135,6 +1585,12 @@ export async function exportAllData() {
     getStreak(),
     getProfile(),
     getDailyReports(),
+
+    getQuickNotes(),
+    getDailyTargets(),
+    getReminders(),
+    getTodoList(),
+    getStudySessions(),
   ]);
 
   return {
@@ -1158,6 +1614,13 @@ export async function exportAllData() {
     profile,
 
     dailyReports,
+
+    // PHASE 1
+    quickNotes,
+    dailyTargets,
+    reminders,
+    todoList,
+    studySessions,
   };
 }
 
@@ -1165,9 +1628,7 @@ export async function exportAllData() {
    BACKUP VALIDATION
 ========================================================= */
 
-export function validateBackup(
-  data
-) {
+export function validateBackup(data) {
   if (
     !data ||
     typeof data !== "object"
@@ -1187,6 +1648,13 @@ export function validateBackup(
     "quickTasks",
     "streak",
     "dailyReports",
+
+    // PHASE 1
+    "quickNotes",
+    "dailyTargets",
+    "reminders",
+    "todoList",
+    "studySessions",
   ];
 
   for (
@@ -1215,9 +1683,7 @@ export function validateBackup(
    IMPORT ALL DATA
 ========================================================= */
 
-export async function importAllData(
-  data
-) {
+export async function importAllData(data) {
   if (
     !validateBackup(data)
   ) {
@@ -1238,13 +1704,22 @@ export async function importAllData(
     "quickTasks",
     "streak",
     "dailyReports",
+
+    // PHASE 1
+    "quickNotes",
+    "dailyTargets",
+    "reminders",
+    "todoList",
+    "studySessions",
   ];
 
   for (
     const key of arrayStores
   ) {
     if (
-      Array.isArray(data[key])
+      Array.isArray(
+        data[key]
+      )
     ) {
       await clearStore(
         STORES[key]
