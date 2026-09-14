@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+
 import {
   BrowserRouter,
   NavLink,
@@ -46,13 +47,105 @@ import Reminders from "./pages/Reminders";
 import TodoList from "./pages/TodoList";
 import StudySessions from "./pages/StudySessions";
 
-import Login from "./pages/Login";
-import { useAuth } from "./context/AuthContext";
-
 import {
   ensureDailyReportHistory,
   createDailyReportForDate,
 } from "./utils/db";
+
+import Login from "./pages/Login";
+import { useAuth } from "./context/AuthContext";
+
+import { testFirestore } from "./firebase/firestoreTest";
+
+import {
+  initialSync,
+  listenToStore,
+} from "./firebase/sync";
+
+
+/* =========================================================
+   FIRESTORE TEST
+========================================================= */
+
+function FirestoreTest() {
+  useEffect(() => {
+    testFirestore();
+  }, []);
+
+  return null;
+}
+
+
+/* =========================================================
+   QUICK NOTES SYNC
+========================================================= */
+
+function QuickNotesSync() {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    let unsubscribe = null;
+    let cancelled = false;
+
+    async function startSync() {
+      try {
+        console.log(
+          "🔄 Starting Taskbar Quick Notes sync..."
+        );
+
+        /*
+         * IMPORTANT:
+         * At this stage we are testing ONLY quickNotes.
+         */
+        await initialSync("quickNotes");
+
+        if (cancelled) {
+          return;
+        }
+
+        /*
+         * Start real-time listener.
+         *
+         * Changes made on another device will
+         * arrive from Firestore.
+         */
+        unsubscribe =
+          listenToStore("quickNotes");
+
+        console.log(
+          "✅ Quick Notes sync is active."
+        );
+
+      } catch (error) {
+        console.error(
+          "❌ Quick Notes sync failed:",
+          error
+        );
+      }
+    }
+
+    startSync();
+
+    return () => {
+      cancelled = true;
+
+      if (unsubscribe) {
+        unsubscribe();
+
+        console.log(
+          "🛑 Quick Notes sync stopped."
+        );
+      }
+    };
+  }, [user]);
+
+  return null;
+}
+
 
 /* =========================================================
    DAILY REPORT MANAGER
@@ -68,9 +161,13 @@ function DailyReportManager() {
 
         if (cancelled) return;
 
-        const previousDate = getPreviousLocalDateKey();
+        const previousDate =
+          getPreviousLocalDateKey();
 
-        await createDailyReportForDate(previousDate);
+        await createDailyReportForDate(
+          previousDate
+        );
+
       } catch (error) {
         console.error(
           "Failed to update daily reports:",
@@ -89,6 +186,7 @@ function DailyReportManager() {
   return null;
 }
 
+
 /* =========================================================
    GET PREVIOUS LOCAL DATE
 ========================================================= */
@@ -96,9 +194,12 @@ function DailyReportManager() {
 function getPreviousLocalDateKey() {
   const date = new Date();
 
-  date.setDate(date.getDate() - 1);
+  date.setDate(
+    date.getDate() - 1
+  );
 
-  const year = date.getFullYear();
+  const year =
+    date.getFullYear();
 
   const month = String(
     date.getMonth() + 1
@@ -110,6 +211,7 @@ function getPreviousLocalDateKey() {
 
   return `${year}-${month}-${day}`;
 }
+
 
 /* =========================================================
    SIDEBAR NAVIGATION
@@ -203,17 +305,14 @@ const navigation = [
   },
 ];
 
+
 /* =========================================================
    BACKGROUND LAYER
-
-   Spider-Man exists ONLY on non-Profile pages.
-
-   Profile is intentionally left without this layer because
-   Profile.jsx provides its own video background.
 ========================================================= */
 
 function PageBackground() {
-  const location = useLocation();
+  const location =
+    useLocation();
 
   const isProfilePage =
     location.pathname === "/profile";
@@ -230,28 +329,20 @@ function PageBackground() {
   );
 }
 
+
 /* =========================================================
    APP LAYOUT
 ========================================================= */
 
 function AppLayout() {
-  const location = useLocation();
+  const location =
+    useLocation();
 
   const isProfilePage =
     location.pathname === "/profile";
 
   return (
     <>
-      {/* ===================================================
-          BACKGROUND SELECTION
-
-          NON-PROFILE:
-          Spider-Man background
-
-          PROFILE:
-          No Spider-Man. Profile.jsx supplies the video.
-      =================================================== */}
-
       <PageBackground />
 
       <div
@@ -261,6 +352,7 @@ function AppLayout() {
             : "normal-route-active"
         }`}
       >
+
         {/* =================================================
             SIDEBAR
         ================================================= */}
@@ -268,7 +360,6 @@ function AppLayout() {
         <aside className="sidebar">
 
           <div className="sidebar-brand">
-
             <h1>
               Taskbar
             </h1>
@@ -276,8 +367,8 @@ function AppLayout() {
             <span>
               Personal Dashboard
             </span>
-
           </div>
+
 
           <nav className="sidebar-nav">
 
@@ -320,6 +411,7 @@ function AppLayout() {
 
         </aside>
 
+
         {/* =================================================
             MAIN CONTENT
         ================================================= */}
@@ -343,6 +435,7 @@ function AppLayout() {
               }
             />
 
+
             {/* LEARNING */}
 
             <Route
@@ -351,6 +444,7 @@ function AppLayout() {
                 <Learning />
               }
             />
+
 
             {/* TIMETABLE */}
 
@@ -361,6 +455,7 @@ function AppLayout() {
               }
             />
 
+
             {/* GOALS */}
 
             <Route
@@ -369,6 +464,7 @@ function AppLayout() {
                 <Goals />
               }
             />
+
 
             {/* DIET */}
 
@@ -379,6 +475,7 @@ function AppLayout() {
               }
             />
 
+
             {/* WATER */}
 
             <Route
@@ -387,6 +484,7 @@ function AppLayout() {
                 <Water />
               }
             />
+
 
             {/* SCREEN TIME */}
 
@@ -397,6 +495,7 @@ function AppLayout() {
               }
             />
 
+
             {/* ACTIVITIES */}
 
             <Route
@@ -405,6 +504,7 @@ function AppLayout() {
                 <Activities />
               }
             />
+
 
             {/* ASSESSMENTS */}
 
@@ -415,6 +515,7 @@ function AppLayout() {
               }
             />
 
+
             {/* QUICK TASKS */}
 
             <Route
@@ -423,6 +524,7 @@ function AppLayout() {
                 <QuickTasks />
               }
             />
+
 
             {/* QUICK NOTES */}
 
@@ -433,6 +535,7 @@ function AppLayout() {
               }
             />
 
+
             {/* DAILY TARGETS */}
 
             <Route
@@ -441,6 +544,7 @@ function AppLayout() {
                 <DailyTargets />
               }
             />
+
 
             {/* REMINDERS */}
 
@@ -451,6 +555,7 @@ function AppLayout() {
               }
             />
 
+
             {/* TO-DO LIST */}
 
             <Route
@@ -459,6 +564,7 @@ function AppLayout() {
                 <TodoList />
               }
             />
+
 
             {/* STUDY SESSIONS */}
 
@@ -469,6 +575,7 @@ function AppLayout() {
               }
             />
 
+
             {/* REPORTS */}
 
             <Route
@@ -477,6 +584,7 @@ function AppLayout() {
                 <Reports />
               }
             />
+
 
             {/* PROFILE */}
 
@@ -496,16 +604,21 @@ function AppLayout() {
   );
 }
 
+
 /* =========================================================
-   MAIN APP
+   PROTECTED APP
 ========================================================= */
 
-function App() {
-  const { user, loading } = useAuth();
+function ProtectedApp() {
+  const {
+    user,
+    loading,
+  } = useAuth();
 
-  /* =======================================================
-     FIREBASE AUTH LOADING
-  ======================================================= */
+
+  /* -----------------------------------------
+     Firebase is checking login status
+  ----------------------------------------- */
 
   if (loading) {
     return (
@@ -513,80 +626,85 @@ function App() {
         style={{
           minHeight: "100vh",
           display: "flex",
-          justifyContent: "center",
           alignItems: "center",
+          justifyContent: "center",
           background: "#0f0f0f",
-          color: "#ffffff",
+          color: "#fff",
           fontSize: "18px",
         }}
       >
-        Loading TaskBar...
+        Loading Taskbar...
       </div>
     );
   }
 
+
+  /* -----------------------------------------
+     User is NOT logged in
+  ----------------------------------------- */
+
+  if (!user) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    );
+  }
+
+
+  /* -----------------------------------------
+     User is logged in
+  ----------------------------------------- */
+
+  return (
+    <>
+      <FirestoreTest />
+
+      <QuickNotesSync />
+
+      <DailyReportManager />
+
+      <AppLayout />
+    </>
+  );
+}
+
+
+/* =========================================================
+   MAIN APP
+========================================================= */
+
+function App() {
   return (
     <BrowserRouter>
 
-      {/* =================================================
-          USER NOT LOGGED IN
-      ================================================= */}
+      <Routes>
 
-      {!user ? (
+        {/* LOGIN */}
 
-        <Routes>
+        <Route
+          path="/login"
+          element={
+            <Login />
+          }
+        />
 
-          <Route
-            path="/login"
-            element={
-              <Login />
-            }
-          />
 
-          <Route
-            path="*"
-            element={
-              <Navigate
-                to="/login"
-                replace
-              />
-            }
-          />
+        {/* PROTECTED TASKBAR */}
 
-        </Routes>
+        <Route
+          path="/*"
+          element={
+            <ProtectedApp />
+          }
+        />
 
-      ) : (
-
-        /* =================================================
-           USER LOGGED IN
-        ================================================= */
-
-        <>
-
-          <DailyReportManager />
-
-          <Routes>
-
-            <Route
-              path="/login"
-              element={
-                <Navigate
-                  to="/"
-                  replace
-                />
-              }
-            />
-
-          </Routes>
-
-          <AppLayout />
-
-        </>
-
-      )}
+      </Routes>
 
     </BrowserRouter>
   );
 }
+
 
 export default App;
