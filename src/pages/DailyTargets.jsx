@@ -18,6 +18,13 @@ import {
   getTodayLocalDateKey,
 } from "../utils/calculations";
 
+import {
+  getItemsFromFirestore,
+  saveItemToFirestore,
+  deleteItemFromFirestore,
+  subscribeToFirestoreCollection,
+} from "../firebase/firestore";
+
 const emptyForm = {
   title: "",
   target: "",
@@ -29,49 +36,231 @@ function DailyTargets() {
   const [targets, setTargets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [editingTarget, setEditingTarget] =
-    useState(null);
-  const [form, setForm] =
-    useState(emptyForm);
+  const [editingTarget, setEditingTarget] = useState(null);
+  const [form, setForm] = useState(emptyForm);
+
+  /*
+   * ============================================================
+   * INITIAL LOAD + FIREBASE SYNC
+   * ============================================================
+   */
 
   useEffect(() => {
+    let unsubscribe = null;
+    let isMounted = true;
+
     async function load() {
       try {
-        const saved =
-          await getDailyTargets();
+        // --------------------------------------------------------
+        // 1. Load local IndexedDB data first
+        // --------------------------------------------------------
 
-        setTargets(
-          Array.isArray(saved)
-            ? saved
-            : []
+        const localData = await getDailyTargets();
+
+        const localTargets = Array.isArray(localData)
+          ? localData
+          : [];
+
+        if (isMounted) {
+          setTargets(localTargets);
+        }
+
+        // --------------------------------------------------------
+        // 2. Get cloud data from Firestore
+        // --------------------------------------------------------
+
+        let cloudTargets = [];
+
+        try {
+          cloudTargets =
+            await getItemsFromFirestore("dailyTargets");
+
+          if (!Array.isArray(cloudTargets)) {
+            cloudTargets = [];
+          }
+        } catch (error) {
+          console.error(
+            "Failed to load daily targets from Firestore:",
+            error
+          );
+        }
+
+        // --------------------------------------------------------
+        // 3. Merge local + cloud data
+        //    Cloud version wins when the same ID exists.
+        // --------------------------------------------------------
+
+        const mergedMap = new Map();
+
+        localTargets.forEach((item) => {
+          if (item?.id !== undefined && item?.id !== null) {
+            mergedMap.set(String(item.id), {
+              ...item,
+              id: String(item.id),
+            });
+          }
+        });
+
+        cloudTargets.forEach((item) => {
+          if (item?.id !== undefined && item?.id !== null) {
+            mergedMap.set(String(item.id), {
+              ...item,
+              id: String(item.id),
+            });
+          }
+        });
+
+        const mergedTargets = Array.from(
+          mergedMap.values()
         );
+
+        if (isMounted) {
+          setTargets(mergedTargets);
+        }
+
+        // --------------------------------------------------------
+        // 4. Save merged data locally
+        // --------------------------------------------------------
+
+        await saveDailyTargets(mergedTargets);
+
+        // --------------------------------------------------------
+        // 5. Upload local-only targets to Firestore
+        // --------------------------------------------------------
+
+        const cloudIds = new Set(
+          cloudTargets.map((item) => String(item.id))
+        );
+
+        for (const item of localTargets) {
+          const itemId = String(item.id);
+
+          if (!cloudIds.has(itemId)) {
+            try {
+              await saveItemToFirestore(
+                "dailyTargets",
+                itemId,
+                {
+                  ...item,
+                  id: itemId,
+                }
+              );
+            } catch (error) {
+              console.error(
+                "Failed to upload daily target:",
+                error
+              );
+            }
+          }
+        }
+
+        // --------------------------------------------------------
+        // 6. Listen for real-time Firestore changes
+        // --------------------------------------------------------
+
+        unsubscribe =
+          subscribeToFirestoreCollection(
+            "dailyTargets",
+            async (firestoreItems) => {
+              if (!isMounted) {
+                return;
+              }
+
+              const normalizedItems =
+                Array.isArray(firestoreItems)
+                  ? firestoreItems.map((item) => ({
+                      ...item,
+                      id: String(item.id),
+                    }))
+                  : [];
+
+              setTargets(normalizedItems);
+
+              try {
+                await saveDailyTargets(
+                  normalizedItems
+                );
+              } catch (error) {
+                console.error(
+                  "Failed to update IndexedDB from Firestore:",
+                  error
+                );
+              }
+            }
+          );
       } catch (error) {
         console.error(
           "Failed to load daily targets:",
           error
         );
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
 
     load();
+
+    return () => {
+      isMounted = false;
+
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
-  async function persist(updated) {
-    setTargets(updated);
+  /*
+   * ============================================================
+   * SAVE DATA
+   * ============================================================
+   */
 
+  async function persist(updated, changedTarget = null) {
+    const normalizedTargets = updated.map((item) => ({
+      ...item,
+      id: String(item.id),
+    }));
+
+    // Update UI immediately
+    setTargets(normalizedTargets);
+
+    // Save locally
     try {
-      await saveDailyTargets(
-        updated
-      );
+      await saveDailyTargets(normalizedTargets);
     } catch (error) {
       console.error(
-        "Failed to save daily targets:",
+        "Failed to save daily targets locally:",
         error
       );
     }
+
+    // Save changed item to Firestore
+    if (changedTarget) {
+      try {
+        await saveItemToFirestore(
+          "dailyTargets",
+          String(changedTarget.id),
+          {
+            ...changedTarget,
+            id: String(changedTarget.id),
+          }
+        );
+      } catch (error) {
+        console.error(
+          "Failed to save daily target to Firestore:",
+          error
+        );
+      }
+    }
   }
+
+  /*
+   * ============================================================
+   * ADD FORM
+   * ============================================================
+   */
 
   function openAddForm() {
     setEditingTarget(null);
@@ -84,13 +273,18 @@ function DailyTargets() {
     setShowForm(true);
   }
 
+  /*
+   * ============================================================
+   * EDIT FORM
+   * ============================================================
+   */
+
   function openEditForm(target) {
     setEditingTarget(target);
 
     setForm({
       title: target.title || "",
-      target:
-        target.target ?? "",
+      target: target.target ?? "",
       unit: target.unit || "",
       date:
         target.date ||
@@ -100,11 +294,26 @@ function DailyTargets() {
     setShowForm(true);
   }
 
+  /*
+   * ============================================================
+   * CLOSE FORM
+   * ============================================================
+   */
+
   function closeForm() {
     setShowForm(false);
     setEditingTarget(null);
-    setForm(emptyForm);
+    setForm({
+      ...emptyForm,
+      date: getTodayLocalDateKey(),
+    });
   }
+
+  /*
+   * ============================================================
+   * ADD / UPDATE TARGET
+   * ============================================================
+   */
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -128,62 +337,86 @@ function DailyTargets() {
       return;
     }
 
-    const target = {
-      ...(editingTarget || {}),
-      title:
-        form.title.trim(),
-      target: targetValue,
-      unit:
-        form.unit.trim(),
-      date: form.date,
-      completed:
-        editingTarget?.completed ===
-        true,
-      completedAt:
-        editingTarget?.completedAt ||
-        null,
-    };
-
     if (editingTarget) {
+      const updatedTarget = {
+        ...editingTarget,
+        title: form.title.trim(),
+        target: targetValue,
+        unit: form.unit.trim(),
+        date: form.date,
+        completed:
+          editingTarget.completed === true,
+        completedAt:
+          editingTarget.completedAt || null,
+      };
+
+      const updated = targets.map((item) =>
+        String(item.id) ===
+        String(editingTarget.id)
+          ? updatedTarget
+          : item
+      );
+
       await persist(
-        targets.map((item) =>
-          item.id ===
-          editingTarget.id
-            ? target
-            : item
-        )
+        updated,
+        updatedTarget
       );
     } else {
-      await persist([
-        ...targets,
-        {
-          ...target,
-          id: Date.now(),
-        },
-      ]);
+      const newTarget = {
+        id: String(Date.now()),
+        title: form.title.trim(),
+        target: targetValue,
+        unit: form.unit.trim(),
+        date: form.date,
+        completed: false,
+        completedAt: null,
+      };
+
+      await persist(
+        [...targets, newTarget],
+        newTarget
+      );
     }
 
     closeForm();
   }
 
+  /*
+   * ============================================================
+   * COMPLETE / INCOMPLETE
+   * ============================================================
+   */
+
   async function toggleComplete(target) {
     const completed =
       target.completed !== true;
 
+    const updatedTarget = {
+      ...target,
+      completed,
+      completedAt: completed
+        ? new Date().toISOString()
+        : null,
+    };
+
+    const updated = targets.map((item) =>
+      String(item.id) ===
+      String(target.id)
+        ? updatedTarget
+        : item
+    );
+
     await persist(
-      targets.map((item) =>
-        item.id === target.id
-          ? {
-              ...item,
-              completed,
-              completedAt: completed
-                ? new Date().toISOString()
-                : null,
-            }
-          : item
-      )
+      updated,
+      updatedTarget
     );
   }
+
+  /*
+   * ============================================================
+   * DELETE TARGET
+   * ============================================================
+   */
 
   async function deleteTarget(target) {
     const confirmed =
@@ -195,13 +428,44 @@ function DailyTargets() {
       return;
     }
 
-    await persist(
-      targets.filter(
-        (item) =>
-          item.id !== target.id
-      )
+    const updated = targets.filter(
+      (item) =>
+        String(item.id) !==
+        String(target.id)
     );
+
+    // Update local state
+    setTargets(updated);
+
+    // Save locally
+    try {
+      await saveDailyTargets(updated);
+    } catch (error) {
+      console.error(
+        "Failed to delete target locally:",
+        error
+      );
+    }
+
+    // Delete from Firestore
+    try {
+      await deleteItemFromFirestore(
+        "dailyTargets",
+        String(target.id)
+      );
+    } catch (error) {
+      console.error(
+        "Failed to delete target from Firestore:",
+        error
+      );
+    }
   }
+
+  /*
+   * ============================================================
+   * TODAY'S DATA
+   * ============================================================
+   */
 
   const today =
     getTodayLocalDateKey();
@@ -231,6 +495,12 @@ function DailyTargets() {
             100
         );
 
+  /*
+   * ============================================================
+   * LOADING
+   * ============================================================
+   */
+
   if (loading) {
     return (
       <div className="module-page">
@@ -244,6 +514,12 @@ function DailyTargets() {
       </div>
     );
   }
+
+  /*
+   * ============================================================
+   * UI
+   * ============================================================
+   */
 
   return (
     <div className="module-page">
@@ -262,13 +538,21 @@ function DailyTargets() {
             Set measurable objectives for a specific day.
           </p>
 
+          <p
+            style={{
+              fontSize: "13px",
+              opacity: 0.7,
+              marginTop: "4px",
+            }}
+          >
+            Synced with your Taskbar account.
+          </p>
+
         </div>
 
         <button
           className="add-topic-button"
-          onClick={
-            openAddForm
-          }
+          onClick={openAddForm}
         >
           <Plus size={18} />
           Add Target
@@ -349,9 +633,7 @@ function DailyTargets() {
             <button
               type="button"
               className="close-button"
-              onClick={
-                closeForm
-              }
+              onClick={closeForm}
             >
               <X size={20} />
             </button>
@@ -361,9 +643,7 @@ function DailyTargets() {
 
           <form
             className="grid-form"
-            onSubmit={
-              handleSubmit
-            }
+            onSubmit={handleSubmit}
           >
 
             {/* TITLE */}
@@ -377,9 +657,7 @@ function DailyTargets() {
               <input
                 type="text"
                 placeholder="Example: Solve 3 DSA problems"
-                value={
-                  form.title
-                }
+                value={form.title}
                 onChange={(event) =>
                   setForm({
                     ...form,
@@ -404,9 +682,7 @@ function DailyTargets() {
                 type="number"
                 min="1"
                 placeholder="Example: 3"
-                value={
-                  form.target
-                }
+                value={form.target}
                 onChange={(event) =>
                   setForm({
                     ...form,
@@ -430,9 +706,7 @@ function DailyTargets() {
               <input
                 type="text"
                 placeholder="Example: problems, hours, pages"
-                value={
-                  form.unit
-                }
+                value={form.unit}
                 onChange={(event) =>
                   setForm({
                     ...form,
@@ -455,9 +729,7 @@ function DailyTargets() {
 
               <input
                 type="date"
-                value={
-                  form.date
-                }
+                value={form.date}
                 onChange={(event) =>
                   setForm({
                     ...form,
@@ -563,6 +835,7 @@ function DailyTargets() {
                       )
                     }
                   >
+
                     {target.completed ? (
                       <CheckCircle2
                         size={18}
@@ -572,6 +845,7 @@ function DailyTargets() {
                         size={18}
                       />
                     )}
+
                   </button>
 
 
@@ -657,6 +931,7 @@ function DailyTargets() {
           (target) =>
             target.date !== today
         ).length > 0 && (
+
           <div
             style={{
               marginTop: 14,
@@ -696,10 +971,13 @@ function DailyTargets() {
                         {target.date}
                         {" • "}
                         {target.target}
+
                         {target.unit
                           ? ` ${target.unit}`
                           : ""}
+
                         {" • "}
+
                         {target.completed
                           ? "Completed"
                           : "Pending"}
@@ -709,6 +987,8 @@ function DailyTargets() {
 
 
                     <div className="topic-actions">
+
+                      {/* EDIT */}
 
                       <button
                         type="button"
@@ -721,12 +1001,12 @@ function DailyTargets() {
                         }
                       >
                         <Pencil
-                          size={
-                            17
-                          }
+                          size={17}
                         />
                       </button>
 
+
+                      {/* DELETE */}
 
                       <button
                         type="button"
@@ -739,9 +1019,7 @@ function DailyTargets() {
                         }
                       >
                         <Trash2
-                          size={
-                            17
-                          }
+                          size={17}
                         />
                       </button>
 
