@@ -14,6 +14,13 @@ import {
   saveTodoList,
 } from "../utils/db";
 
+import {
+  getItemsFromFirestore,
+  saveItemToFirestore,
+  deleteItemFromFirestore,
+  subscribeToFirestoreCollection,
+} from "../firebase/firestore";
+
 const emptyForm = {
   title: "",
 };
@@ -22,53 +29,286 @@ function TodoList() {
   const [todos, setTodos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [editingTodo, setEditingTodo] =
-    useState(null);
-  const [form, setForm] =
-    useState(emptyForm);
+  const [editingTodo, setEditingTodo] = useState(null);
+  const [form, setForm] = useState(emptyForm);
+
+  /*
+   * ============================================================
+   * INITIAL LOAD + FIREBASE SYNC
+   * ============================================================
+   */
 
   useEffect(() => {
+    let unsubscribe = null;
+    let isMounted = true;
+
     async function load() {
       try {
-        const saved =
-          await getTodoList();
+        // --------------------------------------------------------
+        // 1. Load local IndexedDB data
+        // --------------------------------------------------------
 
-        setTodos(
-          Array.isArray(saved)
-            ? saved
-            : []
+        const localData = await getTodoList();
+
+        const localTodos = Array.isArray(localData)
+          ? localData
+          : [];
+
+        if (isMounted) {
+          setTodos(
+            localTodos.map((item) => ({
+              ...item,
+              id: String(item.id),
+            }))
+          );
+        }
+
+        // --------------------------------------------------------
+        // 2. Load cloud data from Firestore
+        // --------------------------------------------------------
+
+        let cloudTodos = [];
+
+        try {
+          cloudTodos =
+            await getItemsFromFirestore("todoList");
+
+          if (!Array.isArray(cloudTodos)) {
+            cloudTodos = [];
+          }
+        } catch (error) {
+          console.error(
+            "Failed to load todo list from Firestore:",
+            error
+          );
+        }
+
+        // --------------------------------------------------------
+        // 3. Normalize cloud IDs
+        // --------------------------------------------------------
+
+        cloudTodos = cloudTodos.map((item) => ({
+          ...item,
+          id: String(item.id),
+        }));
+
+        // --------------------------------------------------------
+        // 4. Merge local + cloud
+        //    Cloud version wins when same ID exists.
+        // --------------------------------------------------------
+
+        const mergedMap = new Map();
+
+        localTodos.forEach((item) => {
+          if (
+            item?.id !== undefined &&
+            item?.id !== null
+          ) {
+            const normalized = {
+              ...item,
+              id: String(item.id),
+            };
+
+            mergedMap.set(
+              String(item.id),
+              normalized
+            );
+          }
+        });
+
+        cloudTodos.forEach((item) => {
+          if (
+            item?.id !== undefined &&
+            item?.id !== null
+          ) {
+            mergedMap.set(
+              String(item.id),
+              item
+            );
+          }
+        });
+
+        const mergedTodos =
+          Array.from(mergedMap.values());
+
+        if (isMounted) {
+          setTodos(mergedTodos);
+        }
+
+        // --------------------------------------------------------
+        // 5. Save merged data locally
+        // --------------------------------------------------------
+
+        await saveTodoList(mergedTodos);
+
+        // --------------------------------------------------------
+        // 6. Upload local-only tasks to Firestore
+        // --------------------------------------------------------
+
+        const cloudIds = new Set(
+          cloudTodos.map((item) =>
+            String(item.id)
+          )
         );
+
+        for (const item of localTodos) {
+          if (
+            item?.id === undefined ||
+            item?.id === null
+          ) {
+            continue;
+          }
+
+          const itemId = String(item.id);
+
+          if (!cloudIds.has(itemId)) {
+            try {
+              await saveItemToFirestore(
+                "todoList",
+                itemId,
+                {
+                  ...item,
+                  id: itemId,
+                }
+              );
+            } catch (error) {
+              console.error(
+                "Failed to upload todo task:",
+                error
+              );
+            }
+          }
+        }
+
+        // --------------------------------------------------------
+        // 7. Real-time Firestore listener
+        // --------------------------------------------------------
+
+        unsubscribe =
+          subscribeToFirestoreCollection(
+            "todoList",
+            async (firestoreItems) => {
+              if (!isMounted) {
+                return;
+              }
+
+              const normalizedItems =
+                Array.isArray(firestoreItems)
+                  ? firestoreItems.map(
+                      (item) => ({
+                        ...item,
+                        id: String(item.id),
+                      })
+                    )
+                  : [];
+
+              setTodos(normalizedItems);
+
+              try {
+                await saveTodoList(
+                  normalizedItems
+                );
+              } catch (error) {
+                console.error(
+                  "Failed to update IndexedDB from Firestore:",
+                  error
+                );
+              }
+            }
+          );
       } catch (error) {
         console.error(
           "Failed to load todo list:",
           error
         );
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
 
     load();
+
+    return () => {
+      isMounted = false;
+
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
-  async function persist(updated) {
-    setTodos(updated);
+  /*
+   * ============================================================
+   * PERSIST
+   * ============================================================
+   */
 
+  async function persist(
+    updated,
+    changedTodo = null
+  ) {
+    const normalizedTodos =
+      updated.map((item) => ({
+        ...item,
+        id: String(item.id),
+      }));
+
+    // Update UI immediately
+    setTodos(normalizedTodos);
+
+    // Save locally
     try {
-      await saveTodoList(updated);
+      await saveTodoList(
+        normalizedTodos
+      );
     } catch (error) {
       console.error(
-        "Failed to save todo list:",
+        "Failed to save todo list locally:",
         error
       );
     }
+
+    // Save changed task to Firestore
+    if (changedTodo) {
+      try {
+        await saveItemToFirestore(
+          "todoList",
+          String(changedTodo.id),
+          {
+            ...changedTodo,
+            id: String(changedTodo.id),
+          }
+        );
+      } catch (error) {
+        console.error(
+          "Failed to save todo task to Firestore:",
+          error
+        );
+      }
+    }
   }
+
+  /*
+   * ============================================================
+   * ADD FORM
+   * ============================================================
+   */
 
   function openAddForm() {
     setEditingTodo(null);
-    setForm(emptyForm);
+    setForm({
+      ...emptyForm,
+    });
     setShowForm(true);
   }
+
+  /*
+   * ============================================================
+   * EDIT FORM
+   * ============================================================
+   */
 
   function openEditForm(todo) {
     setEditingTodo(todo);
@@ -80,11 +320,25 @@ function TodoList() {
     setShowForm(true);
   }
 
+  /*
+   * ============================================================
+   * CLOSE FORM
+   * ============================================================
+   */
+
   function closeForm() {
     setShowForm(false);
     setEditingTodo(null);
-    setForm(emptyForm);
+    setForm({
+      ...emptyForm,
+    });
   }
+
+  /*
+   * ============================================================
+   * ADD / EDIT TASK
+   * ============================================================
+   */
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -93,54 +347,84 @@ function TodoList() {
       return;
     }
 
-    const todo = {
-      ...(editingTodo || {}),
-      title: form.title.trim(),
-      completed:
-        editingTodo?.completed === true,
-      completedAt:
-        editingTodo?.completedAt || null,
-    };
-
     if (editingTodo) {
-      await persist(
+      const updatedTodo = {
+        ...editingTodo,
+        id: String(editingTodo.id),
+        title: form.title.trim(),
+        completed:
+          editingTodo.completed === true,
+        completedAt:
+          editingTodo.completedAt || null,
+      };
+
+      const updated =
         todos.map((item) =>
-          item.id === editingTodo.id
-            ? todo
+          String(item.id) ===
+          String(editingTodo.id)
+            ? updatedTodo
             : item
-        )
+        );
+
+      await persist(
+        updated,
+        updatedTodo
       );
     } else {
-      await persist([
-        ...todos,
-        {
-          ...todo,
-          id: Date.now(),
-        },
-      ]);
+      const newTodo = {
+        id: String(Date.now()),
+        title: form.title.trim(),
+        completed: false,
+        completedAt: null,
+      };
+
+      await persist(
+        [...todos, newTodo],
+        newTodo
+      );
     }
 
     closeForm();
   }
 
+  /*
+   * ============================================================
+   * COMPLETE / INCOMPLETE
+   * ============================================================
+   */
+
   async function toggleTodo(todo) {
     const completed =
       todo.completed !== true;
 
-    await persist(
+    const updatedTodo = {
+      ...todo,
+      id: String(todo.id),
+      completed,
+      completedAt: completed
+        ? new Date().toISOString()
+        : null,
+    };
+
+    const updated =
       todos.map((item) =>
-        item.id === todo.id
-          ? {
-              ...item,
-              completed,
-              completedAt: completed
-                ? new Date().toISOString()
-                : null,
-            }
+        String(item.id) ===
+        String(todo.id)
+          ? updatedTodo
           : item
-      )
+      );
+
+    await persist(
+      updated,
+      updatedTodo
     );
   }
+
+  /*
+   * ============================================================
+   * DELETE
+   * ============================================================
+   */
 
   async function deleteTodo(todo) {
     const confirmed =
@@ -152,13 +436,45 @@ function TodoList() {
       return;
     }
 
-    await persist(
+    const updated =
       todos.filter(
         (item) =>
-          item.id !== todo.id
-      )
-    );
+          String(item.id) !==
+          String(todo.id)
+      );
+
+    // Update local state
+    setTodos(updated);
+
+    // Save locally
+    try {
+      await saveTodoList(updated);
+    } catch (error) {
+      console.error(
+        "Failed to delete todo locally:",
+        error
+      );
+    }
+
+    // Delete from Firestore
+    try {
+      await deleteItemFromFirestore(
+        "todoList",
+        String(todo.id)
+      );
+    } catch (error) {
+      console.error(
+        "Failed to delete todo from Firestore:",
+        error
+      );
+    }
   }
+
+  /*
+   * ============================================================
+   * FILTERED DATA
+   * ============================================================
+   */
 
   const pendingTodos = useMemo(
     () =>
@@ -178,16 +494,29 @@ function TodoList() {
     [todos]
   );
 
+  /*
+   * ============================================================
+   * LOADING
+   * ============================================================
+   */
+
   if (loading) {
     return (
       <div className="module-page">
         <h1>✅ General To-Do</h1>
+
         <p>
           Loading to-do list...
         </p>
       </div>
     );
   }
+
+  /*
+   * ============================================================
+   * UI
+   * ============================================================
+   */
 
   return (
     <div className="module-page">
@@ -204,6 +533,16 @@ function TodoList() {
 
           <p>
             Manage general personal tasks outside your other Taskbar systems.
+          </p>
+
+          <p
+            style={{
+              fontSize: "13px",
+              opacity: 0.7,
+              marginTop: "4px",
+            }}
+          >
+            Synced with your Taskbar account.
           </p>
 
         </div>
