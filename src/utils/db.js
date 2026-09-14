@@ -448,13 +448,39 @@ export const deleteStudySession = (id) =>
 ========================================================= */
 
 export async function getProfile() {
+  const profile = await getItem(
+    STORES.profile,
+    "profile"
+  );
+
+  if (profile) {
+    return profile;
+  }
+
+  /*
+   * Migration fallback:
+   * If an older version saved the profile
+   * with another ID, find it and migrate it
+   * to the permanent "profile" ID.
+   */
   const items = await getItems(
     STORES.profile
   );
 
-  return items.length > 0
-    ? items[0]
-    : null;
+  if (!items.length) {
+    return null;
+  }
+
+  const oldProfile = items[0];
+
+  const migratedProfile = {
+    ...oldProfile,
+    id: "profile",
+  };
+
+  await saveProfile(migratedProfile);
+
+  return migratedProfile;
 }
 
 export async function saveProfile(profile) {
@@ -464,15 +490,106 @@ export async function saveProfile(profile) {
     );
   }
 
+  /*
+   * PROFILE IS A SINGLE RECORD.
+   *
+   * Always use the same IndexedDB key:
+   * "profile"
+   *
+   * This prevents old/legacy profile records
+   * from being returned after refresh.
+   */
+
   const profileData = {
     ...profile,
-    id: profile.id || "profile",
+
+    id: "profile",
+
+    /*
+     * Keep only valid custom shortcuts
+     * and never allow more than 4.
+     */
+    customShortcuts:
+      Array.isArray(
+        profile.customShortcuts
+      )
+        ? profile.customShortcuts
+            .filter(
+              (shortcut) =>
+                shortcut?.name?.trim() &&
+                shortcut?.url?.trim()
+            )
+            .slice(0, 4)
+        : [],
   };
 
-  return putItem(
-    STORES.profile,
-    profileData
-  );
+  const db = await openDatabase();
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(
+      STORES.profile,
+      "readwrite"
+    );
+
+    const store =
+      transaction.objectStore(
+        STORES.profile
+      );
+
+    /*
+     * Remove old profile records first.
+     */
+    const getAllRequest =
+      store.getAll();
+
+    getAllRequest.onsuccess = () => {
+      const existingProfiles =
+        getAllRequest.result || [];
+
+      existingProfiles.forEach(
+        (existingProfile) => {
+          if (
+            existingProfile?.id !==
+            "profile"
+          ) {
+            store.delete(
+              existingProfile.id
+            );
+          }
+        }
+      );
+
+      /*
+       * Save exactly one profile.
+       */
+      store.put(profileData);
+    };
+
+    getAllRequest.onerror = () => {
+      reject(
+        getAllRequest.error
+      );
+    };
+
+    transaction.oncomplete = () => {
+      resolve(profileData);
+    };
+
+    transaction.onerror = () => {
+      reject(
+        transaction.error
+      );
+    };
+
+    transaction.onabort = () => {
+      reject(
+        transaction.error ||
+          new Error(
+            "Profile save transaction aborted"
+          )
+      );
+    };
+  });
 }
 
 /* =========================================================
@@ -482,7 +599,8 @@ export async function saveProfile(profile) {
 function getLocalDateString(
   date = new Date()
 ) {
-  const year = date.getFullYear();
+  const year =
+    date.getFullYear();
 
   const month = String(
     date.getMonth() + 1
@@ -502,22 +620,31 @@ function normalizeDate(value) {
 
   if (
     value instanceof Date &&
-    !Number.isNaN(value.getTime())
+    !Number.isNaN(
+      value.getTime()
+    )
   ) {
-    return getLocalDateString(value);
+    return getLocalDateString(
+      value
+    );
   }
 
-  if (typeof value !== "string") {
+  if (
+    typeof value !== "string"
+  ) {
     return null;
   }
 
   if (
-    /^\d{4}-\d{2}-\d{2}$/.test(value)
+    /^\d{4}-\d{2}-\d{2}$/.test(
+      value
+    )
   ) {
     return value;
   }
 
-  const parsed = new Date(value);
+  const parsed =
+    new Date(value);
 
   if (
     Number.isNaN(
@@ -527,7 +654,9 @@ function normalizeDate(value) {
     return null;
   }
 
-  return getLocalDateString(parsed);
+  return getLocalDateString(
+    parsed
+  );
 }
 
 function itemMatchesDate(
@@ -550,18 +679,24 @@ function itemMatchesDate(
     "endDate",
   ];
 
-  return fields.some((field) => {
-    return (
-      normalizeDate(item[field]) ===
-      targetDate
-    );
-  });
+  return fields.some(
+    (field) => {
+      return (
+        normalizeDate(
+          item[field]
+        ) === targetDate
+      );
+    }
+  );
 }
 
 function safeNumber(value) {
-  const number = Number(value);
+  const number =
+    Number(value);
 
-  return Number.isFinite(number)
+  return Number.isFinite(
+    number
+  )
     ? number
     : 0;
 }
@@ -577,11 +712,12 @@ function getStudySessionMinutes(
     return 0;
   }
 
-  const directDuration = safeNumber(
-    session.duration ??
-      session.durationMinutes ??
-      session.minutes
-  );
+  const directDuration =
+    safeNumber(
+      session.duration ??
+        session.durationMinutes ??
+        session.minutes
+    );
 
   if (directDuration > 0) {
     return directDuration;
@@ -591,25 +727,35 @@ function getStudySessionMinutes(
     session.startTime &&
     session.endTime
   ) {
-    const startParts = String(
-      session.startTime
-    )
-      .split(":")
-      .map(Number);
+    const startParts =
+      String(
+        session.startTime
+      )
+        .split(":")
+        .map(Number);
 
-    const endParts = String(
-      session.endTime
-    )
-      .split(":")
-      .map(Number);
+    const endParts =
+      String(
+        session.endTime
+      )
+        .split(":")
+        .map(Number);
 
     if (
       startParts.length >= 2 &&
       endParts.length >= 2 &&
-      Number.isFinite(startParts[0]) &&
-      Number.isFinite(startParts[1]) &&
-      Number.isFinite(endParts[0]) &&
-      Number.isFinite(endParts[1])
+      Number.isFinite(
+        startParts[0]
+      ) &&
+      Number.isFinite(
+        startParts[1]
+      ) &&
+      Number.isFinite(
+        endParts[0]
+      ) &&
+      Number.isFinite(
+        endParts[1]
+      )
     ) {
       const start =
         startParts[0] * 60 +
@@ -619,10 +765,12 @@ function getStudySessionMinutes(
         endParts[0] * 60 +
         endParts[1];
 
-      let difference = end - start;
+      let difference =
+        end - start;
 
       if (difference < 0) {
-        difference += 24 * 60;
+        difference +=
+          24 * 60;
       }
 
       return Math.max(
@@ -647,7 +795,6 @@ function getStudySessionsForDate(
       )
   );
 }
-
 /* =========================================================
    DAILY REPORTS
 ========================================================= */
@@ -739,7 +886,9 @@ export async function saveDailyReport(
     const oldReports =
       reports.slice(50);
 
-    for (const oldReport of oldReports) {
+    for (
+      const oldReport of oldReports
+    ) {
       await deleteItem(
         STORES.dailyReports,
         oldReport.id
@@ -1093,8 +1242,6 @@ export async function createDailyReportForDate(
 
   /* =========================================================
      PRODUCTIVITY SCORE
-
-     Same scoring model used by Reports.jsx
   ========================================================= */
 
   const waterTarget =
@@ -1140,17 +1287,20 @@ export async function createDailyReportForDate(
 
   const goalScore =
     Math.round(
-      averageGoalProgress * 0.20
+      averageGoalProgress *
+        0.20
     );
 
   const taskScore =
     Math.round(
-      taskCompletionRate * 0.20
+      taskCompletionRate *
+        0.20
     );
 
   const waterScore =
     Math.round(
-      waterPercentage * 0.15
+      waterPercentage *
+        0.15
     );
 
   const activityScore =
@@ -1370,11 +1520,13 @@ export async function createDailyReportForDate(
 /*
   IMPORTANT:
 
-  Every historical date containing data is rebuilt.
+  Every historical date containing data
+  is rebuilt.
 
   We DO NOT trust an old productivityScore.
 
-  The report is recalculated from the actual data.
+  The report is recalculated from the
+  actual data.
 */
 
 export async function ensureDailyReportHistory() {
@@ -1444,15 +1596,15 @@ export async function ensureDailyReportHistory() {
         date &&
         date <= today
       ) {
-        datesWithData.add(date);
+        datesWithData.add(
+          date
+        );
       }
     });
   });
 
   /*
     Rebuild ALL dates.
-
-    This is the important fix.
   */
 
   const datesToUpdate =
@@ -1662,7 +1814,9 @@ export function validateBackup(data) {
   ) {
     if (
       data[key] !== undefined &&
-      !Array.isArray(data[key])
+      !Array.isArray(
+        data[key]
+      )
     ) {
       return false;
     }
@@ -1739,9 +1893,8 @@ export async function importAllData(data) {
 
     await saveProfile({
       ...data.profile,
-      id:
-        data.profile.id ||
-        "profile",
+
+      id: "profile",
     });
   }
 
@@ -1752,4 +1905,6 @@ export async function importAllData(data) {
    EXPORTS
 ========================================================= */
 
-export { STORES };
+export {
+  STORES
+};

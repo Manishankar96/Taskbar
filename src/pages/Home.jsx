@@ -500,7 +500,10 @@ function Home() {
 
     const todayDate = toDate(today);
     const yesterdayDate = new Date(todayDate);
-    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+
+    yesterdayDate.setDate(
+      yesterdayDate.getDate() - 1
+    );
 
     const getDateKey = (dateValue) =>
       `${dateValue.getFullYear()}-${String(
@@ -518,20 +521,28 @@ function Home() {
     if (dateSet.has(today)) {
       let cursorDate = toDate(today);
 
-      while (dateSet.has(getDateKey(cursorDate))) {
+      while (
+        dateSet.has(
+          getDateKey(cursorDate)
+        )
+      ) {
         current += 1;
+
         cursorDate.setDate(
           cursorDate.getDate() - 1
         );
       }
     }
+
     // When today has not been used yet, yesterday's
     // consecutive streak is still alive during today.
     // Today counts as the current streak day automatically.
-    else if (dateSet.has(yesterdayKey)) {
-      let cursorDate = toDate(
-        yesterdayKey
-      );
+    else if (
+      dateSet.has(yesterdayKey)
+    ) {
+      let cursorDate =
+        toDate(yesterdayKey);
+
       let completedDays = 0;
 
       while (
@@ -540,12 +551,14 @@ function Home() {
         )
       ) {
         completedDays += 1;
+
         cursorDate.setDate(
           cursorDate.getDate() - 1
         );
       }
 
-      current = completedDays + 1;
+      current =
+        completedDays + 1;
     }
 
     best = Math.max(
@@ -827,26 +840,39 @@ function Home() {
   ===================================================== */
 
   const todaysSchedule =
-    useMemo(
-      () =>
-        timetable
-          .filter(
-            (entry) =>
-              entry.day === today
-          )
-          .sort(
-            (a, b) =>
-              (
-                a.startTime || ""
-              ).localeCompare(
-                b.startTime || ""
-              )
-          ),
-      [
-        timetable,
-        today,
-      ]
-    );
+    useMemo(() => {
+      const dayIndex =
+        currentTime.getDay();
+
+      const todayDayName =
+        [
+          "Sunday",
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+        ][dayIndex];
+
+      return timetable
+        .filter(
+          (entry) =>
+            entry.day ===
+            todayDayName
+        )
+        .sort(
+          (a, b) =>
+            (
+              a.startTime || ""
+            ).localeCompare(
+              b.startTime || ""
+            )
+        );
+    }, [
+      timetable,
+      currentTime,
+    ]);
 
 
   /* =====================================================

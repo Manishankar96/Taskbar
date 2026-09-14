@@ -2,8 +2,10 @@ import { useEffect } from "react";
 import {
   BrowserRouter,
   NavLink,
+  Navigate,
   Route,
   Routes,
+  useLocation,
 } from "react-router-dom";
 
 import {
@@ -44,11 +46,13 @@ import Reminders from "./pages/Reminders";
 import TodoList from "./pages/TodoList";
 import StudySessions from "./pages/StudySessions";
 
+import Login from "./pages/Login";
+import { useAuth } from "./context/AuthContext";
+
 import {
   ensureDailyReportHistory,
   createDailyReportForDate,
 } from "./utils/db";
-
 
 /* =========================================================
    DAILY REPORT MANAGER
@@ -64,12 +68,9 @@ function DailyReportManager() {
 
         if (cancelled) return;
 
-        const previousDate =
-          getPreviousLocalDateKey();
+        const previousDate = getPreviousLocalDateKey();
 
-        await createDailyReportForDate(
-          previousDate
-        );
+        await createDailyReportForDate(previousDate);
       } catch (error) {
         console.error(
           "Failed to update daily reports:",
@@ -88,7 +89,6 @@ function DailyReportManager() {
   return null;
 }
 
-
 /* =========================================================
    GET PREVIOUS LOCAL DATE
 ========================================================= */
@@ -96,26 +96,20 @@ function DailyReportManager() {
 function getPreviousLocalDateKey() {
   const date = new Date();
 
-  date.setDate(
-    date.getDate() - 1
-  );
+  date.setDate(date.getDate() - 1);
 
-  const year =
-    date.getFullYear();
+  const year = date.getFullYear();
 
-  const month =
-    String(
-      date.getMonth() + 1
-    ).padStart(2, "0");
+  const month = String(
+    date.getMonth() + 1
+  ).padStart(2, "0");
 
-  const day =
-    String(
-      date.getDate()
-    ).padStart(2, "0");
+  const day = String(
+    date.getDate()
+  ).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
 }
-
 
 /* =========================================================
    SIDEBAR NAVIGATION
@@ -209,282 +203,390 @@ const navigation = [
   },
 ];
 
+/* =========================================================
+   BACKGROUND LAYER
+
+   Spider-Man exists ONLY on non-Profile pages.
+
+   Profile is intentionally left without this layer because
+   Profile.jsx provides its own video background.
+========================================================= */
+
+function PageBackground() {
+  const location = useLocation();
+
+  const isProfilePage =
+    location.pathname === "/profile";
+
+  if (isProfilePage) {
+    return null;
+  }
+
+  return (
+    <div
+      className="taskbar-spiderman-background"
+      aria-hidden="true"
+    />
+  );
+}
 
 /* =========================================================
    APP LAYOUT
 ========================================================= */
 
 function AppLayout() {
+  const location = useLocation();
+
+  const isProfilePage =
+    location.pathname === "/profile";
+
   return (
-    <div className="app-shell">
-
+    <>
       {/* ===================================================
-          SIDEBAR
+          BACKGROUND SELECTION
+
+          NON-PROFILE:
+          Spider-Man background
+
+          PROFILE:
+          No Spider-Man. Profile.jsx supplies the video.
       =================================================== */}
 
-      <aside className="sidebar">
-
-        <div className="sidebar-brand">
-
-          <h1>
-            Taskbar
-          </h1>
-
-          <span>
-            Personal Dashboard
-          </span>
-
-        </div>
-
-
-        <nav className="sidebar-nav">
-
-          {navigation.map(
-            ({
-              label,
-              path,
-              icon: Icon,
-            }) => (
-
-              <NavLink
-                key={path}
-                to={path}
-                end={path === "/"}
-                className={({
-                  isActive,
-                }) =>
-                  `sidebar-link ${
-                    isActive
-                      ? "active"
-                      : ""
-                  }`
-                }
-              >
-
-                <Icon
-                  size={19}
-                />
-
-                <span>
-                  {label}
-                </span>
-
-              </NavLink>
-
-            )
-          )}
-
-        </nav>
-
-      </aside>
-
-
-      {/* ===================================================
-          MAIN CONTENT
-      =================================================== */}
-
-      <main className="main-content">
-
-        <Routes>
-
-          {/* HOME */}
-
-          <Route
-            path="/"
-            element={
-              <Home />
-            }
-          />
-
-
-          {/* LEARNING */}
-
-          <Route
-            path="/learning"
-            element={
-              <Learning />
-            }
-          />
-
-
-          {/* TIMETABLE */}
-
-          <Route
-            path="/timetable"
-            element={
-              <Timetable />
-            }
-          />
-
-
-          {/* GOALS */}
-
-          <Route
-            path="/goals"
-            element={
-              <Goals />
-            }
-          />
-
-
-          {/* DIET */}
-
-          <Route
-            path="/diet"
-            element={
-              <Diet />
-            }
-          />
-
-
-          {/* =================================================
-              WATER
-              
-              IMPORTANT:
-              This now loads the REAL Water.jsx.
-          ================================================= */}
-
-          <Route
-            path="/water"
-            element={
-              <Water />
-            }
-          />
-
-
-          {/* SCREEN TIME */}
-
-          <Route
-            path="/screen-time"
-            element={
-              <ScreenTime />
-            }
-          />
-
-
-          {/* ACTIVITIES */}
-
-          <Route
-            path="/activities"
-            element={
-              <Activities />
-            }
-          />
-
-
-          {/* ASSESSMENTS */}
-
-          <Route
-            path="/assessments"
-            element={
-              <Assessments />
-            }
-          />
-
-
-          {/* QUICK TASKS */}
-
-          <Route
-            path="/quick-tasks"
-            element={
-              <QuickTasks />
-            }
-          />
-
-
-          {/* QUICK NOTES */}
-
-          <Route
-            path="/quick-notes"
-            element={
-              <QuickNotes />
-            }
-          />
-
-
-          {/* DAILY TARGETS */}
-
-          <Route
-            path="/daily-targets"
-            element={
-              <DailyTargets />
-            }
-          />
-
-
-          {/* REMINDERS */}
-
-          <Route
-            path="/reminders"
-            element={
-              <Reminders />
-            }
-          />
-
-
-          {/* TO-DO LIST */}
-
-          <Route
-            path="/todo-list"
-            element={
-              <TodoList />
-            }
-          />
-
-
-          {/* STUDY SESSIONS */}
-
-          <Route
-            path="/study-sessions"
-            element={
-              <StudySessions />
-            }
-          />
-
-
-          {/* REPORTS */}
-
-          <Route
-            path="/reports"
-            element={
-              <Reports />
-            }
-          />
-
-
-          {/* PROFILE */}
-
-          <Route
-            path="/profile"
-            element={
-              <Profile />
-            }
-          />
-
-        </Routes>
-
-      </main>
-
-    </div>
+      <PageBackground />
+
+      <div
+        className={`app-shell ${
+          isProfilePage
+            ? "profile-route-active"
+            : "normal-route-active"
+        }`}
+      >
+        {/* =================================================
+            SIDEBAR
+        ================================================= */}
+
+        <aside className="sidebar">
+
+          <div className="sidebar-brand">
+
+            <h1>
+              Taskbar
+            </h1>
+
+            <span>
+              Personal Dashboard
+            </span>
+
+          </div>
+
+          <nav className="sidebar-nav">
+
+            {navigation.map(
+              ({
+                label,
+                path,
+                icon: Icon,
+              }) => (
+
+                <NavLink
+                  key={path}
+                  to={path}
+                  end={path === "/"}
+                  className={({
+                    isActive,
+                  }) =>
+                    `sidebar-link ${
+                      isActive
+                        ? "active"
+                        : ""
+                    }`
+                  }
+                >
+
+                  <Icon
+                    size={19}
+                  />
+
+                  <span>
+                    {label}
+                  </span>
+
+                </NavLink>
+
+              )
+            )}
+
+          </nav>
+
+        </aside>
+
+        {/* =================================================
+            MAIN CONTENT
+        ================================================= */}
+
+        <main
+          className={`main-content ${
+            isProfilePage
+              ? "profile-main-content"
+              : "normal-main-content"
+          }`}
+        >
+
+          <Routes>
+
+            {/* HOME */}
+
+            <Route
+              path="/"
+              element={
+                <Home />
+              }
+            />
+
+            {/* LEARNING */}
+
+            <Route
+              path="/learning"
+              element={
+                <Learning />
+              }
+            />
+
+            {/* TIMETABLE */}
+
+            <Route
+              path="/timetable"
+              element={
+                <Timetable />
+              }
+            />
+
+            {/* GOALS */}
+
+            <Route
+              path="/goals"
+              element={
+                <Goals />
+              }
+            />
+
+            {/* DIET */}
+
+            <Route
+              path="/diet"
+              element={
+                <Diet />
+              }
+            />
+
+            {/* WATER */}
+
+            <Route
+              path="/water"
+              element={
+                <Water />
+              }
+            />
+
+            {/* SCREEN TIME */}
+
+            <Route
+              path="/screen-time"
+              element={
+                <ScreenTime />
+              }
+            />
+
+            {/* ACTIVITIES */}
+
+            <Route
+              path="/activities"
+              element={
+                <Activities />
+              }
+            />
+
+            {/* ASSESSMENTS */}
+
+            <Route
+              path="/assessments"
+              element={
+                <Assessments />
+              }
+            />
+
+            {/* QUICK TASKS */}
+
+            <Route
+              path="/quick-tasks"
+              element={
+                <QuickTasks />
+              }
+            />
+
+            {/* QUICK NOTES */}
+
+            <Route
+              path="/quick-notes"
+              element={
+                <QuickNotes />
+              }
+            />
+
+            {/* DAILY TARGETS */}
+
+            <Route
+              path="/daily-targets"
+              element={
+                <DailyTargets />
+              }
+            />
+
+            {/* REMINDERS */}
+
+            <Route
+              path="/reminders"
+              element={
+                <Reminders />
+              }
+            />
+
+            {/* TO-DO LIST */}
+
+            <Route
+              path="/todo-list"
+              element={
+                <TodoList />
+              }
+            />
+
+            {/* STUDY SESSIONS */}
+
+            <Route
+              path="/study-sessions"
+              element={
+                <StudySessions />
+              }
+            />
+
+            {/* REPORTS */}
+
+            <Route
+              path="/reports"
+              element={
+                <Reports />
+              }
+            />
+
+            {/* PROFILE */}
+
+            <Route
+              path="/profile"
+              element={
+                <Profile />
+              }
+            />
+
+          </Routes>
+
+        </main>
+
+      </div>
+    </>
   );
 }
-
 
 /* =========================================================
    MAIN APP
 ========================================================= */
 
 function App() {
+  const { user, loading } = useAuth();
+
+  /* =======================================================
+     FIREBASE AUTH LOADING
+  ======================================================= */
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          background: "#0f0f0f",
+          color: "#ffffff",
+          fontSize: "18px",
+        }}
+      >
+        Loading TaskBar...
+      </div>
+    );
+  }
+
   return (
     <BrowserRouter>
 
-      <DailyReportManager />
+      {/* =================================================
+          USER NOT LOGGED IN
+      ================================================= */}
 
-      <AppLayout />
+      {!user ? (
+
+        <Routes>
+
+          <Route
+            path="/login"
+            element={
+              <Login />
+            }
+          />
+
+          <Route
+            path="*"
+            element={
+              <Navigate
+                to="/login"
+                replace
+              />
+            }
+          />
+
+        </Routes>
+
+      ) : (
+
+        /* =================================================
+           USER LOGGED IN
+        ================================================= */
+
+        <>
+
+          <DailyReportManager />
+
+          <Routes>
+
+            <Route
+              path="/login"
+              element={
+                <Navigate
+                  to="/"
+                  replace
+                />
+              }
+            />
+
+          </Routes>
+
+          <AppLayout />
+
+        </>
+
+      )}
 
     </BrowserRouter>
   );
 }
-
 
 export default App;

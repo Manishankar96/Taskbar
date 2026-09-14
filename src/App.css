@@ -7222,9 +7222,7 @@ body {
 .app-shell > .main-content {
   position: relative !important;
   isolation: isolate !important;
-  background:
-    url("/spiderman-bg.jpg") center bottom / cover no-repeat fixed,
-    #000000 !important;
+  background: #000000 !important;
   overflow-x: hidden !important;
 }
 
@@ -8078,4 +8076,2024 @@ textarea:focus {
 .page-header h1 svg,
 .home-header h1 svg {
   background-color: transparent !important;
+}
+/* =========================================================
+   REPORTS HISTORY — ACTIVE TEXT FIX
+   ========================================================= */
+
+.reports-page .history-item.active {
+  color: #0f172a !important;
+}
+
+.reports-page .history-item.active > div:first-child strong {
+  color: #0f172a !important;
+}
+
+.reports-page .history-item.active > div:first-child span {
+  color: #64748b !important;
+}
+
+.reports-page .history-item.active > div:last-child strong {
+  color: #e50914 !important;
+}
+
+/* =========================================================
+   PROFILE PAGE — VIDEO BACKGROUND + GLASS UI
+   ========================================================= */
+
+/*
+   These styles are intentionally scoped to .profile-video-page
+   so the rest of Taskbar keeps its existing design.
+*/
+
+.profile-video-page {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  max-width: 1450px;
+  min-height: calc(100vh - 64px);
+  margin: 0 auto;
+  padding: 10px 0 40px;
+  overflow: hidden;
+  border-radius: 24px;
+}
+
+/* Full Profile-only background video */
+.profile-video-page .profile-background-video {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  background: #07111f;
+}
+
+/* Subtle dark layer — video remains clearly visible */
+.profile-video-page .profile-video-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(3, 10, 20, 0.34) 0%,
+      rgba(3, 10, 20, 0.18) 45%,
+      rgba(3, 10, 20, 0.38) 100%
+    );
+}
+
+/* Keeps all Profile content above the video */
+.profile-video-page .profile-video-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}
+
+/* Header */
+.profile-video-page .page-header {
+  margin: 0 16px 22px;
+  padding: 20px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.13);
+  box-shadow:
+    0 12px 35px rgba(0, 0, 0, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.profile-video-page .page-header h1 {
+  color: #ffffff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+
+.profile-video-page .page-header p {
+  color: rgba(255, 255, 255, 0.84);
+}
+
+/* All Profile section cards become transparent glass */
+.profile-video-page .section-card,
+.profile-video-page .profile-form-card {
+  position: relative;
+  margin-left: 16px;
+  margin-right: 16px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.27);
+  box-shadow:
+    0 18px 45px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(13px) saturate(125%);
+  -webkit-backdrop-filter: blur(13px) saturate(125%);
+}
+
+.profile-video-page .section-card:hover,
+.profile-video-page .profile-form-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.40);
+  box-shadow:
+    0 22px 50px rgba(0, 0, 0, 0.20),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+/* Section headings */
+.profile-video-page .section-title h2,
+.profile-video-page .section-card h3,
+.profile-video-page .section-card > p {
+  color: #ffffff;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.28);
+}
+
+.profile-video-page .section-title svg {
+  color: #ffffff;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.28));
+}
+
+.profile-video-page .backup-description {
+  color: rgba(255, 255, 255, 0.84);
+}
+
+/* Profile form labels */
+.profile-video-page .form-group label {
+  color: #ffffff;
+  text-shadow: 0 1px 7px rgba(0, 0, 0, 0.30);
+}
+
+/* Glass inputs */
+.profile-video-page .profile-form input,
+.profile-video-page .profile-form select,
+.profile-video-page .profile-form textarea,
+.profile-video-page .form-group input,
+.profile-video-page .form-group select,
+.profile-video-page .form-group textarea {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.30);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.profile-video-page .profile-form input:hover,
+.profile-video-page .profile-form select:hover,
+.profile-video-page .profile-form textarea:hover,
+.profile-video-page .form-group input:hover,
+.profile-video-page .form-group select:hover,
+.profile-video-page .form-group textarea:hover {
+  border-color: rgba(255, 255, 255, 0.50);
+  background: rgba(255, 255, 255, 0.20);
+}
+
+.profile-video-page .profile-form input:focus,
+.profile-video-page .profile-form select:focus,
+.profile-video-page .profile-form textarea:focus,
+.profile-video-page .form-group input:focus,
+.profile-video-page .form-group select:focus,
+.profile-video-page .form-group textarea:focus {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.72);
+  box-shadow:
+    0 0 0 4px rgba(255, 255, 255, 0.10),
+    0 8px 25px rgba(0, 0, 0, 0.10);
+}
+
+.profile-video-page .profile-form input::placeholder,
+.profile-video-page .profile-form textarea::placeholder,
+.profile-video-page .form-group input::placeholder {
+  color: rgba(255, 255, 255, 0.64);
+}
+
+/* Native select options need a readable solid background */
+.profile-video-page .profile-form select option,
+.profile-video-page .form-group select option {
+  background: #172033;
+  color: #ffffff;
+}
+
+/* Profile photo area */
+.profile-video-page .profile-photo-preview {
+  border: 2px solid rgba(255, 255, 255, 0.42);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 10px 25px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.profile-video-page .profile-photo-preview svg {
+  color: #ffffff;
+}
+
+.profile-video-page .upload-label {
+  color: #ffffff;
+  text-shadow: 0 1px 7px rgba(0, 0, 0, 0.28);
+}
+
+/* Custom shortcuts editor */
+.profile-video-page .custom-shortcuts-editor {
+  margin-top: 8px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(9px);
+  -webkit-backdrop-filter: blur(9px);
+}
+
+.profile-video-page .custom-shortcuts-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 16px;
+}
+
+.profile-video-page .custom-shortcuts-heading h3 {
+  margin: 0;
+  color: #ffffff;
+}
+
+.profile-video-page .shortcut-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 58px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.13);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.profile-video-page .custom-shortcut-form {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 180px;
+  gap: 14px;
+  align-items: end;
+}
+
+.profile-video-page .custom-shortcut-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.profile-video-page .custom-shortcuts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.profile-video-page .custom-shortcut-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 13px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.23);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.11);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  transition:
+    transform var(--transition),
+    background var(--transition),
+    border-color var(--transition);
+}
+
+.profile-video-page .custom-shortcut-item:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.17);
+  border-color: rgba(255, 255, 255, 0.38);
+}
+
+.profile-video-page .custom-shortcut-info {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 12px;
+}
+
+.profile-video-page .custom-shortcut-icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.13);
+  color: #ffffff;
+}
+
+.profile-video-page .custom-shortcut-info strong {
+  display: block;
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-video-page .custom-shortcut-info span {
+  display: block;
+  max-width: min(55vw, 650px);
+  margin-top: 2px;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-video-page .custom-shortcut-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+}
+
+.profile-video-page .shortcut-open-button,
+.profile-video-page .shortcut-edit-button,
+.profile-video-page .shortcut-delete-button {
+  min-height: 35px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 750;
+  transition:
+    transform var(--transition),
+    background var(--transition),
+    border-color var(--transition);
+}
+
+.profile-video-page .shortcut-open-button {
+  background: rgba(37, 99, 235, 0.72);
+  color: #ffffff;
+}
+
+.profile-video-page .shortcut-edit-button {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.profile-video-page .shortcut-delete-button {
+  background: rgba(239, 68, 68, 0.68);
+  color: #ffffff;
+}
+
+.profile-video-page .shortcut-open-button:hover,
+.profile-video-page .shortcut-edit-button:hover,
+.profile-video-page .shortcut-delete-button:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.50);
+}
+
+/* Buttons over the video */
+.profile-video-page .add-topic-button,
+.profile-video-page .save-topic-button,
+.profile-video-page .import-button {
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Backup area */
+.profile-video-page .backup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Save confirmation */
+.profile-video-page .save-confirmation {
+  color: #ffffff;
+  text-shadow: 0 1px 7px rgba(0, 0, 0, 0.25);
+}
+
+/* Make the bottom Profile sections remain glass */
+.profile-video-page .section-card[style] {
+  background: rgba(255, 255, 255, 0.14) !important;
+}
+
+/* =========================================================
+   PROFILE VIDEO — MOBILE
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .profile-video-page {
+    min-height: calc(100vh - 35px);
+    border-radius: 18px;
+  }
+
+  .profile-video-page .custom-shortcut-form {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-video-page .custom-shortcut-form-actions {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .profile-video-page {
+    padding-bottom: 22px;
+    border-radius: 14px;
+  }
+
+  .profile-video-page .page-header {
+    margin-left: 8px;
+    margin-right: 8px;
+    padding: 17px;
+  }
+
+  .profile-video-page .section-card,
+  .profile-video-page .profile-form-card {
+    margin-left: 8px;
+    margin-right: 8px;
+    padding: 18px;
+    border-radius: 15px;
+  }
+
+  .profile-video-page .custom-shortcuts-editor {
+    padding: 15px;
+  }
+
+  .profile-video-page .custom-shortcuts-heading {
+    align-items: flex-start;
+  }
+
+  .profile-video-page .custom-shortcut-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .profile-video-page .custom-shortcut-info {
+    width: 100%;
+  }
+
+  .profile-video-page .custom-shortcut-info span {
+    max-width: 100%;
+  }
+
+  .profile-video-page .custom-shortcut-actions {
+    width: 100%;
+  }
+
+  .profile-video-page .shortcut-open-button {
+    flex: 1;
+  }
+}
+
+/* =========================================================
+   PROFILE VIDEO — ACCESSIBILITY / REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-video-page .custom-shortcut-item,
+  .profile-video-page .shortcut-open-button,
+  .profile-video-page .shortcut-edit-button,
+  .profile-video-page .shortcut-delete-button {
+    transition: none;
+  }
+}
+
+/* =========================================================
+   PROFILE VIDEO — FIXED BACKGROUND / NO STRETCH / SCROLL CONTENT
+   ========================================================= */
+
+/* The video stays fixed while only the Profile content scrolls. */
+.profile-video-page {
+  overflow: visible !important;
+  background: transparent !important;
+}
+
+.profile-video-page .profile-background-video {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: auto !important;
+  bottom: auto !important;
+  z-index: -3 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  transform: none !important;
+}
+
+.profile-video-page .profile-video-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: -2 !important;
+  pointer-events: none !important;
+}
+
+.profile-video-page .profile-video-content {
+  position: relative !important;
+  z-index: 1 !important;
+  background: transparent !important;
+}
+
+/* =========================================================
+   PROFILE — REMOVE REMAINING WHITE CONTAINERS
+   ========================================================= */
+
+.profile-video-page .card,
+.profile-video-page .section-card,
+.profile-video-page .profile-box,
+.profile-video-page .profile-form-card,
+.profile-video-page .profile-photo-row,
+.profile-video-page .backup-section,
+.profile-video-page .backup-card,
+.profile-video-page .custom-shortcuts-editor {
+  background: rgba(255, 255, 255, 0.10) !important;
+  border-color: rgba(255, 255, 255, 0.26) !important;
+  color: #ffffff !important;
+  backdrop-filter: blur(12px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(120%) !important;
+}
+
+.profile-video-page .section-card:hover,
+.profile-video-page .profile-form-card:hover,
+.profile-video-page .card:hover,
+.profile-video-page .profile-box:hover {
+  background: rgba(255, 255, 255, 0.13) !important;
+}
+
+/* Remove white backgrounds from nested profile layout elements. */
+.profile-video-page .profile-form,
+.profile-video-page .profile-photo-row,
+.profile-video-page .backup-actions,
+.profile-video-page .section-title,
+.profile-video-page .section-title > div,
+.profile-video-page .form-group,
+.profile-video-page .profile-form > div {
+  background: transparent !important;
+}
+
+/* Keep inputs glass instead of solid white. */
+.profile-video-page input,
+.profile-video-page select,
+.profile-video-page textarea {
+  background: rgba(255, 255, 255, 0.13) !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.30) !important;
+}
+
+.profile-video-page input:hover,
+.profile-video-page select:hover,
+.profile-video-page textarea:hover,
+.profile-video-page input:focus,
+.profile-video-page select:focus,
+.profile-video-page textarea:focus {
+  background: rgba(255, 255, 255, 0.18) !important;
+  color: #ffffff !important;
+}
+
+/* Text inside the transparent Profile sections stays readable. */
+.profile-video-page .section-card p,
+.profile-video-page .section-card span,
+.profile-video-page .section-card small,
+.profile-video-page .profile-form label,
+.profile-video-page .backup-description {
+  color: rgba(255, 255, 255, 0.86) !important;
+}
+
+.profile-video-page .section-card h1,
+.profile-video-page .section-card h2,
+.profile-video-page .section-card h3,
+.profile-video-page .section-card h4,
+.profile-video-page .profile-form-card h1,
+.profile-video-page .profile-form-card h2,
+.profile-video-page .profile-form-card h3,
+.profile-video-page .profile-form-card h4 {
+  color: #ffffff !important;
+}
+
+/* =========================================================
+   PROFILE VIDEO — FINAL CLEAN BACKGROUND + GLASS FIX
+   ========================================================= */
+
+/* Remove the old Spider-Man page background ONLY while Profile is open. */
+body:has(.profile-video-page) {
+  background-image: none !important;
+  background-color: #090b10 !important;
+}
+
+html:has(.profile-video-page),
+#root:has(.profile-video-page) {
+  background-image: none !important;
+}
+
+/* Profile itself must not create another image/background layer. */
+.profile-video-page,
+.profile-video-page::before,
+.profile-video-page::after {
+  background-image: none !important;
+}
+
+/* ---------------------------------------------------------
+   FIXED VIDEO
+   - stays in exactly the same viewport position while scrolling
+   - keeps its original aspect ratio
+   - object-fit: cover prevents distortion/stretching
+   - edges may be cropped when the screen ratio differs from video
+--------------------------------------------------------- */
+.profile-video-page {
+  position: relative !important;
+  isolation: isolate !important;
+  min-height: 100vh !important;
+  background: transparent !important;
+}
+
+.profile-video-page .profile-background-video {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  min-width: 100vw !important;
+  min-height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  display: block !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  transform: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+}
+
+.profile-video-page .profile-video-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(7, 10, 16, 0.30) !important;
+  z-index: 1 !important;
+  pointer-events: none !important;
+}
+
+.profile-video-page .profile-video-content {
+  position: relative !important;
+  z-index: 2 !important;
+  width: 100% !important;
+  background: transparent !important;
+}
+
+/* ---------------------------------------------------------
+   PROFILE PAGE HEADER — GLASS, NOT WHITE
+--------------------------------------------------------- */
+.profile-video-page .page-header {
+  background: rgba(12, 18, 28, 0.34) !important;
+  border: 1px solid rgba(255, 255, 255, 0.24) !important;
+  border-radius: 20px !important;
+  box-shadow:
+    0 18px 50px rgba(0, 0, 0, 0.20),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+  backdrop-filter: blur(14px) saturate(125%) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(125%) !important;
+}
+
+.profile-video-page .page-header h1,
+.profile-video-page .page-header p {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background: none !important;
+  background-image: none !important;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45) !important;
+}
+
+/* ---------------------------------------------------------
+   ALL PROFILE CARDS — ONE CONSISTENT GLASS STYLE
+--------------------------------------------------------- */
+.profile-video-page .section-card,
+.profile-video-page .profile-form-card,
+.profile-video-page .profile-box,
+.profile-video-page .backup-section,
+.profile-video-page .backup-card,
+.profile-video-page .profile-photo-row,
+.profile-video-page .custom-shortcuts-editor {
+  background: rgba(13, 20, 31, 0.34) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
+  box-shadow:
+    0 18px 45px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.13) !important;
+  backdrop-filter: blur(15px) saturate(130%) !important;
+  -webkit-backdrop-filter: blur(15px) saturate(130%) !important;
+}
+
+.profile-video-page .section-card:hover,
+.profile-video-page .profile-form-card:hover,
+.profile-video-page .profile-box:hover {
+  background: rgba(13, 20, 31, 0.39) !important;
+  border-color: rgba(255, 255, 255, 0.34) !important;
+}
+
+/* Remove inline white backgrounds from Profile cards. */
+.profile-video-page .section-card[style],
+.profile-video-page .profile-form-card[style],
+.profile-video-page .profile-photo-row[style] {
+  background: rgba(13, 20, 31, 0.34) !important;
+}
+
+/* Nested wrappers stay transparent. */
+.profile-video-page .profile-form,
+.profile-video-page .form-group,
+.profile-video-page .section-title,
+.profile-video-page .section-title > div,
+.profile-video-page .backup-actions,
+.profile-video-page .profile-form > div {
+  background: transparent !important;
+}
+
+/* ---------------------------------------------------------
+   PROFILE TEXT — HIGH CONTRAST ON GLASS
+--------------------------------------------------------- */
+.profile-video-page h1,
+.profile-video-page h2,
+.profile-video-page h3,
+.profile-video-page h4,
+.profile-video-page strong,
+.profile-video-page label {
+  color: #ffffff !important;
+  text-shadow: 0 2px 9px rgba(0, 0, 0, 0.38) !important;
+}
+
+.profile-video-page p,
+.profile-video-page span,
+.profile-video-page small,
+.profile-video-page .backup-description {
+  color: rgba(255, 255, 255, 0.88) !important;
+  text-shadow: 0 1px 7px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* ---------------------------------------------------------
+   PROFILE INPUTS — DARK GLASS, NOT WHITE
+--------------------------------------------------------- */
+.profile-video-page input,
+.profile-video-page select,
+.profile-video-page textarea {
+  width: 100% !important;
+  background: rgba(255, 255, 255, 0.11) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.30) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+.profile-video-page input::placeholder,
+.profile-video-page textarea::placeholder {
+  color: rgba(255, 255, 255, 0.55) !important;
+}
+
+.profile-video-page input:hover,
+.profile-video-page select:hover,
+.profile-video-page textarea:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.42) !important;
+}
+
+.profile-video-page input:focus,
+.profile-video-page select:focus,
+.profile-video-page textarea:focus {
+  background: rgba(255, 255, 255, 0.17) !important;
+  border-color: rgba(255, 255, 255, 0.72) !important;
+  color: #ffffff !important;
+  outline: none !important;
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.10),
+    0 10px 24px rgba(0, 0, 0, 0.15) !important;
+}
+
+.profile-video-page select option {
+  background: #17202d !important;
+  color: #ffffff !important;
+}
+
+/* ---------------------------------------------------------
+   CUSTOM SHORTCUTS — CLEAN, SEPARATED LAYOUT
+--------------------------------------------------------- */
+.profile-video-page .custom-shortcuts-editor {
+  width: 100% !important;
+  margin-top: 18px !important;
+  padding: 22px !important;
+  border-radius: 18px !important;
+  overflow: hidden !important;
+}
+
+.profile-video-page .custom-shortcuts-heading {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 20px !important;
+  margin: 0 0 20px !important;
+  padding-bottom: 15px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16) !important;
+}
+
+.profile-video-page .custom-shortcuts-heading > div {
+  min-width: 0 !important;
+}
+
+.profile-video-page .custom-shortcuts-heading h3 {
+  margin: 0 !important;
+  color: #ffffff !important;
+  font-size: 19px !important;
+  line-height: 1.25 !important;
+}
+
+.profile-video-page .custom-shortcuts-heading p {
+  margin: 7px 0 0 !important;
+  color: rgba(255, 255, 255, 0.74) !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+}
+
+.profile-video-page .shortcut-count {
+  flex: 0 0 auto !important;
+  min-width: 58px !important;
+  height: 38px !important;
+  padding: 0 13px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+}
+
+/* Three fields stay in three clean columns. */
+.profile-video-page .custom-shortcut-form {
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns:
+    minmax(150px, 0.85fr)
+    minmax(250px, 1.45fr)
+    minmax(180px, 0.95fr) !important;
+  gap: 16px !important;
+  align-items: end !important;
+}
+
+.profile-video-page .custom-shortcut-form .form-group {
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+.profile-video-page .custom-shortcut-form .form-group label {
+  margin: 0 !important;
+  color: #ffffff !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+}
+
+.profile-video-page .custom-shortcut-form .form-group input,
+.profile-video-page .custom-shortcut-form .form-group select {
+  min-width: 0 !important;
+  height: 50px !important;
+  min-height: 50px !important;
+  margin: 0 !important;
+  padding: 0 14px !important;
+  border-radius: 12px !important;
+  box-sizing: border-box !important;
+}
+
+/* Actions occupy their own full row — never mix with the fields. */
+.profile-video-page .custom-shortcut-form-actions {
+  grid-column: 1 / -1 !important;
+  width: 100% !important;
+  min-height: 50px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  margin: 2px 0 0 !important;
+  padding-top: 2px !important;
+}
+
+.profile-video-page .custom-shortcut-form-actions button {
+  min-height: 46px !important;
+  border-radius: 11px !important;
+  font-weight: 800 !important;
+}
+
+/* ---------------------------------------------------------
+   CUSTOM SHORTCUT SAVED ITEMS
+--------------------------------------------------------- */
+.profile-video-page .custom-shortcuts-list {
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 11px !important;
+  margin-top: 20px !important;
+  padding-top: 18px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.16) !important;
+}
+
+.profile-video-page .custom-shortcut-item {
+  width: 100% !important;
+  min-width: 0 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 16px !important;
+  padding: 13px 14px !important;
+  box-sizing: border-box !important;
+  background: rgba(255, 255, 255, 0.085) !important;
+  border: 1px solid rgba(255, 255, 255, 0.20) !important;
+  border-radius: 14px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+.profile-video-page .custom-shortcut-item:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.30) !important;
+  transform: translateY(-1px) !important;
+}
+
+.profile-video-page .custom-shortcut-info {
+  min-width: 0 !important;
+  display: grid !important;
+  grid-template-columns: 42px minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.profile-video-page .custom-shortcut-icon {
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid rgba(255, 255, 255, 0.26) !important;
+  border-radius: 11px !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+}
+
+.profile-video-page .custom-shortcut-info > div:last-child {
+  min-width: 0 !important;
+}
+
+.profile-video-page .custom-shortcut-info strong {
+  display: block !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  line-height: 1.3 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.profile-video-page .custom-shortcut-info span {
+  display: block !important;
+  max-width: 100% !important;
+  margin: 4px 0 0 !important;
+  overflow: hidden !important;
+  color: rgba(255, 255, 255, 0.68) !important;
+  font-size: 12px !important;
+  line-height: 1.3 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.profile-video-page .custom-shortcut-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 7px !important;
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
+}
+
+.profile-video-page .shortcut-open-button,
+.profile-video-page .shortcut-edit-button,
+.profile-video-page .shortcut-delete-button {
+  min-width: 68px !important;
+  min-height: 38px !important;
+  padding: 8px 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  border-radius: 9px !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+
+.profile-video-page .shortcut-open-button {
+  background: rgba(37, 99, 235, 0.78) !important;
+  border-color: rgba(147, 197, 253, 0.45) !important;
+  color: #ffffff !important;
+}
+
+.profile-video-page .shortcut-edit-button {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
+}
+
+.profile-video-page .shortcut-delete-button {
+  background: rgba(220, 38, 38, 0.78) !important;
+  border-color: rgba(254, 202, 202, 0.42) !important;
+  color: #ffffff !important;
+}
+
+/* ---------------------------------------------------------
+   PHOTO AREA — GLASS
+--------------------------------------------------------- */
+.profile-video-page .profile-photo-preview {
+  background: rgba(255, 255, 255, 0.10) !important;
+  border: 2px solid rgba(255, 255, 255, 0.35) !important;
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.20),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+}
+
+/* ---------------------------------------------------------
+   MOBILE
+--------------------------------------------------------- */
+@media (max-width: 900px) {
+  .profile-video-page .custom-shortcut-form {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .profile-video-page .custom-shortcut-form .form-group:nth-child(3) {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .profile-video-page .custom-shortcuts-editor {
+    padding: 17px !important;
+  }
+
+  .profile-video-page .custom-shortcuts-heading {
+    align-items: flex-start !important;
+  }
+
+  .profile-video-page .custom-shortcut-form {
+    grid-template-columns: 1fr !important;
+  }
+
+  .profile-video-page .custom-shortcut-form .form-group:nth-child(3) {
+    grid-column: auto !important;
+  }
+
+  .profile-video-page .custom-shortcut-item {
+    grid-template-columns: 1fr !important;
+  }
+
+  .profile-video-page .custom-shortcut-actions {
+    width: 100% !important;
+    justify-content: stretch !important;
+  }
+
+  .profile-video-page .shortcut-open-button,
+  .profile-video-page .shortcut-edit-button,
+  .profile-video-page .shortcut-delete-button {
+    flex: 1 1 0 !important;
+  }
+}
+
+
+/* =========================================================
+   PROFILE — FINAL VIDEO-ONLY BACKGROUND FIX
+   ========================================================= */
+
+/* Absolutely no Spider-Man/background image on Profile. */
+body:has(.profile-video-page) .app-shell > .main-content,
+body:has(.profile-video-page) .app-shell > .main-content::before,
+body:has(.profile-video-page) .app-shell > .main-content::after,
+body:has(.profile-video-page) .app-shell,
+body:has(.profile-video-page) #root {
+  background-image: none !important;
+}
+
+body:has(.profile-video-page) .app-shell > .main-content {
+  background: transparent !important;
+}
+
+/* Profile page itself is only a transparent scrolling layer. */
+.profile-video-page,
+.profile-video-page::before,
+.profile-video-page::after,
+.profile-video-page .profile-video-content {
+  background-image: none !important;
+}
+
+.profile-video-page {
+  position: relative !important;
+  isolation: isolate !important;
+  min-height: 100vh !important;
+  background: transparent !important;
+  overflow: visible !important;
+}
+
+/* The video is FIXED to the viewport, not the scrolling Profile content. */
+.profile-video-page .profile-background-video {
+  position: fixed !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  min-width: 100vw !important;
+  min-height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  display: block !important;
+  z-index: -2 !important;
+  pointer-events: none !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  background: transparent !important;
+}
+
+/* Fixed overlay belongs to the viewport too. */
+.profile-video-page .profile-video-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
+  background: rgba(5, 8, 14, 0.28) !important;
+}
+
+/* Content scrolls normally above the fixed video. */
+.profile-video-page .profile-video-content {
+  position: relative !important;
+  z-index: 2 !important;
+  background: transparent !important;
+}
+
+/* =========================================================
+   PROFILE — CONSISTENT DARK GLASS SURFACES
+   ========================================================= */
+
+.profile-video-page .page-header,
+.profile-video-page .profile-form-card,
+.profile-video-page .profile-box,
+.profile-video-page .backup-section,
+.profile-video-page .backup-card,
+.profile-video-page .profile-photo-row,
+.profile-video-page .custom-shortcuts-editor,
+.profile-video-page .section-card {
+  background: rgba(10, 16, 26, 0.56) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  box-shadow:
+    0 18px 45px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10) !important;
+  backdrop-filter: blur(16px) saturate(125%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(125%) !important;
+  color: #ffffff !important;
+}
+
+/* Kill old inline/white backgrounds inside Profile cards. */
+.profile-video-page .section-card[style],
+.profile-video-page .profile-form-card[style],
+.profile-video-page .profile-photo-row[style],
+.profile-video-page [style*="background"],
+.profile-video-page [style*="background-color"] {
+  background-color: rgba(10, 16, 26, 0.56) !important;
+  background-image: none !important;
+}
+
+/* Text contrast. */
+.profile-video-page h1,
+.profile-video-page h2,
+.profile-video-page h3,
+.profile-video-page h4,
+.profile-video-page strong,
+.profile-video-page label {
+  color: #ffffff !important;
+}
+
+.profile-video-page p,
+.profile-video-page span,
+.profile-video-page small,
+.profile-video-page .backup-description {
+  color: rgba(255, 255, 255, 0.82) !important;
+}
+
+/* Inputs stay slightly lighter than the glass cards. */
+.profile-video-page input,
+.profile-video-page select,
+.profile-video-page textarea {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+}
+
+.profile-video-page input::placeholder,
+.profile-video-page textarea::placeholder {
+  color: rgba(255, 255, 255, 0.58) !important;
+}
+
+.profile-video-page input:focus,
+.profile-video-page select:focus,
+.profile-video-page textarea:focus {
+  background: rgba(255, 255, 255, 0.16) !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.50) !important;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.10) !important;
+}
+
+.profile-video-page select option {
+  background: #17202d !important;
+  color: #ffffff !important;
+}
+
+/* =========================================================
+   CUSTOM SHORTCUTS — CLEAN LAYOUT
+   ========================================================= */
+
+.profile-video-page .custom-shortcuts-editor {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 24px !important;
+  overflow: hidden !important;
+}
+
+.profile-video-page .custom-shortcuts-heading {
+  width: 100% !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 18px !important;
+  padding-bottom: 16px !important;
+  margin-bottom: 18px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14) !important;
+}
+
+.profile-video-page .custom-shortcuts-heading > div {
+  min-width: 0 !important;
+}
+
+.profile-video-page .custom-shortcuts-heading h3 {
+  margin: 0 !important;
+  color: #ffffff !important;
+  font-size: 21px !important;
+  line-height: 1.25 !important;
+}
+
+.profile-video-page .custom-shortcuts-heading p {
+  margin: 7px 0 0 !important;
+  color: rgba(255, 255, 255, 0.72) !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+}
+
+.profile-video-page .shortcut-count {
+  flex: 0 0 auto !important;
+  min-width: 58px !important;
+  height: 38px !important;
+  padding: 0 13px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+}
+
+.profile-video-page .custom-shortcut-form {
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: minmax(150px, 0.85fr) minmax(250px, 1.45fr) minmax(180px, 0.95fr) !important;
+  gap: 16px !important;
+  align-items: end !important;
+}
+
+.profile-video-page .custom-shortcut-form .form-group {
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+.profile-video-page .custom-shortcut-form .form-group label {
+  margin: 0 !important;
+  color: #ffffff !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+
+.profile-video-page .custom-shortcut-form .form-group input,
+.profile-video-page .custom-shortcut-form .form-group select {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 50px !important;
+  min-height: 50px !important;
+  margin: 0 !important;
+  padding: 0 14px !important;
+  box-sizing: border-box !important;
+  border-radius: 12px !important;
+}
+
+.profile-video-page .custom-shortcut-form-actions {
+  grid-column: 1 / -1 !important;
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  margin: 2px 0 0 !important;
+  padding: 0 !important;
+}
+
+.profile-video-page .custom-shortcut-form-actions button {
+  min-height: 46px !important;
+  border-radius: 11px !important;
+  font-weight: 800 !important;
+}
+
+.profile-video-page .custom-shortcuts-list {
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 11px !important;
+  margin-top: 20px !important;
+  padding-top: 18px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.14) !important;
+}
+
+.profile-video-page .custom-shortcut-item {
+  width: 100% !important;
+  min-width: 0 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 16px !important;
+  padding: 13px 14px !important;
+  box-sizing: border-box !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.20) !important;
+  border-radius: 14px !important;
+}
+
+.profile-video-page .custom-shortcut-info {
+  min-width: 0 !important;
+  display: grid !important;
+  grid-template-columns: 42px minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.profile-video-page .custom-shortcut-icon {
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border-radius: 11px !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+}
+
+.profile-video-page .custom-shortcut-info strong {
+  display: block !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  line-height: 1.3 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.profile-video-page .custom-shortcut-info span {
+  display: block !important;
+  max-width: 100% !important;
+  margin: 4px 0 0 !important;
+  overflow: hidden !important;
+  color: rgba(255, 255, 255, 0.68) !important;
+  font-size: 12px !important;
+  line-height: 1.3 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.profile-video-page .custom-shortcut-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 7px !important;
+  white-space: nowrap !important;
+}
+
+.profile-video-page .shortcut-open-button,
+.profile-video-page .shortcut-edit-button,
+.profile-video-page .shortcut-delete-button {
+  min-width: 68px !important;
+  min-height: 38px !important;
+  padding: 8px 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  border-radius: 9px !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+}
+
+.profile-video-page .shortcut-open-button {
+  background: rgba(37, 99, 235, 0.82) !important;
+  border-color: rgba(147, 197, 253, 0.45) !important;
+}
+
+.profile-video-page .shortcut-edit-button {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+.profile-video-page .shortcut-delete-button {
+  background: rgba(220, 38, 38, 0.82) !important;
+  border-color: rgba(254, 202, 202, 0.42) !important;
+}
+
+@media (max-width: 900px) {
+  .profile-video-page .custom-shortcut-form {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .profile-video-page .custom-shortcut-form .form-group:nth-child(3) {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .profile-video-page .custom-shortcuts-editor {
+    padding: 17px !important;
+  }
+
+  .profile-video-page .custom-shortcut-form {
+    grid-template-columns: 1fr !important;
+  }
+
+  .profile-video-page .custom-shortcut-form .form-group:nth-child(3) {
+    grid-column: auto !important;
+  }
+
+  .profile-video-page .custom-shortcut-item {
+    grid-template-columns: 1fr !important;
+  }
+
+  .profile-video-page .custom-shortcut-actions {
+    width: 100% !important;
+    justify-content: stretch !important;
+  }
+
+  .profile-video-page .shortcut-open-button,
+  .profile-video-page .shortcut-edit-button,
+  .profile-video-page .shortcut-delete-button {
+    flex: 1 1 0 !important;
+  }
+}
+
+
+/* =========================================================
+   PROFILE VIDEO — FINAL FIX
+   Fixed video fills the viewport without stretching.
+   Profile content scrolls above it. No black background.
+   ========================================================= */
+
+html:has(.profile-video-page),
+body:has(.profile-video-page),
+#root:has(.profile-video-page) {
+  background: transparent !important;
+}
+
+body:has(.profile-video-page) {
+  overflow-x: hidden !important;
+}
+
+body:has(.profile-video-page) .app-shell,
+body:has(.profile-video-page) .main-content,
+body:has(.profile-video-page) .content-area,
+body:has(.profile-video-page) .page-content {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+.profile-video-page {
+  position: relative !important;
+  isolation: isolate !important;
+  min-height: 100vh !important;
+  background: transparent !important;
+  background-image: none !important;
+  overflow: visible !important;
+}
+
+/* Fixed video: cover fills the viewport, preserving aspect ratio.
+   It may crop edges, but it will NEVER stretch. */
+.profile-video-page .profile-background-video {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  min-width: 100vw !important;
+  min-height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  background: transparent !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Dark glass tint only; NEVER black background. */
+.profile-video-page .profile-video-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: rgba(5, 8, 14, 0.22) !important;
+  z-index: 1 !important;
+  pointer-events: none !important;
+}
+
+/* Everything here scrolls normally over the fixed video. */
+.profile-video-page .profile-video-content {
+  position: relative !important;
+  z-index: 2 !important;
+  background: transparent !important;
+  background-image: none !important;
+}
+
+/* Remove ALL old image backgrounds from Profile. */
+.profile-video-page,
+.profile-video-page::before,
+.profile-video-page::after,
+.profile-video-page .profile-video-content,
+.profile-video-page .page-header,
+.profile-video-page .profile-form-card,
+.profile-video-page .profile-box,
+.profile-video-page .profile-photo-row,
+.profile-video-page .custom-shortcuts-editor,
+.profile-video-page .section-card,
+.profile-video-page .backup-section,
+.profile-video-page .backup-card {
+  background-image: none !important;
+}
+
+/* Profile surfaces: transparent dark glass, not white. */
+.profile-video-page .page-header,
+.profile-video-page .profile-form-card,
+.profile-video-page .profile-box,
+.profile-video-page .backup-section,
+.profile-video-page .backup-card,
+.profile-video-page .profile-photo-row,
+.profile-video-page .custom-shortcuts-editor,
+.profile-video-page .section-card {
+  background: rgba(15, 20, 30, 0.52) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  box-shadow:
+    0 18px 50px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10) !important;
+  backdrop-filter: blur(14px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(120%) !important;
+  color: #ffffff !important;
+}
+
+/* Kill inline white/gray backgrounds used by older Profile markup. */
+.profile-video-page [style*="background"],
+.profile-video-page [style*="background-color"] {
+  background-image: none !important;
+  background-color: rgba(15, 20, 30, 0.52) !important;
+}
+
+/* Keep form controls readable on glass. */
+.profile-video-page input,
+.profile-video-page select,
+.profile-video-page textarea {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+}
+
+.profile-video-page input::placeholder,
+.profile-video-page textarea::placeholder {
+  color: rgba(255, 255, 255, 0.58) !important;
+}
+
+.profile-video-page select option {
+  background: #17202d !important;
+  color: #ffffff !important;
+}
+
+.profile-video-page h1,
+.profile-video-page h2,
+.profile-video-page h3,
+.profile-video-page h4,
+.profile-video-page label,
+.profile-video-page strong {
+  color: #ffffff !important;
+}
+
+.profile-video-page p,
+.profile-video-page span,
+.profile-video-page small {
+  color: rgba(255, 255, 255, 0.82) !important;
+}
+
+/* =========================================================
+   CUSTOM SHORTCUTS — FINAL CLEAN GLASS LAYOUT
+   ========================================================= */
+
+.profile-video-page .custom-shortcuts-editor {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 24px !important;
+  overflow: hidden !important;
+}
+
+.profile-video-page .custom-shortcuts-heading {
+  width: 100% !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  margin: 0 0 18px !important;
+  padding: 0 0 16px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14) !important;
+}
+
+.profile-video-page .custom-shortcuts-heading h3 {
+  margin: 0 !important;
+  color: #ffffff !important;
+  font-size: 21px !important;
+  line-height: 1.25 !important;
+}
+
+.profile-video-page .custom-shortcuts-heading p {
+  margin: 7px 0 0 !important;
+  color: rgba(255, 255, 255, 0.72) !important;
+  line-height: 1.45 !important;
+}
+
+.profile-video-page .shortcut-count {
+  flex: 0 0 auto !important;
+  min-width: 58px !important;
+  height: 38px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 13px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+}
+
+.profile-video-page .custom-shortcut-form {
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: minmax(150px, 0.85fr) minmax(240px, 1.4fr) minmax(180px, 0.9fr) !important;
+  gap: 16px !important;
+  align-items: end !important;
+}
+
+.profile-video-page .custom-shortcut-form .form-group {
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+.profile-video-page .custom-shortcut-form .form-group label {
+  color: #ffffff !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+
+.profile-video-page .custom-shortcut-form input,
+.profile-video-page .custom-shortcut-form select {
+  width: 100% !important;
+  height: 50px !important;
+  min-height: 50px !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 0 14px !important;
+  border-radius: 12px !important;
+}
+
+.profile-video-page .custom-shortcut-form-actions {
+  grid-column: 1 / -1 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin-top: 2px !important;
+}
+
+.profile-video-page .custom-shortcut-form-actions button {
+  min-height: 46px !important;
+  padding: 10px 18px !important;
+  border-radius: 11px !important;
+  font-weight: 800 !important;
+}
+
+.profile-video-page .custom-shortcuts-list {
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  margin-top: 20px !important;
+  padding-top: 18px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.14) !important;
+}
+
+.profile-video-page .custom-shortcut-item {
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 14px !important;
+  padding: 12px 14px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.20) !important;
+  border-radius: 14px !important;
+}
+
+.profile-video-page .custom-shortcut-info {
+  min-width: 0 !important;
+  display: grid !important;
+  grid-template-columns: 42px minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.profile-video-page .custom-shortcut-icon {
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 11px !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
+}
+
+.profile-video-page .custom-shortcut-info strong {
+  display: block !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.profile-video-page .custom-shortcut-info span {
+  display: block !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  margin-top: 4px !important;
+  color: rgba(255, 255, 255, 0.68) !important;
+  font-size: 12px !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.profile-video-page .custom-shortcut-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 7px !important;
+  white-space: nowrap !important;
+}
+
+.profile-video-page .shortcut-open-button,
+.profile-video-page .shortcut-edit-button,
+.profile-video-page .shortcut-delete-button {
+  min-width: 68px !important;
+  min-height: 38px !important;
+  padding: 8px 12px !important;
+  border-radius: 9px !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+}
+
+.profile-video-page .shortcut-open-button {
+  background: rgba(37, 99, 235, 0.86) !important;
+  border-color: rgba(147, 197, 253, 0.45) !important;
+}
+
+.profile-video-page .shortcut-edit-button {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+.profile-video-page .shortcut-delete-button {
+  background: rgba(220, 38, 38, 0.86) !important;
+  border-color: rgba(254, 202, 202, 0.42) !important;
+}
+
+@media (max-width: 900px) {
+  .profile-video-page .custom-shortcut-form {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .profile-video-page .custom-shortcut-form .form-group:nth-child(3) {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .profile-video-page .custom-shortcuts-editor {
+    padding: 17px !important;
+  }
+
+  .profile-video-page .custom-shortcut-form {
+    grid-template-columns: 1fr !important;
+  }
+
+  .profile-video-page .custom-shortcut-form .form-group:nth-child(3) {
+    grid-column: auto !important;
+  }
+
+  .profile-video-page .custom-shortcut-item {
+    grid-template-columns: 1fr !important;
+  }
+
+  .profile-video-page .custom-shortcut-actions {
+    width: 100% !important;
+  }
+
+  .profile-video-page .shortcut-open-button,
+  .profile-video-page .shortcut-edit-button,
+  .profile-video-page .shortcut-delete-button {
+    flex: 1 1 0 !important;
+  }
+}
+
+
+/* =========================================================
+   FINAL BACKGROUND ARCHITECTURE
+   Spider-Man and Profile Video are completely separate.
+   ========================================================= */
+
+/* Disable old main-content Spider-Man pseudo-background.
+   Spider-Man is now rendered by React on normal pages only. */
+.app-shell > .main-content.normal-main-content::before,
+.app-shell > .main-content.profile-main-content::before {
+  display: none !important;
+  content: none !important;
+  background-image: none !important;
+}
+
+
+/* =========================================================
+   SPIDER-MAN — NORMAL PAGES ONLY
+   ========================================================= */
+
+.taskbar-spiderman-background {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+
+  background-image: url("/spiderman-bg.jpg") !important;
+  background-repeat: no-repeat !important;
+  background-position: center bottom !important;
+  background-size: cover !important;
+  background-color: #dfe7f0 !important;
+}
+
+
+/* =========================================================
+   NORMAL APP — ABOVE SPIDER-MAN
+   ========================================================= */
+
+.app-shell.normal-route-active {
+  position: relative !important;
+  z-index: 2 !important;
+  min-height: 100vh !important;
+  background: transparent !important;
+}
+
+.app-shell.normal-route-active > .main-content {
+  position: relative !important;
+  z-index: 3 !important;
+  background: transparent !important;
+  background-image: none !important;
+  overflow-x: hidden !important;
+}
+
+
+/* =========================================================
+   PROFILE — SPIDER-MAN IS NOT RENDERED BY REACT
+   ========================================================= */
+
+.app-shell.profile-route-active {
+  position: relative !important;
+  z-index: 3 !important;
+  min-height: 100vh !important;
+  background: transparent !important;
+}
+
+.app-shell.profile-route-active > .main-content {
+  position: relative !important;
+  z-index: 4 !important;
+  background: transparent !important;
+  background-image: none !important;
+  overflow-x: hidden !important;
+}
+
+
+/* =========================================================
+   PROFILE VIDEO PORTAL
+   Profile.jsx owns this background.
+   ========================================================= */
+
+.profile-video-portal {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 1 !important;
+  pointer-events: none !important;
+}
+
+.profile-video-portal .profile-background-video {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  display: block !important;
+  pointer-events: none !important;
+}
+
+.profile-video-portal .profile-video-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+}
+
+.app-shell.profile-route-active .profile-video-page,
+.app-shell.profile-route-active .profile-video-content {
+  background: transparent !important;
+  background-image: none !important;
 }

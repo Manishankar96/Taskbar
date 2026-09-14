@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   UserCircle,
   Download,
@@ -52,7 +53,9 @@ const emptyProfile = {
   linkedin: "",
   github: "",
 
-  // Dynamic professional shortcut
+  // Up to 4 custom professional shortcuts
+  customShortcuts: [],
+  // Legacy fields kept for backward compatibility
   shortcutName: "",
   shortcutUrl: "",
   shortcutIcon: "ExternalLink",
@@ -71,6 +74,15 @@ function Profile() {
   const [importMessage, setImportMessage] =
     useState(null);
 
+  const [shortcutDraft, setShortcutDraft] = useState({
+    name: "",
+    url: "",
+    icon: "ExternalLink",
+  });
+
+  const [editingShortcutId, setEditingShortcutId] =
+    useState(null);
+
   const fileInputRef =
     useRef(null);
 
@@ -82,9 +94,33 @@ function Profile() {
           await getProfile();
 
         if (savedProfile) {
+          const legacyShortcut =
+            savedProfile.shortcutName?.trim() &&
+            savedProfile.shortcutUrl?.trim()
+              ? [{
+                  id: `legacy-${Date.now()}`,
+                  name: savedProfile.shortcutName.trim(),
+                  url: savedProfile.shortcutUrl.trim(),
+                  icon: savedProfile.shortcutIcon || "ExternalLink",
+                }]
+              : [];
+
+          const savedShortcuts = Array.isArray(
+            savedProfile.customShortcuts
+          )
+            ? savedProfile.customShortcuts
+                .filter(
+                  (shortcut) =>
+                    shortcut?.name?.trim() &&
+                    shortcut?.url?.trim()
+                )
+                .slice(0, 4)
+            : legacyShortcut;
+
           setProfile({
             ...emptyProfile,
             ...savedProfile,
+            customShortcuts: savedShortcuts,
             shortcutName:
               savedProfile.shortcutName || "",
             shortcutUrl:
@@ -142,7 +178,50 @@ function Profile() {
     event.preventDefault();
 
     try {
-      await saveProfile(profile);
+      const normalizedProfile = {
+        ...profile,
+        customShortcuts: Array.isArray(profile.customShortcuts)
+          ? profile.customShortcuts
+              .filter(
+                (shortcut) =>
+                  shortcut?.name?.trim() &&
+                  shortcut?.url?.trim()
+              )
+              .slice(0, 4)
+              .map((shortcut) => ({
+                id:
+                  shortcut.id ||
+                  `${Date.now()}-${Math.random()
+                    .toString(36)
+                    .slice(2, 8)}`,
+                name: shortcut.name.trim(),
+                url: shortcut.url.trim(),
+                icon: shortcut.icon || "ExternalLink",
+              }))
+          : [],
+      };
+
+      await saveProfile(normalizedProfile);
+
+      const savedProfile = await getProfile();
+
+      if (savedProfile) {
+        setProfile({
+          ...emptyProfile,
+          ...savedProfile,
+          customShortcuts: Array.isArray(
+            savedProfile.customShortcuts
+          )
+            ? savedProfile.customShortcuts
+                .filter(
+                  (shortcut) =>
+                    shortcut?.name?.trim() &&
+                    shortcut?.url?.trim()
+                )
+                .slice(0, 4)
+            : [],
+        });
+      }
 
       setSaved(true);
 
@@ -333,17 +412,124 @@ function Profile() {
     );
   }
 
-  // Get the selected Lucide icon
-  function getShortcutIcon() {
-    return (
-      shortcutIcons[
-        profile.shortcutIcon
-      ] || ExternalLink
-    );
+  // Get a Lucide icon for a custom shortcut
+  function getShortcutIcon(iconName) {
+    return shortcutIcons[iconName] || ExternalLink;
   }
 
-  const ShortcutIcon =
-    getShortcutIcon();
+  function resetShortcutDraft() {
+    setShortcutDraft({
+      name: "",
+      url: "",
+      icon: "ExternalLink",
+    });
+    setEditingShortcutId(null);
+  }
+
+  async function persistProfile(nextProfile) {
+    try {
+      await saveProfile(nextProfile);
+      return true;
+    } catch (error) {
+      console.error("Failed to persist profile:", error);
+      alert("Could not save the shortcut. Please try again.");
+      return false;
+    }
+  }
+
+  async function handleAddOrUpdateShortcut() {
+    const name = shortcutDraft.name.trim();
+    const url = shortcutDraft.url.trim();
+
+    if (!name || !url) {
+      alert("Please enter both a shortcut name and URL.");
+      return;
+    }
+
+    let finalUrl = url;
+    if (!/^https?:\/\//i.test(finalUrl)) {
+      finalUrl = `https://${finalUrl}`;
+    }
+
+    if (editingShortcutId) {
+      const nextProfile = {
+        ...profile,
+        customShortcuts: profile.customShortcuts.map((shortcut) =>
+          shortcut.id === editingShortcutId
+            ? {
+                ...shortcut,
+                name,
+                url: finalUrl,
+                icon: shortcutDraft.icon,
+              }
+            : shortcut
+        ),
+      };
+
+      const savedSuccessfully = await persistProfile(nextProfile);
+
+      if (!savedSuccessfully) return;
+
+      setProfile(nextProfile);
+      resetShortcutDraft();
+      return;
+    }
+
+    if (profile.customShortcuts.length >= 4) {
+      alert("You can add a maximum of 4 custom shortcuts.");
+      return;
+    }
+
+    const newShortcut = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name,
+      url: finalUrl,
+      icon: shortcutDraft.icon,
+    };
+
+    const nextProfile = {
+      ...profile,
+      customShortcuts: [
+        ...profile.customShortcuts,
+        newShortcut,
+      ],
+    };
+
+    const savedSuccessfully = await persistProfile(nextProfile);
+
+    if (!savedSuccessfully) return;
+
+    setProfile(nextProfile);
+    resetShortcutDraft();
+  }
+
+  function handleEditShortcut(shortcut) {
+    setShortcutDraft({
+      name: shortcut.name || "",
+      url: shortcut.url || "",
+      icon: shortcut.icon || "ExternalLink",
+    });
+    setEditingShortcutId(shortcut.id);
+  }
+
+  async function handleDeleteShortcut(id) {
+    const nextProfile = {
+      ...profile,
+      customShortcuts: profile.customShortcuts.filter(
+        (shortcut) => shortcut.id !== id
+      ),
+    };
+
+    const savedSuccessfully = await persistProfile(nextProfile);
+
+    if (!savedSuccessfully) return;
+
+    setProfile(nextProfile);
+
+    if (editingShortcutId === id) {
+      resetShortcutDraft();
+    }
+  }
 
   if (loading) {
     return (
@@ -358,7 +544,26 @@ function Profile() {
   }
 
   return (
-    <div className="module-page">
+    <>
+      {createPortal(
+        <div className="profile-video-portal" aria-hidden="true">
+          <video
+            className="profile-background-video"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+          >
+            <source src="/profile-video.mp4" type="video/mp4" />
+          </video>
+          <div className="profile-video-overlay" />
+        </div>,
+        document.body
+      )}
+
+      <div className="module-page profile-video-page">
+        <div className="profile-video-content">
 
       {/* PAGE HEADER */}
 
@@ -598,253 +803,147 @@ function Profile() {
           </div>
 
 
-          {/* DYNAMIC SHORTCUT */}
+          {/* CUSTOM SHORTCUTS — MAXIMUM 4 */}
 
-          <div
-            style={{
-              marginTop: "8px",
-              padding: "18px",
-              border:
-                "1px solid #dbe5f0",
-              borderRadius: "14px",
-              background:
-                "#f8fbff",
-            }}
-          >
+          <div className="custom-shortcuts-editor">
+            <div className="custom-shortcuts-heading">
+              <div>
+                <h3>🔗 Custom Shortcuts</h3>
+                <p>
+                  Add up to 4 websites or professional profiles for quick access.
+                </p>
+              </div>
 
-            <div
-              style={{
-                marginBottom: "14px",
-              }}
-            >
-
-              <h3
-                style={{
-                  margin: 0,
-                  fontSize: "17px",
-                }}
-              >
-                🔗 Custom Shortcut
-              </h3>
-
-              <p
-                style={{
-                  margin:
-                    "6px 0 0",
-                  fontSize: "13px",
-                  opacity: 0.75,
-                }}
-              >
-                Add any website or professional profile. The shortcut will appear automatically below.
-              </p>
-
+              <span className="shortcut-count">
+                {profile.customShortcuts.length}/4
+              </span>
             </div>
 
+            <div className="custom-shortcut-form">
+              <div className="form-group">
+                <label>Shortcut Name</label>
+                <input
+                  type="text"
+                  placeholder="Example: LeetCode"
+                  value={shortcutDraft.name}
+                  onChange={(event) =>
+                    setShortcutDraft((previous) => ({
+                      ...previous,
+                      name: event.target.value,
+                    }))
+                  }
+                />
+              </div>
 
-            <div className="form-group">
+              <div className="form-group">
+                <label>Shortcut URL</label>
+                <input
+                  type="text"
+                  placeholder="https://leetcode.com"
+                  value={shortcutDraft.url}
+                  onChange={(event) =>
+                    setShortcutDraft((previous) => ({
+                      ...previous,
+                      url: event.target.value,
+                    }))
+                  }
+                />
+              </div>
 
-              <label>
-                Shortcut Name
-              </label>
-
-              <input
-                type="text"
-                placeholder="Example: LeetCode"
-                value={
-                  profile.shortcutName
-                }
-                onChange={(event) =>
-                  setProfile({
-                    ...profile,
-                    shortcutName:
-                      event.target.value,
-                  })
-                }
-              />
-
-            </div>
-
-
-            <div className="form-group">
-
-              <label>
-                Shortcut URL
-              </label>
-
-              <input
-                type="url"
-                placeholder="https://leetcode.com/yourname"
-                value={
-                  profile.shortcutUrl
-                }
-                onChange={(event) =>
-                  setProfile({
-                    ...profile,
-                    shortcutUrl:
-                      event.target.value,
-                  })
-                }
-              />
-
-            </div>
-
-
-            <div className="form-group">
-
-              <label>
-                Shortcut Icon
-              </label>
-
-              <select
-                value={
-                  profile.shortcutIcon
-                }
-                onChange={(event) =>
-                  setProfile({
-                    ...profile,
-                    shortcutIcon:
-                      event.target.value,
-                  })
-                }
-              >
-
-                <option value="ExternalLink">
-                  External Link
-                </option>
-
-                <option value="Link2">
-                  Link
-                </option>
-
-                <option value="Globe">
-                  Globe
-                </option>
-
-                <option value="BriefcaseBusiness">
-                  Briefcase
-                </option>
-
-                <option value="Code2">
-                  Code
-                </option>
-
-                <option value="FolderOpen">
-                  Folder
-                </option>
-
-                <option value="Rocket">
-                  Rocket
-                </option>
-
-                <option value="GraduationCap">
-                  Education
-                </option>
-
-                <option value="Terminal">
-                  Terminal
-                </option>
-
-              </select>
-
-            </div>
-
-
-            {/* LIVE PREVIEW */}
-
-            {(profile.shortcutName ||
-              profile.shortcutUrl) && (
-              <div
-                style={{
-                  marginTop:
-                    "14px",
-                  padding:
-                    "12px 14px",
-                  borderRadius:
-                    "10px",
-                  background:
-                    "#ffffff",
-                  border:
-                    "1px solid #e2e8f0",
-                }}
-              >
-
-                <strong
-                  style={{
-                    display:
-                      "block",
-                    marginBottom:
-                      "8px",
-                    fontSize:
-                      "13px",
-                  }}
+              <div className="form-group">
+                <label>Shortcut Icon</label>
+                <select
+                  value={shortcutDraft.icon}
+                  onChange={(event) =>
+                    setShortcutDraft((previous) => ({
+                      ...previous,
+                      icon: event.target.value,
+                    }))
+                  }
                 >
-                  Preview
-                </strong>
+                  <option value="ExternalLink">External Link</option>
+                  <option value="Link2">Link</option>
+                  <option value="Globe">Globe</option>
+                  <option value="BriefcaseBusiness">Briefcase</option>
+                  <option value="Code2">Code</option>
+                  <option value="FolderOpen">Folder</option>
+                  <option value="Rocket">Rocket</option>
+                  <option value="GraduationCap">Education</option>
+                  <option value="Terminal">Terminal</option>
+                </select>
+              </div>
 
+              <div className="custom-shortcut-form-actions">
                 <button
                   type="button"
-                  onClick={() => {
-                    if (
-                      profile.shortcutUrl?.trim()
-                    ) {
-                      openExternalLink(
-                        profile.shortcutUrl
-                      );
-                    }
-                  }}
-                  disabled={
-                    !profile.shortcutUrl?.trim()
-                  }
-                  title={
-                    profile.shortcutUrl?.trim()
-                      ? `Open ${profile.shortcutName || "shortcut"}`
-                      : "Add a shortcut URL first"
-                  }
-                  style={{
-                    display:
-                      "inline-flex",
-                    alignItems:
-                      "center",
-                    gap: "8px",
-                    padding:
-                      "10px 14px",
-                    borderRadius:
-                      "10px",
-                    border:
-                      "none",
-                    background:
-                      "#2563eb",
-                    color:
-                      "#ffffff",
-                    fontWeight:
-                      600,
-                    cursor:
-                      profile.shortcutUrl?.trim()
-                        ? "pointer"
-                        : "not-allowed",
-                    opacity:
-                      profile.shortcutUrl?.trim()
-                        ? 1
-                        : 0.55,
-                    fontSize:
-                      "15px",
-                  }}
+                  className="add-topic-button"
+                  onClick={handleAddOrUpdateShortcut}
+                  disabled={!editingShortcutId && profile.customShortcuts.length >= 4}
                 >
-
-                  <ShortcutIcon
-                    size={18}
-                  />
-
-                  {profile.shortcutName ||
-                    "Shortcut Name"}
-
+                  {editingShortcutId ? "Update Shortcut" : "+ Add Shortcut"}
                 </button>
 
+                {editingShortcutId && (
+                  <button
+                    type="button"
+                    className="import-button"
+                    onClick={resetShortcutDraft}
+                  >
+                    Cancel Edit
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {profile.customShortcuts.length > 0 && (
+              <div className="custom-shortcuts-list">
+                {profile.customShortcuts.map((shortcut, index) => {
+                  const Icon = getShortcutIcon(shortcut.icon);
+
+                  return (
+                    <div className="custom-shortcut-item" key={shortcut.id || index}>
+                      <div className="custom-shortcut-info">
+                        <div className="custom-shortcut-icon">
+                          <Icon size={20} />
+                        </div>
+                        <div>
+                          <strong>{shortcut.name}</strong>
+                          <span>{shortcut.url}</span>
+                        </div>
+                      </div>
+
+                      <div className="custom-shortcut-actions">
+                        <button
+                          type="button"
+                          className="shortcut-open-button"
+                          onClick={() => openExternalLink(shortcut.url)}
+                        >
+                          <ExternalLink size={15} />
+                          Open
+                        </button>
+
+                        <button
+                          type="button"
+                          className="shortcut-edit-button"
+                          onClick={() => handleEditShortcut(shortcut)}
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          type="button"
+                          className="shortcut-delete-button"
+                          onClick={() => handleDeleteShortcut(shortcut.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
-
           </div>
-
 
           {/* SAVE BUTTON */}
 
@@ -1009,32 +1108,6 @@ function Profile() {
           )}
 
 
-          {/* DYNAMIC CUSTOM SHORTCUT */}
-
-          {profile.shortcutName?.trim() &&
-            profile.shortcutUrl?.trim() && (
-              <button
-                type="button"
-                className="add-topic-button"
-                onClick={() =>
-                  openExternalLink(
-                    profile.shortcutUrl
-                  )
-                }
-                title={
-                  profile.shortcutUrl
-                }
-              >
-
-                <ShortcutIcon
-                  size={18}
-                />
-
-                {profile.shortcutName.trim()}
-
-              </button>
-            )}
-
         </div>
 
 
@@ -1042,8 +1115,7 @@ function Profile() {
           !profile.portfolio &&
           !profile.linkedin &&
           !profile.github &&
-          !profile.shortcutName &&
-          !profile.shortcutUrl && (
+          !profile.customShortcuts?.length && (
             <p
               style={{
                 marginTop:
@@ -1158,7 +1230,9 @@ function Profile() {
 
       </section>
 
-    </div>
+        </div>
+      </div>
+    </>
   );
 }
 
