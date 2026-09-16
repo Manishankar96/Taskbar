@@ -13,13 +13,21 @@ import {
 import {
   getQuickTasks,
   saveQuickTasks,
-} from "../utils/db";
+} from "../../utils/db";
+
+import {
+  getItemsFromFirestore,
+  saveItemsToFirestore,
+  saveItemToFirestore,
+  deleteItemFromFirestore,
+  subscribeToFirestoreCollection,
+} from "../../firebase/firestore";
 
 import {
   getTodayLocalDateKey,
   calculateDaysRemaining,
   getLocalDateKey,
-} from "../utils/calculations";
+} from "../../utils/calculations";
 
 
 const emptyForm = {
@@ -44,36 +52,85 @@ function QuickTasks() {
   ========================================================= */
 
   useEffect(() => {
+    let unsubscribe = () => {};
+    let mounted = true;
+
     async function load() {
       try {
-        const savedTasks = await getQuickTasks();
+        const localTasks = await getQuickTasks();
+        const cloudTasks = await getItemsFromFirestore("quickTasks");
 
-        /*
-          Backward compatibility:
-          Existing tasks that were created before the
-          Pin/Unpin feature simply receive pinned: false.
-        */
-        const normalizedTasks = (
-          Array.isArray(savedTasks)
-            ? savedTasks
-            : []
-        ).map((task) => ({
-          ...task,
-          pinned: task.pinned === true,
-        }));
+        const normalize = (items) =>
+          (Array.isArray(items) ? items : []).map((task) => ({
+            ...task,
+            id: String(task.id),
+            pinned: task.pinned === true,
+          }));
 
-        setTasks(normalizedTasks);
+        const local = normalize(localTasks);
+        const cloud = normalize(cloudTasks);
+
+        const mergedMap = new Map();
+        local.forEach((task) => mergedMap.set(task.id, task));
+        cloud.forEach((task) => mergedMap.set(task.id, task));
+
+        const merged = Array.from(mergedMap.values());
+
+        if (!mounted) return;
+        setTasks(merged);
+        await saveQuickTasks(merged);
+
+        // Upload tasks that existed only on this device.
+        const cloudIds = new Set(cloud.map((task) => task.id));
+        const localOnly = local.filter((task) => !cloudIds.has(task.id));
+        if (localOnly.length > 0) {
+          await saveItemsToFirestore("quickTasks", localOnly);
+        }
+
+        unsubscribe = subscribeToFirestoreCollection(
+          "quickTasks",
+          async (items) => {
+            if (!mounted) return;
+
+            const normalized = normalize(items);
+            setTasks(normalized);
+            await saveQuickTasks(normalized);
+          }
+        );
       } catch (error) {
         console.error(
           "Failed to load quick tasks:",
           error
         );
+
+        try {
+          const savedTasks = await getQuickTasks();
+          const normalizedTasks = (
+            Array.isArray(savedTasks) ? savedTasks : []
+          ).map((task) => ({
+            ...task,
+            id: String(task.id),
+            pinned: task.pinned === true,
+          }));
+
+          if (mounted) setTasks(normalizedTasks);
+        } catch (localError) {
+          console.error(
+            "Failed to load local quick tasks:",
+            localError
+          );
+        }
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
 
     load();
+
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
   }, []);
 
 
@@ -81,14 +138,32 @@ function QuickTasks() {
      SAVE TASKS
   ========================================================= */
 
-  async function persist(updated) {
-    setTasks(updated);
+  async function persist(updated, changedTask = null) {
+    const normalized = updated.map((task) => ({
+      ...task,
+      id: String(task.id),
+      pinned: task.pinned === true,
+    }));
+
+    setTasks(normalized);
 
     try {
-      await saveQuickTasks(updated);
+      await saveQuickTasks(normalized);
+
+      if (changedTask) {
+        await saveItemToFirestore(
+          "quickTasks",
+          String(changedTask.id),
+          {
+            ...changedTask,
+            id: String(changedTask.id),
+            pinned: changedTask.pinned === true,
+          }
+        );
+      }
     } catch (error) {
       console.error(
-        "Failed to save quick tasks:",
+        "Failed to save quick task:",
         error
       );
     }
@@ -210,30 +285,34 @@ function QuickTasks() {
     }
 
     if (editingTask) {
+      const updatedTask = {
+        ...editingTask,
+        ...form,
+        id: String(editingTask.id),
+        task: form.task.trim(),
+        pinned: form.pinned === true,
+      };
+
       persist(
         tasks.map((task) =>
-          task.id === editingTask.id
-            ? {
-                ...task,
-                ...form,
-                task: form.task.trim(),
-                pinned:
-                  form.pinned === true,
-              }
+          String(task.id) === String(editingTask.id)
+            ? updatedTask
             : task
-        )
+        ),
+        updatedTask
       );
     } else {
-      persist([
-        ...tasks,
-        {
-          id: Date.now(),
-          ...form,
-          task: form.task.trim(),
-          pinned:
-            form.pinned === true,
-        },
-      ]);
+      const newTask = {
+        id: String(Date.now()),
+        ...form,
+        task: form.task.trim(),
+        pinned: form.pinned === true,
+      };
+
+      persist(
+        [...tasks, newTask],
+        newTask
+      );
     }
 
     closeForm();
@@ -256,9 +335,19 @@ function QuickTasks() {
     persist(
       tasks.filter(
         (item) =>
-          item.id !== task.id
+          String(item.id) !== String(task.id)
       )
     );
+
+    deleteItemFromFirestore(
+      "quickTasks",
+      String(task.id)
+    ).catch((error) => {
+      console.error(
+        "Failed to delete quick task from Firestore:",
+        error
+      );
+    });
   }
 
 
@@ -270,24 +359,23 @@ function QuickTasks() {
     const isCurrentlyCompleted =
       task.status === "completed";
 
+    const updatedTask = {
+      ...task,
+      status: isCurrentlyCompleted
+        ? "pending"
+        : "completed",
+      completedAt: isCurrentlyCompleted
+        ? undefined
+        : getLocalDateKey(),
+    };
+
     persist(
       tasks.map((item) =>
-        item.id === task.id
-          ? {
-              ...item,
-
-              status:
-                isCurrentlyCompleted
-                  ? "pending"
-                  : "completed",
-
-              completedAt:
-                isCurrentlyCompleted
-                  ? undefined
-                  : getLocalDateKey(),
-            }
+        String(item.id) === String(task.id)
+          ? updatedTask
           : item
-      )
+      ),
+      updatedTask
     );
   }
 
@@ -297,16 +385,18 @@ function QuickTasks() {
   ========================================================= */
 
   function togglePin(task) {
+    const updatedTask = {
+      ...task,
+      pinned: task.pinned !== true,
+    };
+
     persist(
       tasks.map((item) =>
-        item.id === task.id
-          ? {
-              ...item,
-              pinned:
-                item.pinned !== true,
-            }
+        String(item.id) === String(task.id)
+          ? updatedTask
           : item
-      )
+      ),
+      updatedTask
     );
   }
 
@@ -501,6 +591,10 @@ function QuickTasks() {
             Small, fast to-dos that don't
             deserve their own project.
           </p>
+
+          <small style={{ opacity: 0.7 }}>
+            Synced with your Taskbar account.
+          </small>
         </div>
 
 

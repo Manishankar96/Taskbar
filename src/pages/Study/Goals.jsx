@@ -16,12 +16,16 @@ import {
   getGoals,
   saveGoals,
   getTopics,
-} from "../utils/db";
+} from "../../utils/db";
+
+import {
+  syncDeleteToFirestore,
+} from "../../firebase/sync";
 
 import {
   calculateDaysRemaining,
   calculatePercentage,
-} from "../utils/calculations";
+} from "../../utils/calculations";
 
 // ========================================
 // LEARNING SKILLS
@@ -509,6 +513,10 @@ function Goals() {
         );
 
       await saveGoals(updatedGoals);
+
+      // Remove the matching goal from Firestore so it
+      // cannot return after a refresh.
+      await syncDeleteToFirestore("goals", goal.id);
 
       setGoals(updatedGoals);
     } catch (error) {

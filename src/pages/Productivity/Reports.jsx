@@ -26,11 +26,15 @@ import {
   getScreenTime,
   getStudySessions,
   getActivities,
+  getDiet,
   getQuickTasks,
+  getTodoList,
+  getTimetable,
+  getAssessments,
   getStreak,
   getDailyReports,
   ensureDailyReportHistory,
-} from "../utils/db";
+} from "../../utils/db";
 
 
 /* =========================================================
@@ -275,7 +279,19 @@ function Reports() {
   const [screenTime, setScreenTime] = useState([]);
   const [studySessions, setStudySessions] = useState([]);
   const [activities, setActivities] = useState([]);
+  const [diet, setDiet] = useState([]);
   const [quickTasks, setQuickTasks] = useState([]);
+  const [todoList, setTodoList] = useState([]);
+  const [timetable, setTimetable] = useState([]);
+  const [assessments, setAssessments] = useState([]);
+  const [incomeList, setIncomeList] = useState([]);
+  const [expenseList, setExpenseList] = useState([]);
+  const [jobPreparationData, setJobPreparationData] = useState({
+    tasks: [],
+  });
+  const [applicationsList, setApplicationsList] = useState([]);
+  const [savedJobsList, setSavedJobsList] = useState([]);
+  const [interviewsList, setInterviewsList] = useState([]);
 
   const [streak, setStreak] = useState({
     current: 0,
@@ -334,7 +350,11 @@ function Reports() {
         screenData,
         studyData,
         activityData,
+        dietData,
         taskData,
+        personalTodoData,
+        timetableData,
+        assessmentData,
         streakData,
         reportData,
       ] = await Promise.all([
@@ -344,7 +364,11 @@ function Reports() {
         getScreenTime(),
         getStudySessions(),
         getActivities(),
+        getDiet(),
         getQuickTasks(),
+        getTodoList(),
+        getTimetable(),
+        getAssessments(),
         getStreak(),
         getDailyReports(),
       ]);
@@ -373,9 +397,81 @@ function Reports() {
         Array.isArray(activityData) ? activityData : []
       );
 
+      setDiet(
+        Array.isArray(dietData) ? dietData : []
+      );
+
       setQuickTasks(
         Array.isArray(taskData) ? taskData : []
       );
+
+      setTodoList(
+        Array.isArray(personalTodoData) ? personalTodoData : []
+      );
+
+      setTimetable(
+        Array.isArray(timetableData) ? timetableData : []
+      );
+
+      setAssessments(
+        Array.isArray(assessmentData) ? assessmentData : []
+      );
+
+      try {
+        const storedIncome = JSON.parse(
+          localStorage.getItem("taskbar-income") || "[]"
+        );
+        const storedExpenses = JSON.parse(
+          localStorage.getItem("taskbar-expenses") || "[]"
+        );
+
+        setIncomeList(
+          Array.isArray(storedIncome) ? storedIncome : []
+        );
+        setExpenseList(
+          Array.isArray(storedExpenses) ? storedExpenses : []
+        );
+      } catch (financeError) {
+        console.error("Finance reports loading error:", financeError);
+        setIncomeList([]);
+        setExpenseList([]);
+      }
+
+      try {
+        const storedJobPreparation = JSON.parse(
+          localStorage.getItem("taskbar-job-preparation") || "{}"
+        );
+        const storedApplications = JSON.parse(
+          localStorage.getItem("taskbar-job-applications") || "[]"
+        );
+        const storedSavedJobs = JSON.parse(
+          localStorage.getItem("taskbar-saved-jobs") || "[]"
+        );
+        const storedInterviews = JSON.parse(
+          localStorage.getItem("taskbar-interviews") || "[]"
+        );
+
+        setJobPreparationData(
+          storedJobPreparation && typeof storedJobPreparation === "object"
+            ? storedJobPreparation
+            : { tasks: [] }
+        );
+        setApplicationsList(
+          Array.isArray(storedApplications) ? storedApplications : []
+        );
+        setSavedJobsList(
+          Array.isArray(storedSavedJobs) ? storedSavedJobs : []
+        );
+        setInterviewsList(
+          Array.isArray(storedInterviews) ? storedInterviews : []
+        );
+      } catch (careerError) {
+        console.error("Career reports loading error:", careerError);
+        setJobPreparationData({ tasks: [] });
+        setApplicationsList([]);
+        setSavedJobsList([]);
+        setInterviewsList([]);
+      }
 
       if (
         Array.isArray(streakData) &&
@@ -423,7 +519,40 @@ function Reports() {
       loadReports();
     }, 5000);
 
-    return () => clearInterval(timer);
+    const refreshFinance = () => loadReports();
+    const refreshCareer = () => loadReports();
+
+    window.addEventListener("taskbar-finance-updated", refreshFinance);
+    window.addEventListener("taskbarJobPreparationUpdated", refreshCareer);
+    window.addEventListener("taskbarApplicationsUpdated", refreshCareer);
+    window.addEventListener("taskbarSavedJobsUpdated", refreshCareer);
+    window.addEventListener("taskbarInterviewsUpdated", refreshCareer);
+    window.addEventListener("storage", refreshFinance);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener(
+        "taskbar-finance-updated",
+        refreshFinance
+      );
+      window.removeEventListener(
+        "taskbarJobPreparationUpdated",
+        refreshCareer
+      );
+      window.removeEventListener(
+        "taskbarApplicationsUpdated",
+        refreshCareer
+      );
+      window.removeEventListener(
+        "taskbarSavedJobsUpdated",
+        refreshCareer
+      );
+      window.removeEventListener(
+        "taskbarInterviewsUpdated",
+        refreshCareer
+      );
+      window.removeEventListener("storage", refreshFinance);
+    };
   }, []);
 
 
@@ -867,8 +996,383 @@ function Reports() {
 
 
   /* =======================================================
+     GOALS + CENTRAL TO-DO INSIGHTS
+
+     Uses the same task sources as the central To-Do page.
+     Today's tasks are counted separately from overdue tasks.
+  ======================================================= */
+
+  const goalsAndTodoInsights = useMemo(() => {
+    const goalTotal = goals.length;
+    const goalCompleted = goals.filter(
+      (goal) => goal?.status === "completed"
+    ).length;
+
+    const goalProgress = goalTotal > 0
+      ? Math.round((goalCompleted / goalTotal) * 100)
+      : 0;
+
+    const centralTasks = [];
+    const seenIds = new Set();
+
+    const addTask = (task) => {
+      if (!task) return;
+      const id = String(task.id ?? "");
+      if (id && seenIds.has(id)) return;
+      if (id) seenIds.add(id);
+      centralTasks.push(task);
+    };
+
+    todoList.forEach((task) => addTask({
+      id: task?.id,
+      title: task?.title ?? task?.text ?? "Task",
+      date: task?.date ?? task?.dueDate,
+      completed: isCompleted(task),
+    }));
+
+    topics.forEach((topic) => {
+      if (topic?.plannedDate) {
+        addTask({
+          id: `learning-${topic?.id}`,
+          title: topic?.title ?? topic?.name ?? "Learning task",
+          date: topic.plannedDate,
+          completed: topic?.status === "completed",
+        });
+      }
+    });
+
+    goals.forEach((goal) => {
+      if (goal?.targetDate) {
+        addTask({
+          id: `goal-${goal?.id}`,
+          title: goal?.title ?? goal?.name ?? "Goal",
+          date: goal.targetDate,
+          completed: goal?.status === "completed",
+        });
+      }
+    });
+
+    assessments.forEach((assessment) => {
+      if (assessment?.date) {
+        addTask({
+          id: `assessment-${assessment?.id}`,
+          title: assessment?.title ?? assessment?.name ?? "Assessment",
+          date: assessment.date,
+          completed: isCompleted(assessment),
+        });
+      }
+    });
+
+    const todayLong = new Date(`${today}T00:00:00`)
+      .toLocaleDateString("en-IN", { weekday: "long" })
+      .toLowerCase();
+    const todayShort = weekday(today).toLowerCase();
+
+    timetable.forEach((item) => {
+      const itemDay = String(
+        item?.day ?? item?.weekday ?? item?.weekDay ?? ""
+      ).toLowerCase();
+
+      if (itemDay === todayLong || itemDay === todayShort) {
+        addTask({
+          id: `timetable-${item?.id}`,
+          title: item?.title ?? item?.subject ?? item?.name ?? "Timetable task",
+          date: today,
+          completed: false,
+        });
+      }
+    });
+
+    quickTasks.forEach((task) => {
+      const date = task?.dueDate ?? task?.date;
+      if (date) {
+        addTask({
+          id: `quick-task-${task?.id}`,
+          title: task?.title ?? task?.text ?? task?.name ?? "Quick task",
+          date,
+          completed: isCompleted(task),
+        });
+      }
+    });
+
+    const preparationTasks = Array.isArray(jobPreparationData?.tasks)
+      ? jobPreparationData.tasks
+      : [];
+
+    preparationTasks.forEach((task) => {
+      if (task?.dueDate) {
+        addTask({
+          id: `job-prep-${task?.id}`,
+          title: task?.title ?? task?.name ?? "Job preparation task",
+          date: task.dueDate,
+          completed: task?.completed === true,
+        });
+      }
+    });
+
+    applicationsList.forEach((application) => {
+      if (application?.followUpDate) {
+        addTask({
+          id: `application-follow-up-${application?.id}`,
+          title: `Follow up: ${application?.role ?? "Application"} – ${application?.company ?? ""}`,
+          date: application.followUpDate,
+          completed:
+            ["Selected", "Rejected", "Withdrawn"].includes(application?.status) ||
+            application?.followUpCompleted === true,
+        });
+      }
+    });
+
+    savedJobsList.forEach((job) => {
+      if (job?.actionDate === today) {
+        addTask({
+          id: `saved-job-action-${job?.id}`,
+          title: `Apply: ${job?.role ?? "Job"} – ${job?.company ?? ""}`,
+          date: job.actionDate,
+          completed: job?.actionCompleted === true,
+        });
+      }
+    });
+
+    interviewsList.forEach((interview) => {
+      if (interview?.date) {
+        addTask({
+          id: `interview-${interview?.id}`,
+          title: `Interview: ${interview?.role ?? "Interview"} – ${interview?.company ?? ""}`,
+          date: interview.date,
+          completed: ["Completed", "Passed", "Failed", "Cancelled"].includes(
+            interview?.status
+          ),
+        });
+      }
+    });
+
+    const datedTasks = centralTasks.filter((task) => task.date);
+    const todayTasks = datedTasks.filter((task) => task.date === today);
+    const overdueTasks = datedTasks.filter(
+      (task) => task.date < today && !task.completed
+    );
+
+    const completedToday = todayTasks.filter((task) => task.completed).length;
+    const pendingToday = todayTasks.filter((task) => !task.completed).length;
+
+    const completionRate = todayTasks.length > 0
+      ? Math.round((completedToday / todayTasks.length) * 100)
+      : 0;
+
+    return {
+      goalTotal,
+      goalCompleted,
+      goalProgress,
+      todayTotal: todayTasks.length,
+      completedToday,
+      pendingToday,
+      overdueCount: overdueTasks.length,
+      completionRate,
+    };
+  }, [
+    goals,
+    todoList,
+    topics,
+    assessments,
+    timetable,
+    quickTasks,
+    jobPreparationData,
+    applicationsList,
+    savedJobsList,
+    interviewsList,
+    today,
+  ]);
+
+
+  /* =======================================================
      PRODUCTIVITY
 ======================================================= */
+
+  const financeInsights = useMemo(() => {
+    const monthKey = today.slice(0, 7);
+
+    const monthIncome = incomeList
+      .filter((item) =>
+        String(item?.date || "").startsWith(monthKey)
+      )
+      .reduce(
+        (total, item) =>
+          total + safeNumber(item?.amount),
+        0
+      );
+
+    const monthExpenses = expenseList
+      .filter((item) =>
+        String(item?.date || "").startsWith(monthKey)
+      )
+      .reduce(
+        (total, item) =>
+          total + safeNumber(item?.amount),
+        0
+      );
+
+    const balance =
+      monthIncome - monthExpenses;
+
+    const savingsRate =
+      monthIncome > 0
+        ? Math.round(
+            (balance / monthIncome) * 1000
+          ) / 10
+        : 0;
+
+    const expenseRate =
+      monthIncome > 0
+        ? Math.round(
+            (monthExpenses / monthIncome) * 1000
+          ) / 10
+        : 0;
+
+    return {
+      monthIncome,
+      monthExpenses,
+      balance,
+      savingsRate,
+      expenseRate,
+    };
+  }, [incomeList, expenseList, today]);
+
+
+  /* =======================================================
+     WELLNESS INSIGHTS
+
+     Uses the same stored Taskbar wellness data:
+     Water, Screen Time, Activities and Diet.
+======================================================= */
+
+  const wellnessInsights = useMemo(() => {
+    const dietToday = diet.filter(
+      (item) => item?.date === today
+    );
+
+    const sugarToday = dietToday.reduce(
+      (total, item) =>
+        total +
+        safeNumber(
+          item?.sugar ??
+            item?.sugarGrams ??
+            item?.sugarIntake
+        ),
+      0
+    );
+
+    const proteinToday = dietToday.reduce(
+      (total, item) =>
+        total +
+        safeNumber(
+          item?.protein ??
+            item?.proteinGrams ??
+            item?.proteinIntake
+        ),
+      0
+    );
+
+    const proteinTargetCandidates = dietToday
+      .map((item) =>
+        safeNumber(
+          item?.proteinTarget ??
+            item?.targetProtein ??
+            item?.dailyProteinTarget
+        )
+      )
+      .filter((value) => value > 0);
+
+    const proteinTarget =
+      proteinTargetCandidates.length > 0
+        ? proteinTargetCandidates[proteinTargetCandidates.length - 1]
+        : 0;
+
+    const sugarPercentage = Math.min(
+      100,
+      Math.round((sugarToday / 10) * 100)
+    );
+
+    const proteinPercentage =
+      proteinTarget > 0
+        ? Math.min(100, Math.round((proteinToday / proteinTarget) * 100))
+        : 0;
+
+    const waterPercentage =
+      daily.waterTarget > 0
+        ? Math.min(100, Math.round((daily.waterToday / daily.waterTarget) * 100))
+        : 0;
+
+    return {
+      sugarToday,
+      sugarLimit: 10,
+      sugarPercentage,
+      sugarWithinLimit: sugarToday < 10,
+      proteinToday,
+      proteinTarget,
+      proteinPercentage,
+      waterToday: daily.waterToday,
+      waterTarget: daily.waterTarget,
+      waterPercentage,
+      screenMinutes: daily.screenMinutes,
+      activityMinutes: daily.activityMinutes,
+      activityCount: daily.activityToday.length,
+    };
+  }, [diet, today, daily]);
+
+
+  const careerInsights = useMemo(() => {
+    const preparationTasks = Array.isArray(jobPreparationData?.tasks)
+      ? jobPreparationData.tasks
+      : [];
+
+    const preparationCompleted = preparationTasks.filter(
+      (task) => task?.completed === true
+    ).length;
+
+    const preparationProgress =
+      preparationTasks.length > 0
+        ? Math.round((preparationCompleted / preparationTasks.length) * 100)
+        : 0;
+
+    const applicationStatusCounts = applicationsList.reduce(
+      (counts, application) => {
+        const status = String(application?.status || "").trim();
+        if (status) {
+          counts[status] = (counts[status] || 0) + 1;
+        }
+        return counts;
+      },
+      {}
+    );
+
+    const interviewActiveCount = interviewsList.filter(
+      (interview) =>
+        !["Completed", "Passed", "Failed", "Cancelled"].includes(
+          interview?.status
+        )
+    ).length;
+
+    return {
+      preparationTotal: preparationTasks.length,
+      preparationCompleted,
+      preparationProgress,
+      applicationsTotal: applicationsList.length,
+      underReview: applicationStatusCounts["Under Review"] || 0,
+      interviewApplications: applicationStatusCounts.Interview || 0,
+      selected: applicationStatusCounts.Selected || 0,
+      rejected: applicationStatusCounts.Rejected || 0,
+      savedJobs: savedJobsList.length,
+      interviewsTotal: interviewsList.length,
+      activeInterviews: interviewActiveCount,
+    };
+  }, [
+    jobPreparationData,
+    applicationsList,
+    savedJobsList,
+    interviewsList,
+  ]);
+
 
   const productivityScore =
     daily.productivityScore;
@@ -1528,6 +2032,333 @@ function Reports() {
 
             </div>
 
+          </section>
+
+
+          {/* FINANCE INSIGHTS */}
+
+          <section
+            className="report-panel"
+            style={{ marginTop: "24px" }}
+          >
+            <div className="section-heading">
+              <div>
+                <h2>💰 Finance Overview</h2>
+                <p>
+                  Current month's income, expenses and balance.
+                </p>
+              </div>
+            </div>
+
+            <div className="report-mini-stats">
+              <div>
+                <span>Income</span>
+                <strong>
+                  ₹
+                  {financeInsights.monthIncome.toLocaleString(
+                    "en-IN",
+                    { maximumFractionDigits: 2 }
+                  )}
+                </strong>
+              </div>
+
+              <div>
+                <span>Expenses</span>
+                <strong>
+                  ₹
+                  {financeInsights.monthExpenses.toLocaleString(
+                    "en-IN",
+                    { maximumFractionDigits: 2 }
+                  )}
+                </strong>
+              </div>
+
+              <div>
+                <span>Balance</span>
+                <strong>
+                  ₹
+                  {financeInsights.balance.toLocaleString(
+                    "en-IN",
+                    { maximumFractionDigits: 2 }
+                  )}
+                </strong>
+              </div>
+
+              <div>
+                <span>Savings Rate</span>
+                <strong>
+                  {financeInsights.savingsRate}%
+                </strong>
+              </div>
+
+              <div>
+                <span>Expenses / Income</span>
+                <strong>
+                  {financeInsights.expenseRate}%
+                </strong>
+              </div>
+            </div>
+          </section>
+
+
+          {/* CAREER INSIGHTS */}
+
+          <section
+            className="report-panel"
+            style={{ marginTop: "24px" }}
+          >
+            <div className="section-heading">
+              <div>
+                <h2>💼 Career Overview</h2>
+                <p>
+                  Your current job preparation and job-search activity.
+                </p>
+              </div>
+            </div>
+
+            <div className="report-mini-stats">
+              <div>
+                <span>Preparation Tasks</span>
+                <strong>
+                  {careerInsights.preparationCompleted}/
+                  {careerInsights.preparationTotal}
+                </strong>
+              </div>
+
+              <div>
+                <span>Preparation Progress</span>
+                <strong>{careerInsights.preparationProgress}%</strong>
+              </div>
+
+              <div>
+                <span>Applications</span>
+                <strong>{careerInsights.applicationsTotal}</strong>
+              </div>
+
+              <div>
+                <span>Under Review</span>
+                <strong>{careerInsights.underReview}</strong>
+              </div>
+
+              <div>
+                <span>Interview Stage</span>
+                <strong>{careerInsights.interviewApplications}</strong>
+              </div>
+
+              <div>
+                <span>Selected</span>
+                <strong>{careerInsights.selected}</strong>
+              </div>
+
+              <div>
+                <span>Saved Jobs</span>
+                <strong>{careerInsights.savedJobs}</strong>
+              </div>
+
+              <div>
+                <span>Interviews</span>
+                <strong>{careerInsights.activeInterviews}</strong>
+              </div>
+            </div>
+          </section>
+
+
+          {/* WELLNESS INSIGHTS */}
+
+          <section
+            className="report-panel"
+            style={{ marginTop: "24px" }}
+          >
+            <div className="section-heading">
+              <div>
+                <h2>❤️ Wellness Overview</h2>
+                <p>
+                  Today's water, diet, activity and screen-time data.
+                </p>
+              </div>
+            </div>
+
+            <div className="report-mini-stats">
+              <div>
+                <span>Water</span>
+                <strong>
+                  {formatLitres(wellnessInsights.waterToday)} / {formatLitres(wellnessInsights.waterTarget)}
+                </strong>
+              </div>
+
+              <div>
+                <span>Water Progress</span>
+                <strong>{wellnessInsights.waterPercentage}%</strong>
+              </div>
+
+              <div>
+                <span>Sugar</span>
+                <strong>
+                  {wellnessInsights.sugarToday.toFixed(1)}g / &lt;10g
+                </strong>
+              </div>
+
+              <div>
+                <span>Sugar Status</span>
+                <strong>
+                  {wellnessInsights.sugarWithinLimit ? "Within Limit" : "Over Limit"}
+                </strong>
+              </div>
+
+              <div>
+                <span>Protein</span>
+                <strong>
+                  {wellnessInsights.proteinToday.toFixed(1)}g
+                  {wellnessInsights.proteinTarget > 0
+                    ? ` / ${wellnessInsights.proteinTarget}g`
+                    : ""}
+                </strong>
+              </div>
+
+              <div>
+                <span>Protein Progress</span>
+                <strong>
+                  {wellnessInsights.proteinTarget > 0
+                    ? `${wellnessInsights.proteinPercentage}%`
+                    : "Target not set"}
+                </strong>
+              </div>
+
+              <div>
+                <span>Activity</span>
+                <strong>{formatMinutes(wellnessInsights.activityMinutes)}</strong>
+              </div>
+
+              <div>
+                <span>Activity Entries</span>
+                <strong>{wellnessInsights.activityCount}</strong>
+              </div>
+
+              <div>
+                <span>Screen Time</span>
+                <strong>{formatMinutes(wellnessInsights.screenMinutes)}</strong>
+              </div>
+            </div>
+          </section>
+
+
+          {/* GOALS + CENTRAL TO-DO PRODUCTIVITY */}
+
+          <section
+            className="reports-grid"
+            style={{ marginTop: "24px" }}
+          >
+
+            <div className="report-panel">
+              <div className="section-heading">
+                <div>
+                  <h2>🎯 Goals Progress</h2>
+                  <p>Progress based on your current goals.</p>
+                </div>
+              </div>
+
+              <div className="report-mini-stats">
+                <div>
+                  <span>Completed</span>
+                  <strong>
+                    {goalsAndTodoInsights.goalCompleted}/
+                    {goalsAndTodoInsights.goalTotal}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Completion</span>
+                  <strong>{goalsAndTodoInsights.goalProgress}%</strong>
+                </div>
+              </div>
+
+              <div className="report-progress" style={{ marginTop: "18px" }}>
+                <div
+                  className="report-progress-bar"
+                  style={{ width: `${goalsAndTodoInsights.goalProgress}%` }}
+                />
+              </div>
+            </div>
+
+
+            <div className="report-panel">
+              <div className="section-heading">
+                <div>
+                  <h2>✅ Central To-Do</h2>
+                  <p>Today's tasks plus missed scheduled tasks.</p>
+                </div>
+              </div>
+
+              <div className="report-mini-stats">
+                <div>
+                  <span>Completed Today</span>
+                  <strong>{goalsAndTodoInsights.completedToday}</strong>
+                </div>
+
+                <div>
+                  <span>Pending Today</span>
+                  <strong>{goalsAndTodoInsights.pendingToday}</strong>
+                </div>
+
+                <div>
+                  <span>Overdue / Missed</span>
+                  <strong>{goalsAndTodoInsights.overdueCount}</strong>
+                </div>
+
+                <div>
+                  <span>Today's Completion</span>
+                  <strong>{goalsAndTodoInsights.completionRate}%</strong>
+                </div>
+              </div>
+            </div>
+
+          </section>
+
+
+          <section
+            className="report-panel"
+            style={{ marginTop: "24px" }}
+          >
+            <div className="section-heading">
+              <div>
+                <h2>📈 Overall Productivity Summary</h2>
+                <p>
+                  A live summary of today's central tasks and your current goal progress.
+                </p>
+              </div>
+            </div>
+
+            <div className="report-mini-stats">
+              <div>
+                <span>Tasks Today</span>
+                <strong>{goalsAndTodoInsights.todayTotal}</strong>
+              </div>
+
+              <div>
+                <span>Completed</span>
+                <strong>{goalsAndTodoInsights.completedToday}</strong>
+              </div>
+
+              <div>
+                <span>Pending</span>
+                <strong>{goalsAndTodoInsights.pendingToday}</strong>
+              </div>
+
+              <div>
+                <span>Missed</span>
+                <strong>{goalsAndTodoInsights.overdueCount}</strong>
+              </div>
+
+              <div>
+                <span>Goal Progress</span>
+                <strong>{goalsAndTodoInsights.goalProgress}%</strong>
+              </div>
+
+              <div>
+                <span>Productivity Score</span>
+                <strong>{productivityScore}%</strong>
+              </div>
+            </div>
           </section>
 
 

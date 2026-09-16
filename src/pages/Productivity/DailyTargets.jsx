@@ -12,18 +12,18 @@ import {
 import {
   getDailyTargets,
   saveDailyTargets,
-} from "../utils/db";
+} from "../../utils/db";
 
 import {
   getTodayLocalDateKey,
-} from "../utils/calculations";
+} from "../../utils/calculations";
 
 import {
   getItemsFromFirestore,
   saveItemToFirestore,
   deleteItemFromFirestore,
   subscribeToFirestoreCollection,
-} from "../firebase/firestore";
+} from "../../firebase/firestore";
 
 const emptyForm = {
   title: "",

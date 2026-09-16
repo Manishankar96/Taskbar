@@ -12,20 +12,20 @@ import {
 import {
   getTimetable,
   saveTimetable,
-} from "../utils/db";
+} from "../../utils/db";
 
 import {
   getTodayLocalDateKey,
-} from "../utils/calculations";
+} from "../../utils/calculations";
 
-const DAYS = [
+const DAY_NAMES = [
+  "Sunday",
   "Monday",
   "Tuesday",
   "Wednesday",
   "Thursday",
   "Friday",
   "Saturday",
-  "Sunday",
 ];
 
 const CATEGORIES = [
@@ -37,7 +37,7 @@ const CATEGORIES = [
 ];
 
 const emptyForm = {
-  day: "Monday",
+  date: "",
   startTime: "09:00",
   endTime: "10:00",
   activity: "",
@@ -169,7 +169,7 @@ function Timetable() {
     setEditingEntry(null);
     setForm({
       ...emptyForm,
-      day: getCurrentDayName(),
+      date: getTodayLocalDateKey(),
     });
     setShowForm(true);
     setNotificationMessage("");
@@ -182,9 +182,9 @@ function Timetable() {
     setEditingEntry(entry);
 
     setForm({
-      day:
-        entry.day ||
-        "Monday",
+      date:
+        entry.date ||
+        getTodayLocalDateKey(),
       startTime:
         entry.startTime ||
         "09:00",
@@ -256,7 +256,8 @@ function Timetable() {
 
     const cleanedEntry = {
       ...(editingEntry || {}),
-      day: form.day,
+      date: form.date,
+      day: getDayNameFromDate(form.date),
       startTime:
         form.startTime,
       endTime:
@@ -350,100 +351,72 @@ function Timetable() {
   }
 
   /*
-   * Group timetable by day.
+   * Calendar: today and the next 10 days.
    */
-  const groupedEntries =
-    useMemo(() => {
-      const grouped = {};
+  const calendarDays = useMemo(() => {
+    const todayKey = getTodayLocalDateKey();
+    const [year, month, day] = todayKey.split("-").map(Number);
+    const today = new Date(year, month - 1, day);
 
-      DAYS.forEach(
-        (day) => {
-          grouped[day] = [];
-        }
+    return Array.from({ length: 11 }, (_, index) => {
+      const date = new Date(today);
+      date.setDate(today.getDate() + index);
+      const key = formatDateKey(date);
+
+      return {
+        key,
+        date,
+        label: index === 0 ? "Today" : formatShortDate(date),
+        dayName: DAY_NAMES[date.getDay()],
+      };
+    });
+  }, []);
+
+  const [selectedDate, setSelectedDate] = useState(
+    getTodayLocalDateKey()
+  );
+
+  const selectedDay =
+    calendarDays.find((item) => item.key === selectedDate) ||
+    calendarDays[0];
+
+  const selectedEntries = useMemo(() => {
+    return entries
+      .filter((entry) => entry.date === selectedDate)
+      .sort((a, b) =>
+        String(a.startTime || "").localeCompare(String(b.startTime || ""))
       );
+  }, [entries, selectedDate]);
 
-      entries.forEach(
-        (entry) => {
-          if (
-            !grouped[entry.day]
-          ) {
-            grouped[entry.day] =
-              [];
-          }
-
-          grouped[
-            entry.day
-          ].push(entry);
-        }
+  const todaysEntries = useMemo(() => {
+    const todayKey = getTodayLocalDateKey();
+    return entries
+      .filter((entry) => entry.date === todayKey)
+      .sort((a, b) =>
+        String(a.startTime || "").localeCompare(String(b.startTime || ""))
       );
+  }, [entries]);
 
-      DAYS.forEach(
-        (day) => {
-          grouped[day].sort(
-            (a, b) =>
-              String(
-                a.startTime || ""
-              ).localeCompare(
-                String(
-                  b.startTime || ""
-                )
-              )
-          );
-        }
-      );
+  const currentDay = DAY_NAMES[new Date().getDay()];
 
-      return grouped;
-    }, [entries]);
+  const nextEntry = useMemo(() => {
+    if (selectedDate !== getTodayLocalDateKey()) return null;
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-  /*
-   * Current day
-   */
-  const currentDay =
-    getCurrentDayName();
-
-  /*
-   * Today's timetable
-   */
-  const todaysEntries =
-    groupedEntries[
-      currentDay
-    ] || [];
-
-  /*
-   * Find the next upcoming timetable entry.
-   */
-  const nextEntry =
-    useMemo(() => {
-      const now =
-        new Date();
-
-      const currentMinutes =
-        now.getHours() *
-          60 +
-        now.getMinutes();
-
-      return (
-        todaysEntries
-          .filter(
-            (entry) =>
-              entry.notificationsEnabled !==
-                false &&
-              timeToMinutes(
-                entry.startTime
-              ) >=
-                currentMinutes
-          )
-          .sort(
-            (a, b) =>
-              timeToMinutes(
-                a.startTime
-              ) -
-              timeToMinutes(
-                b.startTime
-              )
-          )[0] || null
-      );
-    }, [todaysEntries]);
+    return (
+      todaysEntries
+        .filter(
+          (entry) =>
+            entry.notificationsEnabled !== false &&
+            timeToMinutes(entry.startTime) >= currentMinutes
+        )
+        .sort(
+          (a, b) =>
+            timeToMinutes(a.startTime) - timeToMinutes(b.startTime)
+        )[0] || null
+    );
+  }, [selectedDate, todaysEntries]);
 
   /*
    * Timetable notification checker.
@@ -469,10 +442,7 @@ function Timetable() {
         const now =
           new Date();
 
-        const today =
-          getCurrentDayName(
-            now
-          );
+        const today = getTodayLocalDateKey();
 
         const currentMinutes =
           now.getHours() *
@@ -482,8 +452,7 @@ function Timetable() {
         entries.forEach(
           (entry) => {
             if (
-              entry.day !==
-                today ||
+              entry.date !== today ||
               entry.notificationsEnabled ===
                 false
             ) {
@@ -803,30 +772,28 @@ function Timetable() {
             <div className="form-group">
 
               <label>
-                Day
+                Date
               </label>
 
-              <select
-                value={form.day}
+              <input
+                type="date"
+                min={calendarDays[0]?.key}
+                max={calendarDays[10]?.key}
+                value={form.date}
                 onChange={(event) =>
                   setForm({
                     ...form,
-                    day:
-                      event.target.value,
+                    date: event.target.value,
                   })
                 }
-              >
-                {DAYS.map(
-                  (day) => (
-                    <option
-                      key={day}
-                      value={day}
-                    >
-                      {day}
-                    </option>
-                  )
-                )}
-              </select>
+                required
+              />
+
+              {form.date && (
+                <small style={{ opacity: 0.7 }}>
+                  {getDayNameFromDate(form.date)}
+                </small>
+              )}
 
             </div>
 
@@ -1023,211 +990,109 @@ function Timetable() {
       )}
 
 
-      {/* WEEKLY TIMETABLE */}
+      {/* 11-DAY CALENDAR */}
 
       <section
         className="learning-section"
-        style={{
-          marginTop: 20,
-        }}
+        style={{ marginTop: 20 }}
       >
+        <div className="topic-header">
+          <div>
+            <h2>11-Day Calendar</h2>
+            <p>Plan your timetable for today and the next 10 days.</p>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))",
+            gap: 10,
+            marginBottom: 20,
+          }}
+        >
+          {calendarDays.map((calendarDay) => (
+            <button
+              key={calendarDay.key}
+              type="button"
+              onClick={() => setSelectedDate(calendarDay.key)}
+              style={{
+                padding: "12px 8px",
+                borderRadius: 12,
+                border:
+                  selectedDate === calendarDay.key
+                    ? "2px solid currentColor"
+                    : "1px solid currentColor",
+                background:
+                  selectedDate === calendarDay.key
+                    ? "rgba(255,255,255,0.12)"
+                    : "transparent",
+                color: "inherit",
+                cursor: "pointer",
+              }}
+            >
+              <strong style={{ display: "block" }}>{calendarDay.label}</strong>
+              <span style={{ fontSize: 12, opacity: 0.75 }}>
+                {calendarDay.dayName}
+              </span>
+            </button>
+          ))}
+        </div>
 
         <div className="topic-header">
-
           <div>
-
-            <h2>
-              Weekly Schedule
-            </h2>
-
-            <p>
-              Your existing timetable entries.
-            </p>
-
+            <h3>
+              {selectedDay?.label} • {selectedDay?.dayName}
+            </h3>
+            <p>{selectedDate}</p>
           </div>
-
         </div>
-
 
         <div className="topic-list">
-
-          {DAYS.map(
-            (day) => {
-
-              const dayEntries =
-                groupedEntries[
-                  day
-                ] || [];
-
-              return (
-                <div
-                  key={day}
-                  style={{
-                    marginBottom:
-                      18,
-                  }}
-                >
-
-                  <div
-                    style={{
-                      display:
-                        "flex",
-                      alignItems:
-                        "center",
-                      justifyContent:
-                        "space-between",
-                      marginBottom:
-                        8,
-                    }}
-                  >
-
-                    <h3
-                      style={{
-                        margin: 0,
-                      }}
-                    >
-                      {day}
-                      {day ===
-                        currentDay &&
-                        " • Today"}
-                    </h3>
-
-                  </div>
-
-
-                  {dayEntries.length ===
-                  0 ? (
-                    <p className="empty-topics">
-                      No entries.
-                    </p>
-                  ) : (
-                    dayEntries.map(
-                      (entry) => (
-                        <div
-                          className="topic-row"
-                          key={
-                            entry.id
-                          }
-                        >
-
-                          <div className="topic-information">
-
-                            <strong>
-                              {
-                                entry.activity
-                              }
-                            </strong>
-
-                            <span>
-                              {
-                                entry.startTime
-                              }
-                              {" - "}
-                              {
-                                entry.endTime
-                              }
-                              {" • "}
-                              {
-                                entry.category
-                              }
-                              {" • "}
-                              {
-                                entry.status
-                              }
-                            </span>
-
-                          </div>
-
-
-                          <div className="topic-actions">
-
-                            <button
-                              type="button"
-                              className="edit-button"
-                              title={
-                                entry.notificationsEnabled ===
-                                false
-                                  ? "Enable notification"
-                                  : "Disable notification"
-                              }
-                              onClick={() =>
-                                toggleNotification(
-                                  entry
-                                )
-                              }
-                            >
-
-                              {entry.notificationsEnabled ===
-                              false ? (
-                                <BellOff
-                                  size={
-                                    17
-                                  }
-                                />
-                              ) : (
-                                <Bell
-                                  size={
-                                    17
-                                  }
-                                />
-                              )}
-
-                            </button>
-
-
-                            <button
-                              type="button"
-                              className="edit-button"
-                              title="Edit"
-                              onClick={() =>
-                                openEditForm(
-                                  entry
-                                )
-                              }
-                            >
-
-                              <Pencil
-                                size={
-                                  17
-                                }
-                              />
-
-                            </button>
-
-
-                            <button
-                              type="button"
-                              className="delete-button"
-                              title="Delete"
-                              onClick={() =>
-                                deleteEntry(
-                                  entry
-                                )
-                              }
-                            >
-
-                              <Trash2
-                                size={
-                                  17
-                                }
-                              />
-
-                            </button>
-
-                          </div>
-
-                        </div>
-                      )
-                    )
-                  )}
-
+          {selectedEntries.length === 0 ? (
+            <p className="empty-topics">No timetable entries for this date.</p>
+          ) : (
+            selectedEntries.map((entry) => (
+              <div className="topic-row" key={entry.id}>
+                <div className="topic-information">
+                  <strong>{entry.activity}</strong>
+                  <span>
+                    {entry.startTime} - {entry.endTime} • {entry.category} • {entry.status}
+                  </span>
                 </div>
-              );
-            }
+
+                <div className="topic-actions">
+                  <button
+                    type="button"
+                    className="edit-button"
+                    title={entry.notificationsEnabled === false ? "Enable notification" : "Disable notification"}
+                    onClick={() => toggleNotification(entry)}
+                  >
+                    {entry.notificationsEnabled === false ? <BellOff size={17} /> : <Bell size={17} />}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="edit-button"
+                    title="Edit"
+                    onClick={() => openEditForm(entry)}
+                  >
+                    <Pencil size={17} />
+                  </button>
+
+                  <button
+                    type="button"
+                    className="delete-button"
+                    title="Delete"
+                    onClick={() => deleteEntry(entry)}
+                  >
+                    <Trash2 size={17} />
+                  </button>
+                </div>
+              </div>
+            ))
           )}
-
         </div>
-
       </section>
 
     </div>
@@ -1261,20 +1126,24 @@ function timeToMinutes(
   );
 }
 
-/*
- * Get today's weekday name.
- */
-function getCurrentDayName(
-  date = new Date()
-) {
-  const dayIndex =
-    date.getDay();
+function formatDateKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
-  return DAYS[
-    dayIndex === 0
-      ? 6
-      : dayIndex - 1
-  ];
+function formatShortDate(date) {
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+  });
+}
+
+function getDayNameFromDate(dateKey) {
+  if (!dateKey) return "";
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return DAY_NAMES[new Date(year, month - 1, day).getDay()];
 }
 
 export default Timetable;

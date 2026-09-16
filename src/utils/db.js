@@ -1,7 +1,7 @@
 // src/utils/db.js
 
 const DB_NAME = "personalDashboardDB";
-const DB_VERSION = 7;
+const DB_VERSION = 9;
 
 const STORES = {
   topics: "topics",
@@ -23,6 +23,22 @@ const STORES = {
   reminders: "reminders",
   todoList: "todoList",
   studySessions: "studySessions",
+
+  // CAREER
+  jobPreparation: "jobPreparation",
+  applications: "applications",
+  savedJobs: "savedJobs",
+  resumes: "resumes",
+  interviews: "interviews",
+  projects: "projects",
+
+  // FINANCE
+  income: "income",
+  expenses: "expenses",
+  budget: "budget",
+
+  // SETTINGS
+  settings: "settings",
 };
 
 let dbPromise = null;
@@ -444,6 +460,179 @@ export const deleteStudySession = (id) =>
   deleteItem(STORES.studySessions, id);
 
 /* =========================================================
+   CAREER
+========================================================= */
+
+export const getJobPreparation = () =>
+  getItems(STORES.jobPreparation);
+
+export const saveJobPreparation = (items) =>
+  saveItems(STORES.jobPreparation, items);
+
+export const addJobPreparation = (item) =>
+  putItem(STORES.jobPreparation, item);
+
+export const updateJobPreparation = (item) =>
+  putItem(STORES.jobPreparation, item);
+
+export const deleteJobPreparation = (id) =>
+  deleteItem(STORES.jobPreparation, id);
+
+export const getApplications = () =>
+  getItems(STORES.applications);
+
+export const saveApplications = (items) =>
+  saveItems(STORES.applications, items);
+
+export const addApplication = (item) =>
+  putItem(STORES.applications, item);
+
+export const updateApplication = (item) =>
+  putItem(STORES.applications, item);
+
+export const deleteApplication = (id) =>
+  deleteItem(STORES.applications, id);
+
+export const getSavedJobs = () =>
+  getItems(STORES.savedJobs);
+
+export const saveSavedJobs = (items) =>
+  saveItems(STORES.savedJobs, items);
+
+export const addSavedJob = (item) =>
+  putItem(STORES.savedJobs, item);
+
+export const updateSavedJob = (item) =>
+  putItem(STORES.savedJobs, item);
+
+export const deleteSavedJob = (id) =>
+  deleteItem(STORES.savedJobs, id);
+
+export const getResumes = () =>
+  getItems(STORES.resumes);
+
+export const saveResumes = (items) =>
+  saveItems(STORES.resumes, items);
+
+export const addResume = (item) =>
+  putItem(STORES.resumes, item);
+
+export const updateResume = (item) =>
+  putItem(STORES.resumes, item);
+
+export const deleteResume = (id) =>
+  deleteItem(STORES.resumes, id);
+
+export const getInterviews = () =>
+  getItems(STORES.interviews);
+
+export const saveInterviews = (items) =>
+  saveItems(STORES.interviews, items);
+
+export const addInterview = (item) =>
+  putItem(STORES.interviews, item);
+
+export const updateInterview = (item) =>
+  putItem(STORES.interviews, item);
+
+export const deleteInterview = (id) =>
+  deleteItem(STORES.interviews, id);
+
+export const getProjects = () =>
+  getItems(STORES.projects);
+
+export const saveProjects = (items) =>
+  saveItems(STORES.projects, items);
+
+export const addProject = (item) =>
+  putItem(STORES.projects, item);
+
+export const updateProject = (item) =>
+  putItem(STORES.projects, item);
+
+export const deleteProject = (id) =>
+  deleteItem(STORES.projects, id);
+
+/* =========================================================
+   FINANCE
+========================================================= */
+
+export const getIncome = () =>
+  getItems(STORES.income);
+
+export const saveIncome = (items) =>
+  saveItems(STORES.income, items);
+
+export const addIncome = (item) =>
+  putItem(STORES.income, item);
+
+export const updateIncome = (item) =>
+  putItem(STORES.income, item);
+
+export const deleteIncome = (id) =>
+  deleteItem(STORES.income, id);
+
+export const getExpenses = () =>
+  getItems(STORES.expenses);
+
+export const saveExpenses = (items) =>
+  saveItems(STORES.expenses, items);
+
+export const addExpense = (item) =>
+  putItem(STORES.expenses, item);
+
+export const updateExpense = (item) =>
+  putItem(STORES.expenses, item);
+
+export const deleteExpense = (id) =>
+  deleteItem(STORES.expenses, id);
+
+export const getBudget = () =>
+  getItems(STORES.budget);
+
+export const saveBudget = (items) =>
+  saveItems(STORES.budget, items);
+
+export const addBudget = (item) =>
+  putItem(STORES.budget, item);
+
+export const updateBudget = (item) =>
+  putItem(STORES.budget, item);
+
+export const deleteBudget = (id) =>
+  deleteItem(STORES.budget, id);
+
+/* =========================================================
+   SETTINGS
+========================================================= */
+
+export async function getSettings() {
+  return getItem(
+    STORES.settings,
+    "settings"
+  );
+}
+
+export async function saveSettings(settings) {
+  if (!settings) {
+    throw new Error(
+      "Settings data is required"
+    );
+  }
+
+  return putItem(
+    STORES.settings,
+    {
+      ...settings,
+      id: "settings",
+    }
+  );
+}
+
+export const updateSettings =
+  saveSettings;
+
+/* =========================================================
    PROFILE
 ========================================================= */
 
@@ -463,6 +652,7 @@ export async function getProfile() {
    * with another ID, find it and migrate it
    * to the permanent "profile" ID.
    */
+
   const items = await getItems(
     STORES.profile
   );
@@ -478,7 +668,9 @@ export async function getProfile() {
     id: "profile",
   };
 
-  await saveProfile(migratedProfile);
+  await saveProfile(
+    migratedProfile
+  );
 
   return migratedProfile;
 }
@@ -495,9 +687,6 @@ export async function saveProfile(profile) {
    *
    * Always use the same IndexedDB key:
    * "profile"
-   *
-   * This prevents old/legacy profile records
-   * from being returned after refresh.
    */
 
   const profileData = {
@@ -523,73 +712,87 @@ export async function saveProfile(profile) {
         : [],
   };
 
-  const db = await openDatabase();
+  const db =
+    await openDatabase();
 
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(
-      STORES.profile,
-      "readwrite"
-    );
+  return new Promise(
+    (resolve, reject) => {
+      const transaction =
+        db.transaction(
+          STORES.profile,
+          "readwrite"
+        );
 
-    const store =
-      transaction.objectStore(
-        STORES.profile
-      );
-
-    /*
-     * Remove old profile records first.
-     */
-    const getAllRequest =
-      store.getAll();
-
-    getAllRequest.onsuccess = () => {
-      const existingProfiles =
-        getAllRequest.result || [];
-
-      existingProfiles.forEach(
-        (existingProfile) => {
-          if (
-            existingProfile?.id !==
-            "profile"
-          ) {
-            store.delete(
-              existingProfile.id
-            );
-          }
-        }
-      );
+      const store =
+        transaction.objectStore(
+          STORES.profile
+        );
 
       /*
-       * Save exactly one profile.
+       * Remove old profile records first.
        */
-      store.put(profileData);
-    };
+      const getAllRequest =
+        store.getAll();
 
-    getAllRequest.onerror = () => {
-      reject(
-        getAllRequest.error
-      );
-    };
+      getAllRequest.onsuccess =
+        () => {
+          const existingProfiles =
+            getAllRequest.result ||
+            [];
 
-    transaction.oncomplete = () => {
-      resolve(profileData);
-    };
+          existingProfiles.forEach(
+            (existingProfile) => {
+              if (
+                existingProfile?.id !==
+                "profile"
+              ) {
+                store.delete(
+                  existingProfile.id
+                );
+              }
+            }
+          );
 
-    transaction.onerror = () => {
-      reject(
-        transaction.error
-      );
-    };
+          /*
+           * Save exactly one profile.
+           */
+          store.put(
+            profileData
+          );
+        };
 
-    transaction.onabort = () => {
-      reject(
-        transaction.error ||
-          new Error(
-            "Profile save transaction aborted"
-          )
-      );
-    };
-  });
+      getAllRequest.onerror =
+        () => {
+          reject(
+            getAllRequest.error
+          );
+        };
+
+      transaction.oncomplete =
+        () => {
+          resolve(
+            profileData
+          );
+        };
+
+      transaction.onerror =
+        () => {
+          reject(
+            transaction.error
+          );
+        };
+
+      transaction.onabort =
+        () => {
+          reject(
+            transaction.error ||
+              new Error(
+                "Profile save transaction aborted"
+              )
+          );
+        };
+    }
+  );
 }
 
 /* =========================================================
@@ -719,7 +922,9 @@ function getStudySessionMinutes(
         session.minutes
     );
 
-  if (directDuration > 0) {
+  if (
+    directDuration > 0
+  ) {
     return directDuration;
   }
 
@@ -768,7 +973,9 @@ function getStudySessionMinutes(
       let difference =
         end - start;
 
-      if (difference < 0) {
+      if (
+        difference < 0
+      ) {
         difference +=
           24 * 60;
       }
@@ -795,19 +1002,24 @@ function getStudySessionsForDate(
       )
   );
 }
+
 /* =========================================================
    DAILY REPORTS
 ========================================================= */
 
 export async function getDailyReports() {
-  const reports = await getItems(
-    STORES.dailyReports
-  );
+  const reports =
+    await getItems(
+      STORES.dailyReports
+    );
 
-  return reports.sort((a, b) =>
-    String(b.date).localeCompare(
-      String(a.date)
-    )
+  return reports.sort(
+    (a, b) =>
+      String(
+        b.date
+      ).localeCompare(
+        String(a.date)
+      )
   );
 }
 
@@ -860,7 +1072,9 @@ export async function saveDailyReport(
   }
 
   const date =
-    normalizeDate(report.date);
+    normalizeDate(
+      report.date
+    );
 
   if (!date) {
     throw new Error(
@@ -882,7 +1096,9 @@ export async function saveDailyReport(
   const reports =
     await getDailyReports();
 
-  if (reports.length > 50) {
+  if (
+    reports.length > 50
+  ) {
     const oldReports =
       reports.slice(50);
 
@@ -907,7 +1123,9 @@ export async function createDailyReportForDate(
   targetDate
 ) {
   const date =
-    normalizeDate(targetDate);
+    normalizeDate(
+      targetDate
+    );
 
   if (!date) {
     throw new Error(
@@ -946,18 +1164,20 @@ export async function createDailyReportForDate(
   ------------------------- */
 
   const dailyTopics =
-    topics.filter((item) =>
-      itemMatchesDate(
-        item,
-        date
-      )
+    topics.filter(
+      (item) =>
+        itemMatchesDate(
+          item,
+          date
+        )
     );
 
   const learningCompleted =
     dailyTopics.filter(
       (item) =>
         item.completed === true ||
-        item.status === "completed" ||
+        item.status ===
+          "completed" ||
         item.isCompleted === true
     ).length;
 
@@ -1001,7 +1221,8 @@ export async function createDailyReportForDate(
   const goalsCompleted =
     goals.filter(
       (goal) =>
-        goal.status === "completed" ||
+        goal.status ===
+          "completed" ||
         goal.completed === true ||
         goal.isCompleted === true
     ).length;
@@ -1016,11 +1237,13 @@ export async function createDailyReportForDate(
         )
       )
       .filter(
-        (value) => value >= 0
+        (value) =>
+          value >= 0
       );
 
   const averageGoalProgress =
-    goalProgressValues.length > 0
+    goalProgressValues.length >
+    0
       ? Math.round(
           goalProgressValues.reduce(
             (sum, value) =>
@@ -1036,17 +1259,19 @@ export async function createDailyReportForDate(
   ------------------------- */
 
   const dailyTimetable =
-    timetable.filter((item) =>
-      itemMatchesDate(
-        item,
-        date
-      )
+    timetable.filter(
+      (item) =>
+        itemMatchesDate(
+          item,
+          date
+        )
     );
 
   const timetableCompleted =
     dailyTimetable.filter(
       (item) =>
-        item.status === "completed" ||
+        item.status ===
+          "completed" ||
         item.completed === true ||
         item.isCompleted === true
     ).length;
@@ -1063,11 +1288,12 @@ export async function createDailyReportForDate(
   ------------------------- */
 
   const dailyDiet =
-    diet.filter((item) =>
-      itemMatchesDate(
-        item,
-        date
-      )
+    diet.filter(
+      (item) =>
+        itemMatchesDate(
+          item,
+          date
+        )
     );
 
   const healthyDiet =
@@ -1083,18 +1309,21 @@ export async function createDailyReportForDate(
   ------------------------- */
 
   const dailyWater =
-    water.filter((item) =>
-      itemMatchesDate(
-        item,
-        date
-      )
+    water.filter(
+      (item) =>
+        itemMatchesDate(
+          item,
+          date
+        )
     );
 
   const dailyWaterRecord =
     dailyWater.find(
       (item) =>
-        item?.consumed !== undefined ||
-        item?.consumedMl !== undefined
+        item?.consumed !==
+          undefined ||
+        item?.consumedMl !==
+          undefined
     );
 
   const waterConsumed =
@@ -1124,11 +1353,12 @@ export async function createDailyReportForDate(
   ------------------------- */
 
   const dailyScreenTime =
-    screenTime.filter((item) =>
-      itemMatchesDate(
-        item,
-        date
-      )
+    screenTime.filter(
+      (item) =>
+        itemMatchesDate(
+          item,
+          date
+        )
     );
 
   const totalScreenMinutes =
@@ -1174,11 +1404,12 @@ export async function createDailyReportForDate(
   ------------------------- */
 
   const dailyActivities =
-    activities.filter((item) =>
-      itemMatchesDate(
-        item,
-        date
-      )
+    activities.filter(
+      (item) =>
+        itemMatchesDate(
+          item,
+          date
+        )
     );
 
   const activityMinutes =
@@ -1198,17 +1429,19 @@ export async function createDailyReportForDate(
   ------------------------- */
 
   const dailyAssessments =
-    assessments.filter((item) =>
-      itemMatchesDate(
-        item,
-        date
-      )
+    assessments.filter(
+      (item) =>
+        itemMatchesDate(
+          item,
+          date
+        )
     );
 
   const assessmentsCompleted =
     dailyAssessments.filter(
       (item) =>
-        item.status === "completed" ||
+        item.status ===
+          "completed" ||
         item.completed === true ||
         item.isCompleted === true
     ).length;
@@ -1225,18 +1458,20 @@ export async function createDailyReportForDate(
   ------------------------- */
 
   const dailyTasks =
-    quickTasks.filter((item) =>
-      itemMatchesDate(
-        item,
-        date
-      )
+    quickTasks.filter(
+      (item) =>
+        itemMatchesDate(
+          item,
+          date
+        )
     );
 
   const tasksCompleted =
     dailyTasks.filter(
       (item) =>
         item.completed === true ||
-        item.status === "completed" ||
+        item.status ===
+          "completed" ||
         item.isCompleted === true
     ).length;
 
@@ -1724,6 +1959,17 @@ export async function exportAllData() {
     reminders,
     todoList,
     studySessions,
+
+    jobPreparation,
+    applications,
+    savedJobs,
+    resumes,
+    interviews,
+    projects,
+    income,
+    expenses,
+    budget,
+    settings,
   ] = await Promise.all([
     getTopics(),
     getGoals(),
@@ -1743,6 +1989,17 @@ export async function exportAllData() {
     getReminders(),
     getTodoList(),
     getStudySessions(),
+
+    getJobPreparation(),
+    getApplications(),
+    getSavedJobs(),
+    getResumes(),
+    getInterviews(),
+    getProjects(),
+    getIncome(),
+    getExpenses(),
+    getBudget(),
+    getSettings(),
   ]);
 
   return {
@@ -1773,6 +2030,17 @@ export async function exportAllData() {
     reminders,
     todoList,
     studySessions,
+
+    jobPreparation,
+    applications,
+    savedJobs,
+    resumes,
+    interviews,
+    projects,
+    income,
+    expenses,
+    budget,
+    settings,
   };
 }
 
@@ -1807,6 +2075,16 @@ export function validateBackup(data) {
     "reminders",
     "todoList",
     "studySessions",
+
+    "jobPreparation",
+    "applications",
+    "savedJobs",
+    "resumes",
+    "interviews",
+    "projects",
+    "income",
+    "expenses",
+    "budget",
   ];
 
   for (
@@ -1826,6 +2104,14 @@ export function validateBackup(data) {
     data.profile !== undefined &&
     data.profile !== null &&
     typeof data.profile !== "object"
+  ) {
+    return false;
+  }
+
+  if (
+    data.settings !== undefined &&
+    data.settings !== null &&
+    typeof data.settings !== "object"
   ) {
     return false;
   }
@@ -1865,6 +2151,16 @@ export async function importAllData(data) {
     "reminders",
     "todoList",
     "studySessions",
+
+    "jobPreparation",
+    "applications",
+    "savedJobs",
+    "resumes",
+    "interviews",
+    "projects",
+    "income",
+    "expenses",
+    "budget",
   ];
 
   for (
@@ -1895,6 +2191,17 @@ export async function importAllData(data) {
       ...data.profile,
 
       id: "profile",
+    });
+  }
+
+  if (data.settings) {
+    await clearStore(
+      STORES.settings
+    );
+
+    await saveSettings({
+      ...data.settings,
+      id: "settings",
     });
   }
 

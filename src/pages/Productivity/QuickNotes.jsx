@@ -16,14 +16,14 @@ import {
 import {
   getQuickNotes,
   saveQuickNotes,
-} from "../utils/db";
+} from "../../utils/db";
 
 import {
   getItemsFromFirestore,
   saveItemToFirestore,
   deleteItemFromFirestore,
   subscribeToFirestoreCollection,
-} from "../firebase/firestore";
+} from "../../firebase/firestore";
 
 
 const emptyForm = {

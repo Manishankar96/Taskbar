@@ -10097,3 +10097,2517 @@ body:has(.profile-video-page) .page-content {
   background: transparent !important;
   background-image: none !important;
 }
+
+/* =========================================================
+   TASKBAR — STEP 1: ALL CARDS / PANELS = FULL GLASS
+   Only card surfaces are changed in this step.
+   Layout, spacing, buttons, sidebar, colors and functionality
+   are intentionally left unchanged.
+   ========================================================= */
+
+.card,
+.section-card,
+.home-card,
+.learning-stat,
+.learning-overview,
+.learning-section,
+.add-topic-card,
+.goal-form-card,
+.profile-form-card,
+.water-overview,
+.goal-card,
+.goal-stat-card,
+.module-form-card,
+.stat-card,
+.assessment-item,
+.datetime-card,
+.backup-card,
+.report-card,
+.report-panel,
+.water-card,
+.water-log-card,
+.water-main-card,
+.water-status-card,
+.content-card,
+.modal-card,
+.settings-danger-card,
+.settings-info-box,
+.profile-box,
+.interviews-card,
+.interviews-stat-card,
+.interviews-form-card,
+.interviews-item,
+.applications-card,
+.applications-stat-card,
+.applications-form-card,
+.applications-item,
+.resume-card,
+.resumes-card,
+.saved-job-card,
+.saved-jobs-card,
+.project-card,
+.projects-card,
+.job-card,
+.application-card,
+.interview-card {
+  background: rgba(255, 255, 255, 0.055) !important;
+  background-image: none !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.32) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+}
+
+/* Keep nested card sections transparent so they do not cover the glass. */
+.card > .card-header,
+.card > .card-body,
+.card > .card-footer,
+.section-card > .card-header,
+.section-card > .card-body,
+.section-card > .card-footer,
+.home-card > .card-header,
+.home-card > .card-body,
+.home-card > .card-footer,
+.content-card > .card-header,
+.content-card > .card-body,
+.content-card > .card-footer,
+.report-card > .card-header,
+.report-card > .card-body,
+.report-card > .card-footer,
+.interviews-card > .card-header,
+.interviews-card > .card-body,
+.interviews-card > .card-footer,
+.applications-card > .card-header,
+.applications-card > .card-body,
+.applications-card > .card-footer {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+/* Card hover stays subtle; no layout changes. */
+.card:hover,
+.section-card:hover,
+.home-card:hover,
+.learning-stat:hover,
+.learning-overview:hover,
+.learning-section:hover,
+.add-topic-card:hover,
+.goal-form-card:hover,
+.profile-form-card:hover,
+.water-overview:hover,
+.goal-card:hover,
+.goal-stat-card:hover,
+.module-form-card:hover,
+.stat-card:hover,
+.assessment-item:hover,
+.datetime-card:hover,
+.backup-card:hover,
+.report-card:hover,
+.report-panel:hover,
+.water-card:hover,
+.water-log-card:hover,
+.water-main-card:hover,
+.water-status-card:hover,
+.content-card:hover,
+.modal-card:hover,
+.settings-danger-card:hover,
+.settings-info-box:hover,
+.profile-box:hover,
+.interviews-card:hover,
+.interviews-stat-card:hover,
+.interviews-form-card:hover,
+.interviews-item:hover,
+.applications-card:hover,
+.applications-stat-card:hover,
+.applications-form-card:hover,
+.applications-item:hover,
+.resume-card:hover,
+.resumes-card:hover,
+.saved-job-card:hover,
+.saved-jobs-card:hover,
+.project-card:hover,
+.projects-card:hover,
+.job-card:hover,
+.application-card:hover,
+.interview-card:hover {
+  background: rgba(255, 255, 255, 0.07) !important;
+  background-image: none !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+
+/* =====================================================================
+   TASKBAR — FINAL VISUAL CONSISTENCY LAYER
+   Purpose: one coherent dark/red glass system across every page.
+   This layer intentionally wins over older theme rules above it.
+   ===================================================================== */
+
+:root {
+  --tb-red: #e50914;
+  --tb-red-bright: #ff2633;
+  --tb-red-soft: rgba(229, 9, 20, .16);
+  --tb-glass: rgba(13, 13, 15, .72);
+  --tb-glass-strong: rgba(10, 10, 12, .86);
+  --tb-glass-soft: rgba(255, 255, 255, .055);
+  --tb-glass-hover: rgba(255, 255, 255, .085);
+  --tb-line: rgba(255, 255, 255, .14);
+  --tb-line-soft: rgba(255, 255, 255, .09);
+  --tb-text: #ffffff;
+  --tb-muted: rgba(255, 255, 255, .72);
+  --tb-dim: rgba(255, 255, 255, .54);
+  --tb-shadow: 0 16px 42px rgba(0, 0, 0, .34);
+  --tb-radius: 18px;
+}
+
+/* ---------- MAIN PAGE SURFACE ---------- */
+.main-content,
+.normal-main-content {
+  color: var(--tb-text) !important;
+}
+
+.main-content h1,
+.main-content h2,
+.main-content h3,
+.main-content h4,
+.main-content h5,
+.main-content strong,
+.main-content label,
+.main-content th {
+  color: var(--tb-text) !important;
+}
+
+.main-content p,
+.main-content small,
+.main-content .subtitle,
+.main-content .description,
+.main-content .report-description,
+.main-content .applications-subtitle,
+.main-content .interviews-subtitle,
+.main-content .form-group label {
+  color: var(--tb-muted) !important;
+}
+
+/* ---------- ONE GLASS LANGUAGE FOR ALL REAL CONTENT CARDS ---------- */
+.main-content .card,
+.main-content .content-card,
+.main-content .section-card,
+.main-content .home-card,
+.main-content .learning-stat,
+.main-content .learning-overview,
+.main-content .learning-section,
+.main-content .add-topic-card,
+.main-content .goal-form-card,
+.main-content .profile-form-card,
+.main-content .goal-card,
+.main-content .goal-stat-card,
+.main-content .module-form-card,
+.main-content .stat-card,
+.main-content .assessment-item,
+.main-content .datetime-card,
+.main-content .report-card,
+.main-content .report-panel,
+.main-content .water-card,
+.main-content .water-log-card,
+.main-content .water-main-card,
+.main-content .water-status-card,
+.main-content .modal-card,
+.main-content .settings-danger-card,
+.main-content .settings-info-box,
+.main-content .profile-box,
+.main-content .backup-card,
+.main-content .interviews-card,
+.main-content .interviews-stat-card,
+.main-content .interviews-form-card,
+.main-content .interviews-item,
+.main-content .applications-card,
+.main-content .applications-stat-card,
+.main-content .applications-form-card,
+.main-content .applications-item,
+.main-content .job-preparation-card,
+.main-content .job-preparation-progress-card {
+  background: var(--tb-glass) !important;
+  background-image: none !important;
+  border: 1px solid var(--tb-line) !important;
+  color: var(--tb-text) !important;
+  box-shadow: var(--tb-shadow) !important;
+  backdrop-filter: blur(18px) saturate(125%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(125%) !important;
+}
+
+.main-content .card:hover,
+.main-content .content-card:hover,
+.main-content .section-card:hover,
+.main-content .home-card:hover,
+.main-content .learning-stat:hover,
+.main-content .learning-overview:hover,
+.main-content .learning-section:hover,
+.main-content .add-topic-card:hover,
+.main-content .goal-card:hover,
+.main-content .goal-stat-card:hover,
+.main-content .stat-card:hover,
+.main-content .assessment-item:hover,
+.main-content .report-card:hover,
+.main-content .report-panel:hover,
+.main-content .water-card:hover,
+.main-content .water-log-card:hover,
+.main-content .water-main-card:hover,
+.main-content .water-status-card:hover,
+.main-content .interviews-card:hover,
+.main-content .interviews-stat-card:hover,
+.main-content .interviews-form-card:hover,
+.main-content .interviews-item:hover,
+.main-content .applications-card:hover,
+.main-content .applications-stat-card:hover,
+.main-content .applications-form-card:hover,
+.main-content .applications-item:hover,
+.main-content .job-preparation-card:hover,
+.main-content .job-preparation-progress-card:hover {
+  background: var(--tb-glass-hover) !important;
+  background-image: none !important;
+  border-color: rgba(229, 9, 20, .28) !important;
+}
+
+/* No white/grey inner surfaces hiding the glass. */
+.main-content .card-header,
+.main-content .card-body,
+.main-content .card-footer,
+.main-content .applications-card > div,
+.main-content .interviews-card > div,
+.main-content .job-preparation-card > div {
+  background: transparent !important;
+  background-image: none !important;
+  color: inherit !important;
+}
+
+/* ---------- REMOVE THE WHITE SHINE / SWEEP ---------- */
+.card::before,
+.section-card::before,
+.home-card::before,
+.learning-stat::before,
+.goal-card::before,
+.goal-stat-card::before,
+.stat-card::before,
+.report-card::before,
+.report-panel::before,
+.profile-form-card::before,
+.task-item::before {
+  content: none !important;
+  display: none !important;
+  animation: none !important;
+  background: none !important;
+}
+
+/* Remove decorative white circles added by the old theme. */
+.home-card::after,
+.stat-card::after,
+.learning-stat::after,
+.goal-stat-card::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* ---------- INNER LIST / MINI CARDS ---------- */
+.main-content .topic-row,
+.main-content .task-item,
+.main-content .assessment-item,
+.main-content .water-log-row,
+.main-content .water-status-grid > div,
+.main-content .income-item,
+.main-content .expense-item,
+.main-content .overview-row,
+.main-content .budget-overview,
+.main-content .report-mini-stats > div,
+.main-content .history-item,
+.main-content .report-history-summary,
+.main-content .applications-filters,
+.main-content .applications-form-field,
+.main-content .interviews-filters,
+.main-content .interviews-extra-field,
+.main-content .job-preparation-list-item,
+.main-content .job-preparation-goal-content,
+.main-content .custom-shortcut-item {
+  background: rgba(255, 255, 255, .045) !important;
+  background-image: none !important;
+  border-color: var(--tb-line-soft) !important;
+  color: var(--tb-text) !important;
+}
+
+.main-content .topic-row:hover,
+.main-content .task-item:hover,
+.main-content .assessment-item:hover,
+.main-content .water-log-row:hover,
+.main-content .water-status-grid > div:hover,
+.main-content .income-item:hover,
+.main-content .expense-item:hover,
+.main-content .history-item:hover,
+.main-content .applications-item:hover,
+.main-content .interviews-item:hover,
+.main-content .job-preparation-list-item:hover,
+.main-content .custom-shortcut-item:hover {
+  background: rgba(255, 255, 255, .075) !important;
+  border-color: rgba(229, 9, 20, .30) !important;
+}
+
+/* Empty states are also glass — never half-white. */
+.main-content .empty-state,
+.main-content .empty-topics,
+.main-content .applications-empty-state,
+.main-content .interviews-empty-state,
+.main-content .job-preparation-empty-state,
+.main-content .loading-text {
+  background: rgba(255, 255, 255, .045) !important;
+  background-image: none !important;
+  border: 1px solid var(--tb-line-soft) !important;
+  color: var(--tb-muted) !important;
+  border-radius: 16px !important;
+}
+
+.main-content .empty-state h3,
+.main-content .empty-state p,
+.main-content .empty-topics,
+.main-content .applications-empty-state p,
+.main-content .interviews-empty-state p,
+.main-content .job-preparation-empty-state p {
+  color: var(--tb-muted) !important;
+}
+
+/* ---------- ICON SYSTEM: CONTENT ICONS = RED ---------- */
+.main-content svg:not(.recharts-surface):not(.recharts-layer) {
+  color: var(--tb-red) !important;
+  stroke: currentColor;
+}
+
+.main-content .card-icon,
+.main-content .stat-icon,
+.main-content .expense-icon,
+.main-content .income-icon,
+.main-content .water-icon,
+.main-content .profile-icon,
+.main-content .applications-search-icon,
+.main-content .applications-empty-icon,
+.main-content .interviews-empty-icon,
+.main-content .settings-section-icon,
+.main-content .job-preparation-muted-icon,
+.main-content .custom-shortcut-icon {
+  color: var(--tb-red) !important;
+}
+
+/* Icons on red buttons remain white for contrast. */
+.main-content .primary-button svg,
+.main-content .add-topic-button svg,
+.main-content .save-topic-button svg,
+.main-content .applications-button-primary svg,
+.main-content .interviews-button-primary svg,
+.main-content .job-preparation-button-primary svg,
+.main-content .water-add-button svg,
+.main-content .water-remove-button svg,
+.main-content .water-reset-button svg,
+.main-content .report-tab.active svg,
+.main-content button[style*="#2563eb"] svg,
+.main-content button[style*="rgb(37, 99, 235)"] svg {
+  color: #fff !important;
+  stroke: currentColor;
+}
+
+/* Charts keep their own colors. */
+.main-content .recharts-wrapper,
+.main-content .recharts-wrapper svg,
+.main-content .recharts-wrapper svg * {
+  color: inherit !important;
+}
+
+/* ---------- HEADINGS / PAGE ICONS ---------- */
+.main-content .page-header svg,
+.main-content .section-title svg,
+.main-content .section-heading > svg,
+.main-content .settings-section-header svg,
+.main-content .applications-title-row svg,
+.main-content .interviews-title-row svg,
+.main-content .job-preparation-title-row svg {
+  color: var(--tb-red) !important;
+}
+
+/* ---------- FORMS: DARK GLASS EVERYWHERE ---------- */
+.main-content input,
+.main-content select,
+.main-content textarea,
+.main-content .applications-input,
+.main-content .interviews-input,
+.main-content .job-preparation-input,
+.main-content .diet-date-filter,
+.main-content .skill-search-input,
+.main-content .topic-header select,
+.main-content .topic-row select,
+.main-content .goal-details select,
+.main-content .water-target-setting input {
+  background: rgba(0, 0, 0, .48) !important;
+  background-image: none !important;
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, .15) !important;
+  box-shadow: none !important;
+}
+
+.main-content input::placeholder,
+.main-content textarea::placeholder,
+.main-content .applications-input::placeholder,
+.main-content .interviews-input::placeholder,
+.main-content .job-preparation-input::placeholder {
+  color: rgba(255, 255, 255, .42) !important;
+}
+
+.main-content input:focus,
+.main-content select:focus,
+.main-content textarea:focus {
+  border-color: rgba(229, 9, 20, .72) !important;
+  box-shadow: 0 0 0 3px rgba(229, 9, 20, .12) !important;
+  outline: none !important;
+}
+
+.main-content select option {
+  background: #151518 !important;
+  color: #fff !important;
+}
+
+/* ---------- BUTTON SYSTEM ---------- */
+.main-content .primary-button,
+.main-content .add-topic-button,
+.main-content .save-topic-button,
+.main-content .applications-button-primary,
+.main-content .interviews-button-primary,
+.main-content .job-preparation-button-primary,
+.main-content .water-add-button {
+  background: linear-gradient(135deg, var(--tb-red), #b80710) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, .12) !important;
+  box-shadow: 0 10px 24px rgba(229, 9, 20, .22) !important;
+}
+
+.main-content .secondary-button,
+.main-content .applications-button-secondary,
+.main-content .interviews-button-secondary,
+.main-content .job-preparation-button,
+.main-content .close-button,
+.main-content .icon-button,
+.main-content .applications-icon-button,
+.main-content .interviews-icon-button,
+.main-content .job-preparation-icon-button,
+.main-content .edit-button,
+.main-content .view-button,
+.main-content .import-button {
+  background: rgba(255, 255, 255, .055) !important;
+  color: #fff !important;
+  border: 1px solid var(--tb-line) !important;
+}
+
+.main-content button:hover {
+  filter: brightness(1.08);
+}
+
+/* ---------- REPORTS: COMPLETELY GLASS, INCLUDING INLINE-STYLED PARTS ---------- */
+.reports-page .report-card,
+.reports-page .report-panel,
+.reports-page .report-mini-stats > div,
+.reports-page .history-item,
+.reports-page .history-detail,
+.reports-page .report-history-summary {
+  background: var(--tb-glass) !important;
+  background-image: none !important;
+  color: #fff !important;
+  border: 1px solid var(--tb-line) !important;
+  box-shadow: var(--tb-shadow) !important;
+}
+
+.reports-page .history-item.active {
+  background: rgba(229, 9, 20, .12) !important;
+  border-color: rgba(229, 9, 20, .58) !important;
+  box-shadow: 0 14px 34px rgba(229, 9, 20, .12) !important;
+}
+
+.reports-page .history-item.active::before {
+  background: var(--tb-red) !important;
+}
+
+.reports-page .report-mini-stats span,
+.reports-page .history-item span,
+.reports-page .report-history-summary p,
+.reports-page .reports-footer {
+  color: var(--tb-muted) !important;
+}
+
+.reports-page .report-mini-stats strong,
+.reports-page .history-item > div:last-child strong,
+.reports-page .report-large-number {
+  color: #fff !important;
+}
+
+/* Reports JSX contains inline white/blue button styles. Force one visual system. */
+.reports-page .page-header button,
+.reports-page > div[style*="flex-wrap"] > button {
+  background: rgba(255, 255, 255, .055) !important;
+  color: #fff !important;
+  border: 1px solid var(--tb-line) !important;
+  box-shadow: none !important;
+}
+
+.reports-page > div[style*="flex-wrap"] > button[style*="#2563eb"],
+.reports-page > div[style*="flex-wrap"] > button[style*="rgb(37, 99, 235)"] {
+  background: linear-gradient(135deg, var(--tb-red), #b80710) !important;
+  border-color: rgba(255,255,255,.16) !important;
+  color: #fff !important;
+}
+
+.reports-page .report-progress-bar {
+  background: linear-gradient(90deg, var(--tb-red), var(--tb-red-bright)) !important;
+}
+
+/* ---------- LEARNING: NO WHITE CONTROLS ---------- */
+.learning-page .topic-header select,
+.learning-page .topic-row select,
+.learning-page .skill-progress-percent {
+  background: rgba(0, 0, 0, .52) !important;
+  color: #fff !important;
+  border-color: var(--tb-line) !important;
+}
+
+.learning-page .skill-progress-percent {
+  border: 1px solid var(--tb-line) !important;
+}
+
+/* ---------- FINANCE ---------- */
+.main-content .budget-alert,
+.main-content .budget-success {
+  background: rgba(255, 255, 255, .05) !important;
+  border: 1px solid var(--tb-line-soft) !important;
+  color: var(--tb-muted) !important;
+}
+
+.main-content .budget-alert strong,
+.main-content .budget-success strong {
+  color: #fff !important;
+}
+
+.main-content .income-icon,
+.main-content .expense-icon {
+  background: rgba(229, 9, 20, .12) !important;
+  color: var(--tb-red) !important;
+  border: 1px solid rgba(229, 9, 20, .25) !important;
+}
+
+/* ---------- MODALS ---------- */
+.main-content .modal-overlay {
+  background: rgba(0, 0, 0, .72) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+.main-content .modal-card {
+  background: rgba(14, 14, 17, .94) !important;
+  border-color: rgba(255,255,255,.16) !important;
+}
+
+/* ---------- PROGRESS / TRACKS ---------- */
+.main-content .progress-bar,
+.main-content .goal-progress,
+.main-content .report-progress-bar,
+.main-content .job-preparation-progress-track,
+.main-content .water-progress {
+  background: rgba(255, 255, 255, .10) !important;
+  border-color: rgba(255,255,255,.10) !important;
+}
+
+.main-content .progress-fill,
+.main-content .goal-progress-fill,
+.main-content .job-preparation-progress-fill,
+.main-content .water-progress-fill {
+  background: linear-gradient(90deg, var(--tb-red), var(--tb-red-bright)) !important;
+}
+
+/* ---------- NO ACCIDENTAL WHITE BACKGROUND ON COMMON INNER DIVS ---------- */
+.main-content [style*="background: #ffffff"],
+.main-content [style*="background:#ffffff"],
+.main-content [style*="background: rgb(255, 255, 255)"],
+.main-content [style*="background-color: rgb(255, 255, 255)"] {
+  background: var(--tb-glass) !important;
+  color: #fff !important;
+}
+
+/* Preserve chart backgrounds/artwork. */
+.main-content .report-chart,
+.main-content .report-chart *,
+.main-content .recharts-wrapper,
+.main-content .recharts-wrapper * {
+  background-image: none;
+}
+
+/* ---------- REDUCE VISUAL NOISE ---------- */
+.main-content .card,
+.main-content .section-card,
+.main-content .home-card,
+.main-content .stat-card,
+.main-content .report-card,
+.main-content .report-panel,
+.main-content .assessment-item,
+.main-content .topic-row,
+.main-content .task-item,
+.main-content .history-item {
+  animation: none !important;
+}
+
+/* ---------- MOBILE ---------- */
+@media (max-width: 700px) {
+  .main-content .card,
+  .main-content .section-card,
+  .main-content .home-card,
+  .main-content .stat-card,
+  .main-content .report-card,
+  .main-content .report-panel,
+  .main-content .content-card,
+  .main-content .applications-card,
+  .main-content .interviews-card,
+  .main-content .job-preparation-card {
+    border-radius: 15px !important;
+  }
+}
+
+/* =====================================================================
+   CAREER SIMPLE PAGES
+   Resumes / Projects / Saved Jobs previously had no styling hooks in
+   their JSX. The root hooks above let them share the same visual system
+   without changing their functionality.
+   ===================================================================== */
+
+.career-simple-page {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 6px 0 28px;
+  color: #fff;
+}
+
+.career-simple-page > div:first-child {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+
+.career-simple-page > div:first-child > div:first-child > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.career-simple-page > div:first-child svg,
+.career-simple-page h1 + svg,
+.career-simple-page article svg,
+.career-simple-page section svg {
+  color: var(--tb-red) !important;
+}
+
+.career-simple-page h1,
+.career-simple-page h2,
+.career-simple-page h3,
+.career-simple-page strong,
+.career-simple-page label,
+.career-simple-page span {
+  color: #fff !important;
+}
+
+.career-simple-page p {
+  color: var(--tb-muted) !important;
+}
+
+.career-simple-page > div:nth-child(2) {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.resumes-page > div:nth-child(2),
+.saved-jobs-page > div:nth-child(2) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.career-simple-page > div:nth-child(2) > div {
+  min-height: 96px;
+  padding: 16px;
+  border: 1px solid var(--tb-line) !important;
+  border-radius: 17px;
+  background: var(--tb-glass) !important;
+  box-shadow: var(--tb-shadow) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+}
+
+.career-simple-page > div:nth-child(2) > div > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: var(--tb-muted) !important;
+}
+
+.career-simple-page > div:nth-child(2) strong {
+  display: block;
+  font-size: 23px;
+}
+
+.career-simple-page > section,
+.career-simple-page > div:nth-child(4) > section,
+.career-simple-page > div:nth-child(5) > section {
+  background: var(--tb-glass) !important;
+  border: 1px solid var(--tb-line) !important;
+  border-radius: 18px;
+  box-shadow: var(--tb-shadow) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+}
+
+.career-simple-page > section {
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.career-simple-page > section > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.career-simple-page input,
+.career-simple-page select,
+.career-simple-page textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(0,0,0,.48) !important;
+  color: #fff !important;
+  border: 1px solid var(--tb-line) !important;
+  border-radius: 10px;
+  padding: 11px 12px;
+}
+
+.career-simple-page textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.career-simple-page input::placeholder,
+.career-simple-page textarea::placeholder {
+  color: rgba(255,255,255,.42) !important;
+}
+
+.career-simple-page select option {
+  background: #151518 !important;
+  color: #fff !important;
+}
+
+.career-simple-page button,
+.career-simple-page a {
+  border-radius: 10px;
+  font: inherit;
+}
+
+.career-simple-page > div:first-child > button,
+.career-simple-page section button[type="submit"],
+.career-simple-page section button:first-of-type {
+  background: linear-gradient(135deg, var(--tb-red), #b80710) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  padding: 10px 15px;
+}
+
+.career-simple-page article {
+  background: var(--tb-glass) !important;
+  border: 1px solid var(--tb-line) !important;
+  border-radius: 17px;
+  padding: 18px;
+  color: #fff !important;
+  box-shadow: var(--tb-shadow) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+}
+
+.career-simple-page article + article {
+  margin-top: 12px;
+}
+
+.career-simple-page article button,
+.career-simple-page article a {
+  background: rgba(255,255,255,.055) !important;
+  color: #fff !important;
+  border: 1px solid var(--tb-line) !important;
+  padding: 8px 11px;
+  text-decoration: none;
+}
+
+.career-simple-page article button:hover,
+.career-simple-page article a:hover {
+  border-color: rgba(229,9,20,.45) !important;
+  background: rgba(229,9,20,.10) !important;
+}
+
+.career-simple-page .empty-state,
+.career-simple-page > section > div[style] {
+  background: rgba(255,255,255,.045) !important;
+  border-color: var(--tb-line-soft) !important;
+}
+
+@media (max-width: 800px) {
+  .career-simple-page > div:first-child {
+    flex-direction: column;
+  }
+  .career-simple-page > div:nth-child(2),
+  .resumes-page > div:nth-child(2),
+  .saved-jobs-page > div:nth-child(2) {
+    grid-template-columns: 1fr;
+  }
+}
+/* =====================================================================
+   TASKBAR — FINAL BLACK / RED GLASS THEME
+   Authoritative visual layer.
+   Existing JSX/class names and functionality are preserved.
+   ===================================================================== */
+
+:root {
+  --primary: #e50914;
+  --primary-dark: #b80710;
+  --primary-light: rgba(229, 9, 20, .12);
+
+  --success: #35d07f;
+  --success-light: rgba(53, 208, 127, .10);
+  --warning: #f5b942;
+  --warning-light: rgba(245, 185, 66, .10);
+  --danger: #ff4d5a;
+  --danger-light: rgba(255, 77, 90, .10);
+  --purple: #b58cff;
+  --purple-light: rgba(181, 140, 255, .10);
+  --cyan: #55c7ff;
+  --cyan-light: rgba(85, 199, 255, .10);
+  --orange: #ff9f43;
+  --orange-light: rgba(255, 159, 67, .10);
+
+  --sidebar: #08080a;
+  --sidebar-light: #121216;
+  --background: #070709;
+  --surface: rgba(18, 18, 22, .72);
+  --surface-soft: rgba(255,255,255,.045);
+
+  --text: #f7f7f8;
+  --text-secondary: #d2d2d6;
+  --text-muted: #a1a1aa;
+
+  --border: rgba(255,255,255,.11);
+  --border-light: rgba(255,255,255,.075);
+
+  --shadow-xs: 0 2px 8px rgba(0,0,0,.22);
+  --shadow-sm: 0 10px 30px rgba(0,0,0,.28);
+  --shadow-md: 0 16px 42px rgba(0,0,0,.34);
+  --shadow-lg: 0 24px 65px rgba(0,0,0,.42);
+}
+
+/* ---------- APP BACKGROUND ---------- */
+
+html,
+body,
+#root {
+  background: #070709 !important;
+  color: #f7f7f8 !important;
+}
+
+body {
+  background:
+    radial-gradient(circle at 8% 8%, rgba(229,9,20,.10), transparent 28%),
+    radial-gradient(circle at 92% 90%, rgba(229,9,20,.055), transparent 30%),
+    #070709 !important;
+}
+
+/* ---------- SIDEBAR ---------- */
+
+.sidebar {
+  background:
+    radial-gradient(circle at 20% 5%, rgba(229,9,20,.14), transparent 28%),
+    linear-gradient(180deg, #0b0b0e 0%, #08080a 58%, #050507 100%) !important;
+  border-right: 1px solid rgba(255,255,255,.08) !important;
+  box-shadow: 8px 0 35px rgba(0,0,0,.35) !important;
+}
+
+.sidebar h2 {
+  background: linear-gradient(135deg,#fff,#ff7b82) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+}
+
+.sidebar a {
+  color: #b8b8bf !important;
+}
+
+.sidebar a::before {
+  background: #e50914 !important;
+}
+
+.sidebar a:hover {
+  background: rgba(229,9,20,.08) !important;
+  color: #fff !important;
+}
+
+.sidebar a.active {
+  background: linear-gradient(135deg,rgba(229,9,20,.92),rgba(142,5,13,.88)) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 25px rgba(229,9,20,.20) !important;
+}
+
+.sidebar a.active::before {
+  background: #fff !important;
+}
+
+/* ---------- COMMON PAGE TEXT ---------- */
+
+.main-content,
+.main-content * {
+  --page-red: #e50914;
+}
+
+.main-content h1,
+.main-content h2,
+.main-content h3,
+.main-content h4,
+.main-content strong,
+.main-content label {
+  color: #f7f7f8;
+}
+
+.main-content p,
+.main-content small {
+  color: #a1a1aa;
+}
+
+/* ---------- ALL COMMON CARDS ---------- */
+
+.main-content .card,
+.main-content .section-card,
+.main-content .home-card,
+.main-content .learning-stat,
+.main-content .learning-overview,
+.main-content .learning-section,
+.main-content .add-topic-card,
+.main-content .goal-form-card,
+.main-content .profile-form-card,
+.main-content .water-overview,
+.main-content .goal-card,
+.main-content .module-form-card,
+.main-content .stat-card,
+.main-content .assessment-item,
+.main-content .datetime-card,
+.main-content .content-card {
+  background: rgba(18,18,22,.72) !important;
+  border: 1px solid rgba(255,255,255,.105) !important;
+  color: #f7f7f8 !important;
+  box-shadow: 0 14px 40px rgba(0,0,0,.28) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+}
+
+.main-content .section-card:hover,
+.main-content .home-card:hover,
+.main-content .learning-stat:hover,
+.main-content .goal-card:hover,
+.main-content .stat-card:hover {
+  border-color: rgba(229,9,20,.28) !important;
+  box-shadow: 0 18px 48px rgba(0,0,0,.34) !important;
+}
+
+/* Remove decorative white shine / pseudo overlays from old theme. */
+.main-content .card::before,
+.main-content .section-card::before,
+.main-content .home-card::before,
+.main-content .learning-stat::before,
+.main-content .goal-card::before,
+.main-content .stat-card::before,
+.main-content .report-card::before,
+.main-content .report-panel::before,
+.main-content .profile-form-card::before {
+  display: none !important;
+}
+
+/* ---------- HEADINGS / ICONS ---------- */
+
+.main-content svg {
+  color: #e50914;
+}
+
+.section-title svg,
+.card-icon,
+.learning-stat svg,
+.goal-stat-card svg,
+.goal-details svg,
+.datetime-card svg,
+.home-greeting {
+  color: #e50914 !important;
+}
+
+/* ---------- INPUTS / SELECTS / TEXTAREAS ---------- */
+
+.main-content input,
+.main-content select,
+.main-content textarea,
+.main-content .form-group input,
+.main-content .form-group select,
+.main-content .form-group textarea,
+.main-content .profile-form input,
+.main-content .profile-form textarea,
+.main-content .topic-header select,
+.main-content .topic-row select,
+.main-content .skill-search-input {
+  background: rgba(0,0,0,.48) !important;
+  color: #f7f7f8 !important;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025) !important;
+}
+
+.main-content input::placeholder,
+.main-content textarea::placeholder {
+  color: rgba(255,255,255,.42) !important;
+}
+
+.main-content input:hover,
+.main-content select:hover,
+.main-content textarea:hover {
+  border-color: rgba(229,9,20,.35) !important;
+}
+
+.main-content input:focus,
+.main-content select:focus,
+.main-content textarea:focus {
+  outline: none !important;
+  background: rgba(0,0,0,.58) !important;
+  border-color: rgba(229,9,20,.72) !important;
+  box-shadow: 0 0 0 3px rgba(229,9,20,.11) !important;
+}
+
+.main-content select option {
+  background: #151518 !important;
+  color: #fff !important;
+}
+
+/* ---------- BUTTONS ---------- */
+
+.main-content .primary-button,
+.main-content .add-topic-button,
+.main-content .save-topic-button,
+.main-content .import-button,
+.main-content button[type="submit"] {
+  background: linear-gradient(135deg,#e50914,#b80710) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  box-shadow: 0 8px 22px rgba(229,9,20,.18) !important;
+}
+
+.main-content .primary-button:hover,
+.main-content .add-topic-button:hover,
+.main-content .save-topic-button:hover,
+.main-content .import-button:hover,
+.main-content button[type="submit"]:hover {
+  background: linear-gradient(135deg,#f20b17,#c40812) !important;
+  box-shadow: 0 11px 28px rgba(229,9,20,.24) !important;
+}
+
+/* ---------- EDIT / DELETE / SECONDARY ---------- */
+
+.main-content .edit-button,
+.main-content .delete-button,
+.main-content .close-button {
+  background: rgba(255,255,255,.055) !important;
+  border: 1px solid rgba(255,255,255,.11) !important;
+}
+
+.main-content .edit-button {
+  color: #ff5963 !important;
+}
+
+.main-content .delete-button {
+  color: #ff5963 !important;
+}
+
+.main-content .edit-button:hover,
+.main-content .delete-button:hover,
+.main-content .close-button:hover {
+  background: rgba(229,9,20,.10) !important;
+  border-color: rgba(229,9,20,.42) !important;
+}
+
+/* ---------- PROFILE ---------- */
+
+.main-content .profile-box {
+  background: rgba(18,18,22,.72) !important;
+  border: 1px solid rgba(255,255,255,.10) !important;
+  color: #fff !important;
+  box-shadow: var(--shadow-sm) !important;
+  backdrop-filter: blur(18px) !important;
+}
+
+.main-content .profile-icon {
+  background: rgba(229,9,20,.12) !important;
+  color: #e50914 !important;
+}
+
+/* ---------- PROGRESS ---------- */
+
+.main-content .progress-bar,
+.main-content .goal-progress {
+  background: rgba(255,255,255,.10) !important;
+}
+
+.main-content .progress-fill,
+.main-content .goal-progress-fill {
+  background: linear-gradient(90deg,#e50914,#ff3b46) !important;
+  box-shadow: 0 0 14px rgba(229,9,20,.20) !important;
+}
+
+/* ---------- TOPIC / TASK INNER ROWS ---------- */
+
+.main-content .topic-row,
+.main-content .task-item,
+.main-content .assessment-item,
+.main-content .skill-progress-row {
+  color: #f7f7f8;
+  border-color: rgba(255,255,255,.075) !important;
+}
+
+.main-content .topic-row:hover,
+.main-content .skill-progress-row:hover {
+  background: rgba(229,9,20,.045) !important;
+}
+
+.main-content .topic-row strong,
+.main-content .task-item strong,
+.main-content .assessment-item strong {
+  color: #f7f7f8 !important;
+}
+
+.main-content .topic-row span,
+.main-content .task-item span,
+.main-content .assessment-item span,
+.main-content .skill-progress-info span {
+  color: #a1a1aa !important;
+}
+
+/* ---------- WATER ---------- */
+
+.main-content .water-main-card,
+.main-content .water-log-card,
+.main-content .water-status-card {
+  background: rgba(18,18,22,.72) !important;
+  border-color: rgba(255,255,255,.10) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.main-content .water-header-icon,
+.main-content .water-section-header > strong {
+  color: #e50914 !important;
+}
+
+.main-content .water-amount-button,
+.main-content .water-target-setting input,
+.main-content .water-clear-button {
+  background: rgba(255,255,255,.055) !important;
+  color: #fff !important;
+  border-color: rgba(255,255,255,.11) !important;
+}
+
+.main-content .water-amount-button:hover,
+.main-content .water-clear-button:hover {
+  background: rgba(229,9,20,.10) !important;
+  border-color: rgba(229,9,20,.40) !important;
+}
+
+.main-content .water-log-icon {
+  background: rgba(229,9,20,.11) !important;
+}
+
+.main-content .water-log-icon svg {
+  color: #e50914 !important;
+}
+
+.main-content .water-progress-track {
+  background: rgba(255,255,255,.10) !important;
+}
+
+.main-content .water-progress-fill {
+  background: linear-gradient(90deg,#e50914,#ff3b46) !important;
+}
+
+/* ---------- REPORTS: FULL GLASS ---------- */
+
+.main-content .reports-page .report-card,
+.main-content .reports-page .report-panel,
+.main-content .reports-page .report-mini-stats > div,
+.main-content .reports-page .history-item,
+.main-content .reports-page .history-detail,
+.main-content .reports-page .report-history-summary {
+  background: rgba(18,18,22,.72) !important;
+  background-image: none !important;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,.105) !important;
+  box-shadow: var(--shadow-sm) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+}
+
+.main-content .reports-page .history-item.active {
+  background: rgba(229,9,20,.12) !important;
+  border-color: rgba(229,9,20,.55) !important;
+}
+
+.main-content .reports-page .report-mini-stats span,
+.main-content .reports-page .history-item span,
+.main-content .reports-page .report-history-summary p,
+.main-content .reports-page .reports-footer {
+  color: #a1a1aa !important;
+}
+
+.main-content .reports-page .report-mini-stats strong,
+.main-content .reports-page .history-item strong,
+.main-content .reports-page .report-large-number {
+  color: #fff !important;
+}
+
+.main-content .reports-page .report-progress-bar {
+  background: linear-gradient(90deg,#e50914,#ff3b46) !important;
+}
+
+/* ---------- FINANCE ---------- */
+
+.main-content .budget-alert,
+.main-content .budget-success {
+  background: rgba(255,255,255,.045) !important;
+  border-color: rgba(255,255,255,.10) !important;
+}
+
+.main-content .income-icon,
+.main-content .expense-icon {
+  background: rgba(229,9,20,.12) !important;
+  color: #e50914 !important;
+  border-color: rgba(229,9,20,.25) !important;
+}
+
+/* ---------- MODALS ---------- */
+
+.main-content .modal-overlay {
+  background: rgba(0,0,0,.76) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+.main-content .modal-card {
+  background: rgba(14,14,17,.94) !important;
+  color: #fff !important;
+  border-color: rgba(255,255,255,.14) !important;
+  box-shadow: 0 24px 70px rgba(0,0,0,.55) !important;
+}
+
+/* ---------- SCROLLBAR ---------- */
+
+::-webkit-scrollbar-track {
+  background: #0b0b0e !important;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #34343a !important;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #e50914 !important;
+}
+
+::selection {
+  background: rgba(229,9,20,.28) !important;
+  color: #fff !important;
+}
+
+/* ---------- MOBILE ---------- */
+
+@media (max-width: 700px) {
+  .main-content .card,
+  .main-content .section-card,
+  .main-content .home-card,
+  .main-content .stat-card,
+  .main-content .report-card,
+  .main-content .report-panel,
+  .main-content .content-card {
+    border-radius: 15px !important;
+  }
+}
+/* =========================================================
+   FINANCE — FINAL RED PROGRESS BAR
+   ========================================================= */
+
+.finance-page .progress-track {
+  background: rgba(255, 255, 255, 0.08) !important;
+  background-image: none !important;
+}
+
+.finance-page .progress-bar,
+.finance-page .progress-bar.progress-danger {
+  display: block !important;
+  height: 100% !important;
+
+  background: #ef233c !important;
+
+  background-image: linear-gradient(
+    90deg,
+    #ef233c 0%,
+    #ff304a 100%
+  ) !important;
+
+  box-shadow: 0 0 8px rgba(239, 35, 60, 0.30) !important;
+}
+/* =========================================================
+   TASKBAR STEP 2 — NAVIGATION / RESPONSIVE LAYER
+   Only styles navigation structure added in App.jsx.
+   Existing page functionality and page styles are preserved.
+   ========================================================= */
+
+/* ---------- SIDEBAR GROUPS ---------- */
+.sidebar nav {
+  gap: 8px;
+}
+
+.sidebar-group {
+  width: 100%;
+}
+
+.sidebar-group-header {
+  width: 100%;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  margin: 2px 0;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: #b8b8bf;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  transition: background 180ms ease, color 180ms ease;
+}
+
+.sidebar-group-header:hover {
+  background: rgba(229, 9, 20, .08);
+  color: #fff;
+}
+
+.sidebar-group-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.sidebar-group-title svg {
+  flex: 0 0 auto;
+  color: #e50914;
+}
+
+.sidebar-group-header > svg {
+  flex: 0 0 auto;
+  transition: transform 180ms ease;
+}
+
+.sidebar-group-items {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 3px 0 6px 9px;
+  overflow: hidden;
+}
+
+.sidebar-group-items .sidebar-sub-link,
+.sidebar-sub-link {
+  min-height: 38px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  font-size: 13px;
+}
+
+.sidebar-group-items .sidebar-sub-link::before,
+.sidebar-sub-link::before {
+  display: none;
+}
+
+.sidebar-group-items .sidebar-sub-link:hover,
+.sidebar-sub-link:hover {
+  transform: translateX(2px);
+}
+
+.sidebar-coming-soon {
+  display: block;
+  padding: 8px 12px;
+  color: #71717a;
+  font-size: 12px;
+}
+
+/* Keep standalone sidebar links visually aligned with groups. */
+.sidebar > nav > .sidebar-link {
+  min-height: 42px;
+}
+
+/* ---------- MOBILE NAVIGATION ---------- */
+.mobile-bottom-navigation {
+  display: none;
+}
+
+.mobile-more-menu {
+  display: none;
+}
+
+/* ---------- TABLET / SMALL LAPTOP ---------- */
+@media (max-width: 1100px) and (min-width: 701px) {
+  .sidebar {
+    width: 225px;
+    min-width: 225px;
+  }
+
+  .main-content {
+    padding: 24px;
+  }
+
+  .sidebar-group-header {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .sidebar-group-items {
+    padding-left: 6px;
+  }
+}
+
+/* ---------- PHONE ---------- */
+@media (max-width: 700px) {
+  .app {
+    display: block;
+    min-height: 100vh;
+    padding-bottom: 74px;
+  }
+
+  .sidebar {
+    display: none !important;
+  }
+
+  .main-content {
+    width: 100%;
+    min-height: 100vh;
+    padding: 18px 14px 24px;
+    overflow-x: hidden;
+  }
+
+  /* Fixed bottom navigation */
+  .mobile-bottom-navigation {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: stretch;
+
+    min-height: 68px;
+    padding: 7px 8px calc(7px + env(safe-area-inset-bottom));
+
+    background: rgba(8, 8, 10, .96);
+    border-top: 1px solid rgba(255,255,255,.10);
+    box-shadow: 0 -10px 30px rgba(0,0,0,.38);
+
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  .mobile-bottom-nav-item {
+    position: relative;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+
+    min-width: 0;
+    min-height: 54px;
+    padding: 6px 4px;
+
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+
+    color: #9f9fa8;
+    text-decoration: none;
+    font: inherit;
+    font-size: 10px;
+    font-weight: 700;
+
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+
+    transition:
+      background 180ms ease,
+      color 180ms ease,
+      transform 180ms ease;
+  }
+
+  .mobile-bottom-nav-item svg {
+    width: 20px;
+    height: 20px;
+    color: currentColor;
+  }
+
+  .mobile-bottom-nav-item:hover,
+  .mobile-bottom-nav-item:focus-visible {
+    color: #fff;
+    background: rgba(229,9,20,.08);
+    outline: none;
+  }
+
+  .mobile-bottom-nav-item.active {
+    color: #fff;
+    background: rgba(229,9,20,.12);
+  }
+
+  .mobile-bottom-nav-item.active::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 3px;
+    width: 22px;
+    height: 2px;
+    border-radius: 999px;
+    transform: translateX(-50%);
+    background: #e50914;
+    box-shadow: 0 0 10px rgba(229,9,20,.45);
+  }
+
+  /* More drawer */
+  .mobile-more-menu {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+
+    display: flex;
+    flex-direction: column;
+
+    background: rgba(5,5,7,.97);
+    color: #fff;
+
+    padding:
+      max(16px, env(safe-area-inset-top))
+      16px
+      max(88px, calc(76px + env(safe-area-inset-bottom)));
+
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .mobile-more-menu-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+
+    min-height: 52px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+
+    background: rgba(5,5,7,.94);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+
+  .mobile-more-menu-header h2,
+  .mobile-more-menu-header h3 {
+    margin: 0;
+    color: #fff;
+    font-size: 20px;
+    font-weight: 800;
+  }
+
+  .mobile-more-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 42px;
+    height: 42px;
+
+    border: 1px solid rgba(255,255,255,.10);
+    border-radius: 12px;
+    background: rgba(255,255,255,.055);
+    color: #fff;
+
+    cursor: pointer;
+  }
+
+  .mobile-more-close:hover,
+  .mobile-more-close:focus-visible {
+    background: rgba(229,9,20,.12);
+    border-color: rgba(229,9,20,.40);
+    outline: none;
+  }
+
+  .mobile-more-menu-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .mobile-more-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    width: 100%;
+    min-height: 50px;
+    padding: 11px 13px;
+
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 13px;
+    background: rgba(255,255,255,.045);
+
+    color: #e7e7ea;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 650;
+
+    transition:
+      background 180ms ease,
+      border-color 180ms ease,
+      transform 180ms ease;
+  }
+
+  .mobile-more-link:hover,
+  .mobile-more-link:focus-visible,
+  .mobile-more-link.active {
+    background: rgba(229,9,20,.10);
+    border-color: rgba(229,9,20,.36);
+    color: #fff;
+    transform: translateX(2px);
+    outline: none;
+  }
+
+  .mobile-more-link-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+
+    border-radius: 10px;
+    background: rgba(229,9,20,.10);
+    color: #e50914;
+  }
+
+  .mobile-more-link-icon svg {
+    color: currentColor;
+  }
+
+  /* Prevent wide page headers from overflowing on phones. */
+  .page-header,
+  .home-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .page-header > *,
+  .home-header > * {
+    max-width: 100%;
+  }
+
+  .page-header h1,
+  .home-header h1 {
+    font-size: clamp(24px, 8vw, 32px);
+  }
+}
+
+/* ---------- VERY SMALL PHONES ---------- */
+@media (max-width: 420px) {
+  .main-content {
+    padding-left: 11px;
+    padding-right: 11px;
+  }
+
+  .mobile-bottom-navigation {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+  .mobile-bottom-nav-item {
+    font-size: 9px;
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+
+  .mobile-bottom-nav-item svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  .mobile-more-menu {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+/* =========================================================
+   TASKBAR — REPORTS FIX
+   1. Daily report cards use the glass theme.
+   2. History "Select Date" control/text is visible in white.
+   ========================================================= */
+
+/* ---------- DAILY REPORT: GLASS CARD ---------- */
+.reports-page .daily-report,
+.reports-page .daily-report-card,
+.reports-page .daily-card,
+.reports-page .daily-summary,
+.reports-page .daily-history-card,
+.reports-page [class*="daily-report"],
+.reports-page [class*="daily-card"] {
+  background: rgba(18, 18, 22, .72) !important;
+  background-image: none !important;
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, .105) !important;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, .28) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+}
+
+/* Catch report cards that contain inline white backgrounds. */
+.reports-page .report-card,
+.reports-page .report-panel,
+.reports-page .report-mini-stats > div,
+.reports-page .history-detail,
+.reports-page .report-history-summary {
+  background: rgba(18, 18, 22, .72) !important;
+  background-image: none !important;
+  color: #fff !important;
+  border-color: rgba(255, 255, 255, .105) !important;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, .28) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+}
+
+/* Text inside Daily cards */
+.reports-page .daily-report h1,
+.reports-page .daily-report h2,
+.reports-page .daily-report h3,
+.reports-page .daily-report h4,
+.reports-page .daily-report strong,
+.reports-page .daily-report label,
+.reports-page .daily-report-card h1,
+.reports-page .daily-report-card h2,
+.reports-page .daily-report-card h3,
+.reports-page .daily-report-card strong,
+.reports-page .daily-card h1,
+.reports-page .daily-card h2,
+.reports-page .daily-card h3,
+.reports-page .daily-card strong {
+  color: #fff !important;
+}
+
+.reports-page .daily-report p,
+.reports-page .daily-report span,
+.reports-page .daily-report-card p,
+.reports-page .daily-report-card span,
+.reports-page .daily-card p,
+.reports-page .daily-card span {
+  color: #a1a1aa !important;
+}
+
+/* ---------- HISTORY: SELECT DATE ---------- */
+/* Native date input text */
+.reports-page input[type="date"] {
+  background: rgba(0, 0, 0, .48) !important;
+  background-image: none !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, .15) !important;
+  color-scheme: dark !important;
+}
+
+/* Date input parts used by Chrome/Edge */
+.reports-page input[type="date"]::-webkit-datetime-edit,
+.reports-page input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+.reports-page input[type="date"]::-webkit-datetime-edit-text,
+.reports-page input[type="date"]::-webkit-datetime-edit-month-field,
+.reports-page input[type="date"]::-webkit-datetime-edit-day-field,
+.reports-page input[type="date"]::-webkit-datetime-edit-year-field {
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+}
+
+.reports-page input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: .9;
+  cursor: pointer;
+}
+
+/* "Select Date" labels/text */
+.reports-page label[for*="date"],
+.reports-page label[for*="Date"],
+.reports-page .select-date,
+.reports-page .select-date-label,
+.reports-page [class*="select-date"] {
+  color: #fff !important;
+}
+
+/* Date control focus */
+.reports-page input[type="date"]:focus {
+  outline: none !important;
+  border-color: rgba(229, 9, 20, .72) !important;
+  box-shadow: 0 0 0 3px rgba(229, 9, 20, .11) !important;
+}
+/* =========================================================
+   REPORTS — FINAL VISUAL FIX
+   ========================================================= */
+
+/* DAILY: Productivity Score must match the other glass cards. */
+.reports-page .report-overview > .report-card:first-child,
+.reports-page .report-overview .report-card {
+  background: rgba(18, 18, 22, .72) !important;
+  background-color: rgba(18, 18, 22, .72) !important;
+  background-image: none !important;
+  color: #f7f7f8 !important;
+  border: 1px solid rgba(255, 255, 255, .105) !important;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, .28) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+}
+
+/* Remove any inline/light-theme text colors from the Productivity card. */
+.reports-page .report-overview .report-card:first-child,
+.reports-page .report-overview .report-card:first-child * {
+  color: #f7f7f8 !important;
+}
+
+/* Keep the Productivity Score value red, like the existing red theme. */
+.reports-page .report-overview .report-card:first-child strong {
+  color: #e50914 !important;
+}
+
+/* Secondary text stays muted instead of becoming white. */
+.reports-page .report-overview .report-card:first-child small {
+  color: #a1a1aa !important;
+}
+
+/* HISTORY: selected and unselected dates are always readable. */
+.reports-page .history-list .history-item,
+.reports-page .history-list .history-item strong,
+.reports-page .history-list .history-item span {
+  color: #f7f7f8 !important;
+}
+
+/* Selected history item must NOT turn the date black. */
+.reports-page .history-list .history-item.active,
+.reports-page .history-list .history-item.active strong,
+.reports-page .history-list .history-item.active span {
+  color: #f7f7f8 !important;
+}
+
+/* Keep the percentage on history cards red. */
+.reports-page .history-list .history-item > div:last-child strong {
+  color: #e50914 !important;
+}
+
+/* Selected history card keeps the red accent while text remains white. */
+.reports-page .history-list .history-item.active > div:last-child strong {
+  color: #e50914 !important;
+}
+
+/* =========================================================
+   REPORTS HISTORY — FINAL DATE TEXT FIX
+   Based on Reports.jsx:
+   .history-item > div:first-child > strong/span
+   ========================================================= */
+
+/* Force BOTH selected and unselected history dates to white.
+   The older active selector has higher specificity, so this
+   intentionally uses the same .main-content + .reports-page
+   scope and also overrides WebKit text fill. */
+.main-content .reports-page .history-list .history-item,
+.main-content .reports-page .history-list .history-item > div:first-child,
+.main-content .reports-page .history-list .history-item > div:first-child strong {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Selected history date */
+.main-content .reports-page .history-list .history-item.active,
+.main-content .reports-page .history-list .history-item.active > div:first-child,
+.main-content .reports-page .history-list .history-item.active > div:first-child strong {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Keep the "topics completed" line readable but slightly muted. */
+.main-content .reports-page .history-list .history-item > div:first-child span,
+.main-content .reports-page .history-list .history-item.active > div:first-child span {
+  color: #a1a1aa !important;
+  -webkit-text-fill-color: #a1a1aa !important;
+}
+
+/* Percentage stays red. */
+.main-content .reports-page .history-list .history-item > div:last-child strong,
+.main-content .reports-page .history-list .history-item.active > div:last-child strong {
+  color: #e50914 !important;
+  -webkit-text-fill-color: #e50914 !important;
+}
+
+/* Make the selected history card itself glass as well. */
+.main-content .reports-page .history-list .history-item.active {
+  background: rgba(229, 9, 20, .12) !important;
+  background-image: none !important;
+  border-color: rgba(229, 9, 20, .55) !important;
+  box-shadow: 0 14px 34px rgba(229, 9, 20, .12) !important;
+}
+
+
+/* =========================================================
+   TASKBAR SETTINGS — CUSTOM BACKGROUND OVERRIDE
+   ========================================================= */
+
+.taskbar-spiderman-background {
+  background-image: var(--taskbar-page-background, url("/spiderman-bg.jpg")) !important;
+}
+
+.settings-background-block {
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.settings-background-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.settings-background-title > svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.settings-background-title div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-background-title strong {
+  font-size: 16px;
+}
+
+.settings-background-title span {
+  font-size: 13px;
+  opacity: 0.78;
+}
+
+.settings-background-preview {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  height: 170px;
+  overflow: hidden;
+  border-radius: 14px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.settings-background-image-preview {
+  width: 100%;
+  height: 100%;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.settings-background-preview-label {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 12px;
+}
+
+.settings-background-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.settings-background-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.settings-video-status {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: fit-content;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.18);
+  font-size: 13px;
+}
+
+.settings-background-error {
+  margin-top: 18px;
+}
+
+@media (max-width: 640px) {
+  .settings-background-preview {
+    height: 140px;
+  }
+
+  .settings-background-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .settings-background-actions button {
+    justify-content: center;
+  }
+}
+
+
+
+/* =========================================================
+   TASKBAR SETTINGS - BACKGROUND CUSTOMIZATION
+   Premium glass / red-black theme
+   ========================================================= */
+
+.settings-background-card {
+  overflow: hidden;
+}
+
+.settings-background-description {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.settings-background-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 22px;
+}
+
+.settings-background-panel {
+  position: relative;
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 18px;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.075),
+    rgba(255, 255, 255, 0.025)
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 12px 30px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.settings-background-panel:hover {
+  border-color: rgba(255, 60, 60, 0.28);
+}
+
+.settings-background-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 16px;
+}
+
+.settings-background-panel-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: #ff3b3b;
+  background: rgba(255, 45, 45, 0.10);
+  border: 1px solid rgba(255, 60, 60, 0.20);
+  box-shadow: 0 6px 18px rgba(255, 0, 0, 0.08);
+}
+
+.settings-background-panel-title {
+  margin: 0;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.settings-background-panel-subtitle {
+  display: block;
+  margin-top: 3px;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 12px;
+}
+
+.settings-background-preview {
+  position: relative;
+  width: 100%;
+  height: 155px;
+  overflow: hidden;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(255, 45, 45, 0.12), transparent 45%),
+    rgba(0, 0, 0, 0.30);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  margin-bottom: 15px;
+}
+
+.settings-background-preview img,
+.settings-background-preview video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.settings-background-preview::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.42),
+    transparent 55%
+  );
+}
+
+.settings-background-default-label {
+  position: absolute;
+  left: 11px;
+  bottom: 10px;
+  z-index: 2;
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.52);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  font-size: 11px;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.settings-background-custom-label {
+  position: absolute;
+  left: 11px;
+  bottom: 10px;
+  z-index: 2;
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(190, 20, 20, 0.72);
+  border: 1px solid rgba(255, 100, 100, 0.25);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.settings-background-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.settings-background-upload {
+  position: relative;
+  display: inline-flex;
+}
+
+.settings-background-upload input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.settings-background-upload-label,
+.settings-background-remove {
+  min-height: 40px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.settings-background-upload-label {
+  color: #fff;
+  background: linear-gradient(135deg, #e51f2a, #a8000b);
+  border: 1px solid rgba(255, 90, 90, 0.30);
+  box-shadow: 0 7px 18px rgba(210, 0, 0, 0.20);
+}
+
+.settings-background-upload-label:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(210, 0, 0, 0.30);
+}
+
+.settings-background-remove {
+  color: rgba(255, 255, 255, 0.86);
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.settings-background-remove:hover {
+  transform: translateY(-1px);
+  color: #fff;
+  background: rgba(255, 55, 55, 0.10);
+  border-color: rgba(255, 65, 65, 0.30);
+}
+
+.settings-background-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 12px;
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 12px;
+}
+
+.settings-background-status svg {
+  color: #ff4b4b;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 820px) {
+  .settings-background-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .settings-background-panel {
+    padding: 15px;
+    border-radius: 15px;
+  }
+
+  .settings-background-preview {
+    height: 145px;
+  }
+
+  .settings-background-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .settings-background-upload,
+  .settings-background-upload-label,
+  .settings-background-remove {
+    width: 100%;
+  }
+}
+
+
+
+/* =========================================================
+   FINAL PROFILE VIDEO FIX
+   The video stays fixed to the viewport while the Profile
+   content scrolls. No white area can appear underneath.
+   ========================================================= */
+
+/* Profile route itself must never paint a white surface. */
+html:has(.profile-video-page),
+body:has(.profile-video-page),
+#root:has(.profile-video-page),
+.app-shell.profile-route-active,
+.app-shell.profile-route-active > .main-content,
+.app-shell.profile-route-active .normal-main-content,
+.app-shell.profile-route-active .profile-main-content {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Never let the normal Spider-Man background appear on Profile. */
+.app-shell.profile-route-active > .main-content::before,
+.app-shell.profile-route-active > .main-content::after,
+.app-shell.profile-route-active .profile-video-page::before,
+.app-shell.profile-route-active .profile-video-page::after {
+  content: none !important;
+  display: none !important;
+  background: none !important;
+  background-image: none !important;
+  opacity: 0 !important;
+}
+
+/* Profile page is the scrolling content layer. */
+.app-shell.profile-route-active .profile-video-page {
+  position: relative !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  overflow: visible !important;
+  isolation: auto !important;
+}
+
+/* FIXED: video belongs to the browser viewport, not the
+   scrolling Profile document. */
+.app-shell.profile-route-active .profile-video-page
+.profile-background-video {
+  position: fixed !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+
+  width: 100vw !important;
+  height: 100vh !important;
+  min-width: 100vw !important;
+  min-height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  object-fit: cover !important;
+  object-position: center center !important;
+
+  background: #050505 !important;
+  background-image: none !important;
+
+  transform: none !important;
+  filter: none !important;
+
+  z-index: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Fixed readability layer stays with the video. */
+.app-shell.profile-route-active .profile-video-page
+.profile-video-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+
+  width: 100vw !important;
+  height: 100vh !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+
+  background: rgba(5, 8, 14, 0.22) !important;
+  background-image: none !important;
+
+  z-index: 1 !important;
+  pointer-events: none !important;
+}
+
+/* All Profile content scrolls ABOVE the fixed video. */
+.app-shell.profile-route-active .profile-video-page
+.profile-video-content {
+  position: relative !important;
+  z-index: 2 !important;
+
+  width: 100% !important;
+  min-height: 100vh !important;
+
+  margin: 0 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Keep Profile's glass cards visible, but never paint a
+   solid white page behind them. */
+.app-shell.profile-route-active .profile-video-page .section-card,
+.app-shell.profile-route-active .profile-video-page .profile-box,
+.app-shell.profile-route-active .profile-video-page .profile-form-card,
+.app-shell.profile-route-active .profile-video-page .backup-card,
+.app-shell.profile-route-active .profile-video-page .card {
+  position: relative !important;
+  z-index: 3 !important;
+}
+
+/* Profile scrolling must remain normal. */
+.app-shell.profile-route-active > .main-content {
+  min-height: 100vh !important;
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+}
+
+/* Mobile: same fixed viewport behavior. */
+@media (max-width: 768px) {
+  .app-shell.profile-route-active .profile-video-page
+  .profile-background-video {
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-width: 100vw !important;
+    min-height: 100dvh !important;
+  }
+
+  .app-shell.profile-route-active .profile-video-page
+  .profile-video-overlay {
+    width: 100vw !important;
+    height: 100dvh !important;
+  }
+}

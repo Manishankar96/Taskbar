@@ -11,7 +11,7 @@ import {
 import {
   getStudySessions,
   saveStudySessions,
-} from "../utils/db";
+} from "../../utils/db";
 
 import {
   formatMinutes,
@@ -19,7 +19,7 @@ import {
   getLastNLocalDateKeys,
   getWeekdayLabel,
   sumBy,
-} from "../utils/calculations";
+} from "../../utils/calculations";
 
 const emptyForm = {
   subject: "",
@@ -108,39 +108,96 @@ function StudySessions() {
     setEditingSession(null);
   }
 
+  /*
+   * Calculate duration automatically
+   * from Start Time and End Time.
+   */
   function calculateDuration() {
-    /*
-     * If start and end time are provided,
-     * calculate the actual duration.
-     */
     if (
-      form.startTime &&
-      form.endTime
+      !form.startTime ||
+      !form.endTime
     ) {
-      const start =
-        timeToMinutes(
-          form.startTime
-        );
-
-      const end =
-        timeToMinutes(
-          form.endTime
-        );
-
-      if (end > start) {
-        return end - start;
-      }
-
       return 0;
     }
 
-    /*
-     * Otherwise use manually entered duration.
-     */
-    return Math.max(
-      0,
-      Number(form.duration) || 0
-    );
+    const start =
+      timeToMinutes(form.startTime);
+
+    const end =
+      timeToMinutes(form.endTime);
+
+    if (end > start) {
+      return end - start;
+    }
+
+    return 0;
+  }
+
+  /*
+   * Handle 12-hour time selection.
+   *
+   * The actual stored value remains HH:MM
+   * so existing data continues to work.
+   */
+  function updateTime(field, hour, minute, period) {
+    if (!hour || !minute || !period) {
+      setForm((previous) => ({
+        ...previous,
+        [field]: "",
+        duration: calculateDurationWithTimes(
+          field === "startTime"
+            ? ""
+            : previous.startTime,
+          field === "endTime"
+            ? ""
+            : previous.endTime
+        ),
+      }));
+
+      return;
+    }
+
+    const hourNumber = Number(hour);
+    let hour24 = hourNumber;
+
+    if (period === "AM") {
+      hour24 =
+        hourNumber === 12
+          ? 0
+          : hourNumber;
+    } else {
+      hour24 =
+        hourNumber === 12
+          ? 12
+          : hourNumber + 12;
+    }
+
+    const value = `${String(hour24).padStart(
+      2,
+      "0"
+    )}:${minute}`;
+
+    const newStartTime =
+      field === "startTime"
+        ? value
+        : form.startTime;
+
+    const newEndTime =
+      field === "endTime"
+        ? value
+        : form.endTime;
+
+    const newDuration =
+      calculateDurationWithTimes(
+        newStartTime,
+        newEndTime
+      );
+
+    setForm((previous) => ({
+      ...previous,
+      [field]: value,
+      duration: newDuration,
+    }));
   }
 
   async function handleSubmit(event) {
@@ -158,7 +215,7 @@ function StudySessions() {
 
     if (duration <= 0) {
       alert(
-        "Enter a valid duration or a valid start and end time."
+        "Please select a valid Start Time and End Time."
       );
       return;
     }
@@ -298,10 +355,28 @@ function StudySessions() {
       );
     }, [sessions]);
 
+  /*
+   * Convert stored HH:MM value
+   * into 12-hour display values.
+   */
+  const startParts =
+    timeTo12HourParts(
+      form.startTime
+    );
+
+  const endParts =
+    timeTo12HourParts(
+      form.endTime
+    );
+
+  const automaticDuration =
+    calculateDuration();
+
   if (loading) {
     return (
       <div className="module-page">
         <h1>📚 Study Sessions</h1>
+
         <p>
           Loading study sessions...
         </p>
@@ -505,82 +580,71 @@ function StudySessions() {
 
             {/* START TIME */}
 
-            <div className="form-group">
-
-              <label>
-                Start Time
-              </label>
-
-              <input
-                type="time"
-                value={
-                  form.startTime
-                }
-                onChange={(event) =>
-                  setForm({
-                    ...form,
-                    startTime:
-                      event.target.value,
-                  })
-                }
-              />
-
-            </div>
+            <TimePicker
+              label="Start Time"
+              parts={startParts}
+              onChange={(
+                hour,
+                minute,
+                period
+              ) =>
+                updateTime(
+                  "startTime",
+                  hour,
+                  minute,
+                  period
+                )
+              }
+            />
 
 
             {/* END TIME */}
 
-            <div className="form-group">
-
-              <label>
-                End Time
-              </label>
-
-              <input
-                type="time"
-                value={
-                  form.endTime
-                }
-                onChange={(event) =>
-                  setForm({
-                    ...form,
-                    endTime:
-                      event.target.value,
-                  })
-                }
-              />
-
-            </div>
+            <TimePicker
+              label="End Time"
+              parts={endParts}
+              onChange={(
+                hour,
+                minute,
+                period
+              ) =>
+                updateTime(
+                  "endTime",
+                  hour,
+                  minute,
+                  period
+                )
+              }
+            />
 
 
-            {/* DURATION */}
+            {/* AUTOMATIC DURATION */}
 
             <div className="form-group">
 
               <label>
-                Duration (minutes)
+                Duration
               </label>
 
               <input
-                type="number"
-                min="1"
-                placeholder="Example: 60"
+                type="text"
+                readOnly
                 value={
-                  form.duration
+                  automaticDuration > 0
+                    ? formatDuration(
+                        automaticDuration
+                      )
+                    : ""
                 }
-                onChange={(event) =>
-                  setForm({
-                    ...form,
-                    duration:
-                      event.target.value,
-                  })
-                }
+                placeholder="Select Start and End Time"
+                style={{
+                  cursor: "not-allowed",
+                  opacity: 0.85,
+                }}
               />
 
               <small>
-                If Start Time and End Time are
-                entered, duration is calculated
-                automatically.
+                Duration is calculated automatically from Start Time and End Time.
               </small>
 
             </div>
@@ -745,6 +809,7 @@ function StudySessions() {
 
                   <strong>
                     {session.subject}
+
                     {session.topic
                       ? ` • ${session.topic}`
                       : ""}
@@ -757,7 +822,11 @@ function StudySessions() {
 
                     {session.startTime &&
                     session.endTime
-                      ? ` • ${session.startTime} - ${session.endTime}`
+                      ? ` • ${formatDisplayTime(
+                          session.startTime
+                        )} - ${formatDisplayTime(
+                          session.endTime
+                        )}`
                       : ""}
 
                     {session.notes
@@ -823,6 +892,226 @@ function StudySessions() {
   );
 }
 
+
+/*
+ * Time picker component.
+ *
+ * Gives the user:
+ * Hour → Minute → AM/PM
+ *
+ * instead of a 24-hour time input.
+ */
+function TimePicker({
+  label,
+  parts,
+  onChange,
+}) {
+  const hours = Array.from(
+    { length: 12 },
+    (_, index) =>
+      String(index + 1)
+  );
+
+  const minutes = [
+    "00",
+    "05",
+    "10",
+    "15",
+    "20",
+    "25",
+    "30",
+    "35",
+    "40",
+    "45",
+    "50",
+    "55",
+  ];
+
+  /*
+   * Keep the three visible selections locally.
+   *
+   * Previously, selecting Hour first immediately called
+   * the parent with an empty Minute/AM-PM value. The parent
+   * then cleared the entire time, so the user could not
+   * select Hour -> Minute -> AM/PM normally.
+   *
+   * Now each dropdown keeps its selection until all three
+   * values are available. Only then do we update the stored
+   * HH:MM value in the parent.
+   */
+  const [selectedHour, setSelectedHour] =
+    useState(parts.hour || "");
+
+  const [selectedMinute, setSelectedMinute] =
+    useState(parts.minute || "");
+
+  const [selectedPeriod, setSelectedPeriod] =
+    useState(parts.period || "");
+
+  /*
+   * Keep the local picker synchronized when:
+   * - a new form is opened
+   * - an existing session is edited
+   * - the parent changes the stored time
+   */
+  useEffect(() => {
+    setSelectedHour(parts.hour || "");
+    setSelectedMinute(parts.minute || "");
+    setSelectedPeriod(parts.period || "");
+  }, [
+    parts.hour,
+    parts.minute,
+    parts.period,
+  ]);
+
+  function handleHourChange(event) {
+    const value = event.target.value;
+
+    setSelectedHour(value);
+
+    if (
+      value &&
+      selectedMinute &&
+      selectedPeriod
+    ) {
+      onChange(
+        value,
+        selectedMinute,
+        selectedPeriod
+      );
+    }
+  }
+
+  function handleMinuteChange(event) {
+    const value = event.target.value;
+
+    setSelectedMinute(value);
+
+    if (
+      selectedHour &&
+      value &&
+      selectedPeriod
+    ) {
+      onChange(
+        selectedHour,
+        value,
+        selectedPeriod
+      );
+    }
+  }
+
+  function handlePeriodChange(event) {
+    const value = event.target.value;
+
+    setSelectedPeriod(value);
+
+    if (
+      selectedHour &&
+      selectedMinute &&
+      value
+    ) {
+      onChange(
+        selectedHour,
+        selectedMinute,
+        value
+      );
+    }
+  }
+
+  return (
+    <div className="form-group">
+
+      <label>
+        {label}
+      </label>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns:
+            "1fr 1fr 1fr",
+          gap: 8,
+        }}
+      >
+
+        {/* HOUR */}
+
+        <select
+          value={selectedHour}
+          onChange={
+            handleHourChange
+          }
+        >
+          <option value="">
+            Hour
+          </option>
+
+          {hours.map(
+            (hour) => (
+              <option
+                key={hour}
+                value={hour}
+              >
+                {hour}
+              </option>
+            )
+          )}
+        </select>
+
+
+        {/* MINUTE */}
+
+        <select
+          value={selectedMinute}
+          onChange={
+            handleMinuteChange
+          }
+        >
+          <option value="">
+            Min
+          </option>
+
+          {minutes.map(
+            (minute) => (
+              <option
+                key={minute}
+                value={minute}
+              >
+                {minute}
+              </option>
+            )
+          )}
+        </select>
+
+
+        {/* AM / PM */}
+
+        <select
+          value={selectedPeriod}
+          onChange={
+            handlePeriodChange
+          }
+        >
+          <option value="">
+            AM/PM
+          </option>
+
+          <option value="AM">
+            AM
+          </option>
+
+          <option value="PM">
+            PM
+          </option>
+        </select>
+
+      </div>
+
+    </div>
+  );
+}
+
+
 /*
  * Convert HH:MM into minutes.
  */
@@ -845,6 +1134,149 @@ function timeToMinutes(time) {
     hours * 60 +
     minutes
   );
+}
+
+
+/*
+ * Calculate duration using two HH:MM values.
+ */
+function calculateDurationWithTimes(
+  startTime,
+  endTime
+) {
+  if (
+    !startTime ||
+    !endTime
+  ) {
+    return "";
+  }
+
+  const start =
+    timeToMinutes(startTime);
+
+  const end =
+    timeToMinutes(endTime);
+
+  if (end > start) {
+    return end - start;
+  }
+
+  return "";
+}
+
+
+/*
+ * Convert HH:MM into:
+ *
+ * {
+ *   hour: "6",
+ *   minute: "30",
+ *   period: "PM"
+ * }
+ */
+function timeTo12HourParts(time) {
+  if (
+    typeof time !== "string" ||
+    !time.includes(":")
+  ) {
+    return {
+      hour: "",
+      minute: "",
+      period: "",
+    };
+  }
+
+  const [
+    hoursString,
+    minutes,
+  ] = time.split(":");
+
+  const hours =
+    Number(hoursString);
+
+  if (
+    Number.isNaN(hours)
+  ) {
+    return {
+      hour: "",
+      minute: "",
+      period: "",
+    };
+  }
+
+  const period =
+    hours >= 12
+      ? "PM"
+      : "AM";
+
+  let hour12 =
+    hours % 12;
+
+  if (hour12 === 0) {
+    hour12 = 12;
+  }
+
+  return {
+    hour: String(hour12),
+    minute: minutes,
+    period,
+  };
+}
+
+
+/*
+ * Convert HH:MM into readable
+ * AM/PM format.
+ *
+ * Example:
+ * 18:30 → 6:30 PM
+ */
+function formatDisplayTime(time) {
+  const parts =
+    timeTo12HourParts(time);
+
+  if (
+    !parts.hour ||
+    !parts.minute ||
+    !parts.period
+  ) {
+    return time;
+  }
+
+  return `${parts.hour}:${parts.minute} ${parts.period}`;
+}
+
+
+/*
+ * Convert minutes into readable duration.
+ *
+ * Examples:
+ * 60 → 1h
+ * 90 → 1h 30m
+ * 30 → 30m
+ */
+function formatDuration(minutes) {
+  const total =
+    Number(minutes) || 0;
+
+  const hours =
+    Math.floor(total / 60);
+
+  const remainingMinutes =
+    total % 60;
+
+  if (
+    hours > 0 &&
+    remainingMinutes > 0
+  ) {
+    return `${hours}h ${remainingMinutes}m`;
+  }
+
+  if (hours > 0) {
+    return `${hours}h`;
+  }
+
+  return `${remainingMinutes}m`;
 }
 
 export default StudySessions;

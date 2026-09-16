@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ClipboardCheck, Plus, Pencil, Trash2, X } from "lucide-react";
-import { getAssessments, saveAssessments } from "../utils/db";
-import { calculateDaysRemaining, formatDaysRemaining } from "../utils/calculations";
+import { getAssessments, saveAssessments } from "../../utils/db";
+import { calculateDaysRemaining, formatDaysRemaining } from "../../utils/calculations";
 
 const TYPES = ["Coding Assessment", "Interview", "Assignment", "Online Test", "Project Submission"];
 

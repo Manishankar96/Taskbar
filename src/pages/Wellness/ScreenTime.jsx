@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Smartphone, Plus, Pencil, Trash2, X } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { getScreenTime, saveScreenTime } from "../utils/db";
+import { getScreenTime, saveScreenTime } from "../../utils/db";
 import {
   calculatePercentage,
   formatMinutes,
@@ -9,7 +9,7 @@ import {
   getLastNLocalDateKeys,
   getWeekdayLabel,
   sumBy,
-} from "../utils/calculations";
+} from "../../utils/calculations";
 
 const CATEGORIES = ["Learning", "Coding", "Entertainment", "Other"];
 

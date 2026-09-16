@@ -1,0 +1,1857 @@
+/* =========================================================
+   TASKBAR — CAREER GLASS THEME
+   Applies to:
+   Job Preparation
+   Applications
+   Saved Jobs
+   Resumes
+   Interviews
+   Projects
+   ========================================================= */
+
+/* ---------- Shared Career Variables ---------- */
+
+.career-page,
+.job-preparation-page,
+.applications-page,
+.saved-jobs-page,
+.resumes-page,
+.interviews-page,
+.projects-page {
+  --career-red: #ef233c;
+  --career-red-dark: #c9182b;
+  --career-red-soft: rgba(239, 35, 60, 0.14);
+  --career-glass: rgba(8, 8, 12, 0.62);
+  --career-glass-strong: rgba(8, 8, 12, 0.78);
+  --career-glass-soft: rgba(255, 255, 255, 0.055);
+  --career-border: rgba(255, 255, 255, 0.13);
+  --career-border-red: rgba(239, 35, 60, 0.42);
+  --career-text: #ffffff;
+  --career-muted: rgba(255, 255, 255, 0.68);
+  --career-faint: rgba(255, 255, 255, 0.48);
+}
+
+/* ---------- Job Preparation ---------- */
+
+.job-preparation-page {
+  min-height: 100%;
+  padding: 24px;
+  color: var(--career-text);
+}
+
+.job-preparation-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.job-preparation-title-area {
+  min-width: 0;
+}
+
+.job-preparation-title-row,
+.job-preparation-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.job-preparation-title-row svg,
+.job-preparation-section-heading svg {
+  color: var(--career-red);
+  flex: 0 0 auto;
+}
+
+.job-preparation-title-row h1,
+.job-preparation-section-heading h2,
+.job-preparation-form-title {
+  margin: 0;
+  color: var(--career-text);
+}
+
+.job-preparation-title-row h1 {
+  font-size: 28px;
+}
+
+.job-preparation-title-area > p,
+.job-preparation-card p,
+.job-preparation-section-header p {
+  color: var(--career-muted);
+}
+
+.job-preparation-overall {
+  width: min(360px, 100%);
+  padding: 15px 18px;
+  background: var(--career-glass);
+  border: 1px solid var(--career-border);
+  border-radius: 16px;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.job-preparation-progress-label,
+.job-preparation-progress-card-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.job-preparation-progress-label strong,
+.job-preparation-progress-card-label strong {
+  color: var(--career-red);
+}
+
+.job-preparation-progress-track {
+  width: 100%;
+  height: 8px;
+  margin-top: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.job-preparation-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--career-red-dark), var(--career-red));
+  transition: width 0.3s ease;
+}
+
+.job-preparation-card,
+.job-preparation-progress-card {
+  background: var(--career-glass);
+  border: 1px solid var(--career-border);
+  border-radius: 18px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.job-preparation-card {
+  padding: 20px;
+}
+
+.job-preparation-goal {
+  margin-bottom: 20px;
+}
+
+.job-preparation-goal-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.job-preparation-goal-content h3 {
+  margin: 14px 0 7px;
+  color: var(--career-text);
+}
+
+.job-preparation-goal-content p {
+  margin: 0;
+}
+
+.job-preparation-progress-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.job-preparation-progress-card {
+  padding: 18px;
+}
+
+.job-preparation-progress-card p {
+  margin: 10px 0 0;
+  color: var(--career-muted);
+  font-size: 13px;
+}
+
+.job-preparation-content-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.job-preparation-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.job-preparation-section-header h2 {
+  margin: 0;
+  color: var(--career-text);
+}
+
+.job-preparation-section-header p {
+  margin: 6px 0 0;
+  font-size: 14px;
+}
+
+.job-preparation-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.job-preparation-label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: var(--career-muted);
+  font-size: 13px;
+}
+
+.job-preparation-input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid var(--career-border);
+  border-radius: 10px;
+  outline: none;
+  background: rgba(0, 0, 0, 0.34);
+  color: var(--career-text);
+  font: inherit;
+}
+
+.job-preparation-input::placeholder {
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.job-preparation-input:focus {
+  border-color: var(--career-border-red);
+  box-shadow: 0 0 0 3px var(--career-red-soft);
+}
+
+.job-preparation-input[type="date"] {
+  color-scheme: dark;
+}
+
+.job-preparation-form-actions,
+.job-preparation-add-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.job-preparation-form-actions {
+  margin-top: 16px;
+}
+
+.job-preparation-add-row {
+  margin-bottom: 14px;
+}
+
+.job-preparation-add-row .job-preparation-input {
+  flex: 1;
+}
+
+.job-preparation-button,
+.job-preparation-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--career-border);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.38);
+  color: var(--career-text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  transition: 0.2s ease;
+}
+
+.job-preparation-button {
+  min-height: 40px;
+  padding: 9px 14px;
+}
+
+.job-preparation-button-small {
+  min-height: 36px;
+  padding: 7px 12px;
+}
+
+.job-preparation-icon-button {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+}
+
+.job-preparation-button:hover,
+.job-preparation-icon-button:hover {
+  border-color: var(--career-border-red);
+  transform: translateY(-1px);
+}
+
+.job-preparation-button-primary {
+  border-color: var(--career-red);
+  background: var(--career-red);
+  color: #fff;
+}
+
+.job-preparation-button-primary:hover {
+  background: var(--career-red-dark);
+  border-color: var(--career-red-dark);
+}
+
+.job-preparation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.job-preparation-list-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 48px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--career-text);
+}
+
+.job-preparation-list-item-completed {
+  border-color: rgba(239, 35, 60, 0.24);
+  background: rgba(239, 35, 60, 0.08);
+}
+
+.job-preparation-list-item > span {
+  flex: 1;
+}
+
+.job-preparation-check-button,
+.job-preparation-delete-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.job-preparation-check-button {
+  padding: 3px;
+  color: var(--career-red);
+}
+
+.job-preparation-delete-button {
+  padding: 7px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.job-preparation-delete-button:hover {
+  color: var(--career-red);
+}
+
+.job-preparation-notes {
+  margin-top: 20px;
+}
+
+.job-preparation-textarea {
+  min-height: 150px;
+  resize: vertical;
+}
+
+.job-preparation-muted-icon {
+  color: var(--career-red);
+}
+
+.job-preparation-empty-state {
+  padding: 28px 16px;
+  border: 1px dashed rgba(255, 255, 255, 0.13);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--career-faint);
+  text-align: center;
+}
+
+/* ---------- Shared styling for the other Career pages ---------- */
+
+.applications-page,
+.saved-jobs-page,
+.resumes-page,
+.interviews-page,
+.projects-page {
+  color: var(--career-text);
+}
+
+/* Headers */
+
+.applications-header,
+.saved-jobs-header,
+.resumes-header,
+.interviews-header,
+.projects-header {
+  margin-bottom: 20px;
+}
+
+.applications-title-row,
+.saved-jobs-title-row,
+.resumes-title-row,
+.interviews-title-row,
+.projects-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.applications-title-row svg,
+.saved-jobs-title-row svg,
+.resumes-title-row svg,
+.interviews-title-row svg,
+.projects-title-row svg {
+  color: var(--career-red) !important;
+}
+
+.applications-title-row h1,
+.saved-jobs-title-row h1,
+.resumes-title-row h1,
+.interviews-title-row h1,
+.projects-title-row h1 {
+  color: var(--career-text);
+}
+
+.applications-subtitle,
+.saved-jobs-subtitle,
+.resumes-subtitle,
+.interviews-subtitle,
+.projects-subtitle {
+  color: var(--career-muted);
+}
+
+/* Cards */
+
+.applications-card,
+.applications-stat-card,
+.applications-form-card,
+.applications-item,
+.saved-jobs-card,
+.saved-jobs-summary-card,
+.saved-jobs-form-card,
+.saved-jobs-item,
+.resumes-card,
+.resumes-summary-card,
+.resumes-form-card,
+.resumes-item,
+.interviews-card,
+.interviews-stat-card,
+.interviews-form-card,
+.interviews-item,
+.projects-card,
+.projects-stat-card,
+.projects-form-card,
+.projects-item {
+  background: var(--career-glass) !important;
+  border: 1px solid var(--career-border) !important;
+  color: var(--career-text) !important;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.22) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+}
+
+/* Inner cards/lists */
+
+.applications-item,
+.saved-jobs-item,
+.resumes-item,
+.interviews-item,
+.projects-item {
+  background: rgba(255, 255, 255, 0.045) !important;
+  box-shadow: none !important;
+}
+
+.applications-item:hover,
+.saved-jobs-item:hover,
+.resumes-item:hover,
+.interviews-item:hover,
+.projects-item:hover {
+  border-color: var(--career-border-red) !important;
+  background: rgba(239, 35, 60, 0.07) !important;
+}
+
+/* Stats */
+
+.applications-stat-value,
+.saved-jobs-summary-value,
+.resumes-summary-value,
+.interviews-stat-value,
+.projects-stat-value {
+  color: var(--career-red) !important;
+}
+
+.applications-stat-label,
+.saved-jobs-summary-label,
+.resumes-summary-label,
+.interviews-stat-label,
+.projects-stat-label {
+  color: var(--career-muted) !important;
+}
+
+/* Inputs */
+
+.applications-input,
+.applications-textarea,
+.applications-select,
+.saved-jobs-input,
+.saved-jobs-textarea,
+.saved-jobs-select,
+.resumes-input,
+.resumes-textarea,
+.resumes-select,
+.interviews-input,
+.interviews-textarea,
+.interviews-select,
+.projects-input,
+.projects-textarea,
+.projects-select {
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.34) !important;
+  color: #fff !important;
+  border: 1px solid var(--career-border) !important;
+  border-radius: 10px !important;
+  outline: none;
+}
+
+.applications-input::placeholder,
+.applications-textarea::placeholder,
+.saved-jobs-input::placeholder,
+.saved-jobs-textarea::placeholder,
+.resumes-input::placeholder,
+.resumes-textarea::placeholder,
+.interviews-input::placeholder,
+.interviews-textarea::placeholder,
+.projects-input::placeholder,
+.projects-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.42) !important;
+}
+
+.applications-input:focus,
+.applications-textarea:focus,
+.applications-select:focus,
+.saved-jobs-input:focus,
+.saved-jobs-textarea:focus,
+.saved-jobs-select:focus,
+.resumes-input:focus,
+.resumes-textarea:focus,
+.resumes-select:focus,
+.interviews-input:focus,
+.interviews-textarea:focus,
+.interviews-select:focus,
+.projects-input:focus,
+.projects-textarea:focus,
+.projects-select:focus {
+  border-color: var(--career-border-red) !important;
+  box-shadow: 0 0 0 3px var(--career-red-soft) !important;
+}
+
+.applications-input,
+.saved-jobs-input,
+.resumes-input,
+.interviews-input,
+.projects-input {
+  min-height: 42px;
+  padding: 10px 12px;
+}
+
+.applications-textarea,
+.saved-jobs-textarea,
+.resumes-textarea,
+.interviews-textarea,
+.projects-textarea {
+  padding: 10px 12px;
+  min-height: 110px;
+  resize: vertical;
+}
+
+.applications-select,
+.saved-jobs-select,
+.resumes-select,
+.interviews-select,
+.projects-select {
+  min-height: 42px;
+  padding: 0 12px;
+  color-scheme: dark;
+}
+
+/* Labels */
+
+.applications-form-field,
+.saved-jobs-form-field,
+.resumes-form-field,
+.interviews-form-field,
+.projects-form-field,
+.applications-label,
+.saved-jobs-label,
+.resumes-label,
+.interviews-label,
+.projects-label {
+  color: var(--career-muted);
+}
+
+/* Buttons */
+
+.applications-button,
+.saved-jobs-button,
+.resumes-button,
+.interviews-button,
+.projects-action-button,
+.projects-icon-button,
+.saved-jobs-icon-button,
+.resumes-icon-button,
+.interviews-action-button,
+.applications-action-button {
+  border-radius: 10px !important;
+  transition: 0.2s ease;
+}
+
+.applications-button-primary,
+.saved-jobs-button-primary,
+.resumes-button-primary,
+.interviews-button-primary,
+.projects-button-primary,
+.projects-edit-button {
+  background: var(--career-red) !important;
+  border-color: var(--career-red) !important;
+  color: #fff !important;
+}
+
+.applications-button-primary:hover,
+.saved-jobs-button-primary:hover,
+.resumes-button-primary:hover,
+.interviews-button-primary:hover,
+.projects-button-primary:hover,
+.projects-edit-button:hover {
+  background: var(--career-red-dark) !important;
+  border-color: var(--career-red-dark) !important;
+}
+
+/* Keep secondary buttons dark — never white */
+
+.applications-button-secondary,
+.saved-jobs-button-secondary,
+.resumes-button-secondary,
+.interviews-button-secondary,
+.projects-button-secondary,
+.projects-action-button,
+.saved-jobs-action-button,
+.resumes-action-button,
+.interviews-action-button {
+  background: rgba(0, 0, 0, 0.38) !important;
+  border-color: var(--career-border) !important;
+  color: #fff !important;
+}
+
+.applications-button-secondary:hover,
+.saved-jobs-button-secondary:hover,
+.resumes-button-secondary:hover,
+.interviews-button-secondary:hover,
+.projects-button-secondary:hover {
+  border-color: var(--career-border-red) !important;
+}
+
+/* Icons — consistent red accent */
+
+.applications-page svg,
+.saved-jobs-page svg,
+.resumes-page svg,
+.interviews-page svg,
+.projects-page svg {
+  color: inherit;
+}
+
+.applications-header svg,
+.saved-jobs-header svg,
+.resumes-header svg,
+.interviews-header svg,
+.projects-header svg,
+.applications-stat-card svg,
+.saved-jobs-summary-card svg,
+.resumes-summary-card svg,
+.interviews-stat-card svg,
+.projects-stat-card svg {
+  color: var(--career-red) !important;
+}
+
+/* Action icons */
+
+.applications-delete-button svg,
+.saved-jobs-delete-button svg,
+.resumes-delete-button svg,
+.projects-delete-button svg {
+  color: var(--career-red) !important;
+}
+
+.applications-button-primary svg,
+.saved-jobs-button-primary svg,
+.resumes-button-primary svg,
+.interviews-button-primary svg,
+.projects-button-primary svg,
+.projects-edit-button svg {
+  color: #fff !important;
+}
+
+/* Badges / tags */
+
+.applications-status,
+.saved-jobs-company,
+.resumes-primary-badge,
+.resumes-target-role,
+.interviews-status,
+.projects-status,
+.projects-tech-tag {
+  border-color: var(--career-border-red) !important;
+  background: var(--career-red-soft) !important;
+  color: #fff !important;
+}
+
+/* Search */
+
+.saved-jobs-search,
+.projects-filters {
+  background: transparent;
+}
+
+.saved-jobs-search-input,
+.projects-search-input {
+  background: rgba(0, 0, 0, 0.34) !important;
+  color: #fff !important;
+  border-color: var(--career-border) !important;
+}
+
+.saved-jobs-search-icon {
+  color: var(--career-red) !important;
+}
+
+/* Empty states */
+
+.applications-empty-state,
+.saved-jobs-empty-state,
+.resumes-empty-state,
+.interviews-empty-state,
+.projects-empty-state,
+.projects-empty-icon,
+.saved-jobs-empty-icon,
+.resumes-empty-icon {
+  color: var(--career-muted) !important;
+}
+
+.applications-empty-state,
+.saved-jobs-empty-state,
+.resumes-empty-state,
+.interviews-empty-state,
+.projects-empty-state {
+  background: rgba(255, 255, 255, 0.025) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Remove old shine/sweep effects from Career cards */
+
+.applications-card::before,
+.applications-stat-card::before,
+.applications-form-card::before,
+.applications-item::before,
+.saved-jobs-card::before,
+.saved-jobs-summary-card::before,
+.saved-jobs-form-card::before,
+.saved-jobs-item::before,
+.resumes-card::before,
+.resumes-summary-card::before,
+.resumes-form-card::before,
+.resumes-item::before,
+.interviews-card::before,
+.interviews-stat-card::before,
+.interviews-form-card::before,
+.interviews-item::before,
+.projects-card::before,
+.projects-stat-card::before,
+.projects-form-card::before,
+.projects-item::before,
+.job-preparation-card::before,
+.job-preparation-progress-card::before {
+  display: none !important;
+  content: none !important;
+}
+
+.applications-card:hover,
+.applications-stat-card:hover,
+.applications-form-card:hover,
+.saved-jobs-card:hover,
+.saved-jobs-summary-card:hover,
+.saved-jobs-form-card:hover,
+.resumes-card:hover,
+.resumes-summary-card:hover,
+.resumes-form-card:hover,
+.interviews-card:hover,
+.interviews-stat-card:hover,
+.interviews-form-card:hover,
+.projects-card:hover,
+.projects-stat-card:hover,
+.projects-form-card:hover,
+.job-preparation-card:hover,
+.job-preparation-progress-card:hover {
+  transform: none;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 900px) {
+  .job-preparation-header,
+  .job-preparation-goal-content {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .job-preparation-overall {
+    width: auto;
+  }
+
+  .job-preparation-progress-grid,
+  .job-preparation-content-grid,
+  .job-preparation-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .job-preparation-page {
+    padding: 14px;
+  }
+
+  .job-preparation-card {
+    padding: 15px;
+    border-radius: 14px;
+  }
+
+  .job-preparation-title-row h1 {
+    font-size: 23px;
+  }
+
+  .job-preparation-form-actions,
+  .job-preparation-add-row {
+    flex-wrap: wrap;
+  }
+
+  .job-preparation-add-row .job-preparation-input {
+    min-width: 0;
+    flex-basis: 100%;
+  }
+}
+
+/* =========================================================
+   TASKBAR CAREER — FINAL STRUCTURE + GLASS REPAIR
+   The video showed Projects / Resumes / Saved Jobs rendering
+   without their intended class hooks. These rules provide the
+   complete page structure once the corrected JSX is installed.
+   ========================================================= */
+
+.applications-page,
+.saved-jobs-page,
+.resumes-page,
+.interviews-page,
+.projects-page {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 24px;
+  color: #fff !important;
+}
+
+/* Strong glass: background artwork remains visible only subtly. */
+.applications-page,
+.saved-jobs-page,
+.resumes-page,
+.interviews-page,
+.projects-page {
+  --career-glass: rgba(8, 8, 12, 0.88);
+  --career-glass-strong: rgba(8, 8, 12, 0.94);
+  --career-glass-soft: rgba(255,255,255,0.035);
+}
+
+/* Headers */
+.applications-header,
+.saved-jobs-header,
+.resumes-header,
+.interviews-header,
+.projects-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.applications-title-row,
+.saved-jobs-title-row,
+.resumes-title-row,
+.interviews-title-row,
+.projects-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.applications-title-row h1,
+.saved-jobs-title-row h1,
+.resumes-title-row h1,
+.interviews-title-row h1,
+.projects-title-row h1 {
+  margin: 0;
+  color: #fff !important;
+  font-size: 27px;
+  line-height: 1.2;
+}
+
+.applications-subtitle,
+.saved-jobs-subtitle,
+.resumes-subtitle,
+.interviews-subtitle,
+.projects-subtitle {
+  margin: 7px 0 0;
+  color: rgba(255,255,255,.62) !important;
+  line-height: 1.5;
+}
+
+.applications-header svg,
+.saved-jobs-header svg,
+.resumes-header svg,
+.interviews-header svg,
+.projects-header svg {
+  color: #ef233c !important;
+}
+
+/* Stats */
+.applications-stats-grid,
+.projects-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.projects-stats-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.resumes-summary-grid,
+.saved-jobs-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.applications-stat-card,
+.projects-stat-card,
+.resumes-summary-card,
+.saved-jobs-summary-card {
+  min-height: 92px;
+  padding: 16px;
+  background: rgba(8,8,12,.88) !important;
+  border: 1px solid rgba(255,255,255,.11) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 12px 32px rgba(0,0,0,.22) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+}
+
+.applications-stat-label,
+.projects-stat-label,
+.resumes-summary-label,
+.saved-jobs-summary-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255,255,255,.62) !important;
+  font-size: 13px;
+}
+
+.applications-stat-value,
+.projects-stat-value,
+.resumes-summary-value,
+.saved-jobs-summary-value {
+  display: block;
+  margin-top: 9px;
+  color: #ef233c !important;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+/* Filters / search */
+.applications-filters,
+.projects-filters {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 190px;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.saved-jobs-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  background: rgba(8,8,12,.72) !important;
+  border: 1px solid rgba(255,255,255,.11) !important;
+  border-radius: 13px;
+}
+
+.saved-jobs-search-icon,
+.applications-search-icon {
+  flex: 0 0 auto;
+  color: #ef233c !important;
+}
+
+.saved-jobs-search-input,
+.applications-search-input,
+.projects-search-input {
+  width: 100%;
+}
+
+/* Main cards */
+.applications-card,
+.saved-jobs-card,
+.resumes-card,
+.interviews-card,
+.projects-card,
+.applications-form-card,
+.saved-jobs-form-card,
+.resumes-form-card,
+.projects-form-card {
+  background: rgba(8,8,12,.88) !important;
+  background-image: none !important;
+  border: 1px solid rgba(255,255,255,.11) !important;
+  border-radius: 18px !important;
+  color: #fff !important;
+  box-shadow: 0 14px 40px rgba(0,0,0,.24) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+  overflow: hidden;
+}
+
+.applications-card,
+.saved-jobs-card,
+.resumes-card,
+.projects-card {
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+/* Never allow old shine layers inside Career cards. */
+.applications-card::before,
+.applications-card::after,
+.saved-jobs-card::before,
+.saved-jobs-card::after,
+.resumes-card::before,
+.resumes-card::after,
+.interviews-card::before,
+.interviews-card::after,
+.projects-card::before,
+.projects-card::after,
+.applications-stat-card::before,
+.applications-stat-card::after,
+.projects-stat-card::before,
+.projects-stat-card::after,
+.resumes-summary-card::before,
+.resumes-summary-card::after,
+.saved-jobs-summary-card::before,
+.saved-jobs-summary-card::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* Form cards */
+.applications-form-card,
+.saved-jobs-form-card,
+.resumes-form-card,
+.projects-form-card {
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.applications-form-header,
+.saved-jobs-form-header,
+.resumes-form-header,
+.projects-form-header,
+.applications-list-header,
+.saved-jobs-list-header,
+.resumes-list-header,
+.projects-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.applications-form-header h2,
+.saved-jobs-form-header h2,
+.resumes-form-header h2,
+.projects-form-header h2,
+.applications-list-header h2,
+.saved-jobs-list-header h2,
+.resumes-list-header h2,
+.projects-list-header h2 {
+  margin: 0;
+  color: #fff !important;
+  font-size: 18px;
+}
+
+.applications-list-count,
+.saved-jobs-list-count,
+.resumes-list-subtitle,
+.projects-list-count {
+  margin: 0;
+  color: rgba(255,255,255,.52) !important;
+  font-size: 13px;
+}
+
+/* Form grids */
+.applications-form-grid,
+.saved-jobs-form-grid,
+.resumes-form-grid,
+.projects-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 14px;
+}
+
+.projects-form-grid {
+  grid-template-columns: repeat(3, minmax(0,1fr));
+}
+
+.applications-form-field,
+.saved-jobs-form-field,
+.resumes-form-field,
+.projects-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  color: rgba(255,255,255,.65) !important;
+  font-size: 13px;
+}
+
+.applications-input,
+.saved-jobs-input,
+.resumes-input,
+.projects-input {
+  width: 100%;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  background: rgba(0,0,0,.48) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  border-radius: 10px !important;
+  outline: none;
+}
+
+.applications-textarea,
+.saved-jobs-textarea,
+.resumes-textarea,
+.projects-textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+
+.applications-input:focus,
+.saved-jobs-input:focus,
+.resumes-input:focus,
+.projects-input:focus {
+  border-color: rgba(239,35,60,.60) !important;
+  box-shadow: 0 0 0 3px rgba(239,35,60,.10) !important;
+}
+
+.applications-input::placeholder,
+.saved-jobs-input::placeholder,
+.resumes-input::placeholder,
+.projects-input::placeholder {
+  color: rgba(255,255,255,.34) !important;
+}
+
+.applications-select,
+.saved-jobs-select,
+.resumes-select,
+.projects-select {
+  color-scheme: dark;
+}
+
+.applications-select option,
+.saved-jobs-select option,
+.resumes-select option,
+.projects-select option {
+  background: #111115 !important;
+  color: #fff !important;
+}
+
+.applications-notes-field,
+.saved-jobs-form-full-row,
+.resumes-form-full-row,
+.projects-form-full-row {
+  margin-top: 14px;
+}
+
+/* Buttons */
+.applications-button,
+.saved-jobs-button,
+.resumes-button,
+.projects-button,
+.applications-action-button,
+.saved-jobs-action-button,
+.resumes-action-button,
+.projects-action-button,
+.applications-icon-button,
+.saved-jobs-icon-button,
+.resumes-icon-button,
+.projects-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 9px 13px;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  border-radius: 10px !important;
+  background: rgba(255,255,255,.045) !important;
+  color: #fff !important;
+  cursor: pointer;
+  text-decoration: none;
+  font: inherit;
+  font-weight: 600;
+}
+
+.applications-button-primary,
+.saved-jobs-button-primary,
+.resumes-button-primary,
+.projects-button-primary {
+  background: #ef233c !important;
+  border-color: #ef233c !important;
+  color: #fff !important;
+}
+
+.applications-button-primary:hover,
+.saved-jobs-button-primary:hover,
+.resumes-button-primary:hover,
+.projects-button-primary:hover {
+  background: #c9182b !important;
+  border-color: #c9182b !important;
+}
+
+.applications-button-secondary,
+.saved-jobs-button-secondary,
+.resumes-button-secondary,
+.projects-button-secondary {
+  background: rgba(255,255,255,.045) !important;
+  color: #fff !important;
+}
+
+.applications-icon-button,
+.saved-jobs-icon-button,
+.resumes-icon-button,
+.projects-icon-button {
+  width: 40px;
+  min-width: 40px;
+  padding: 0;
+  color: rgba(255,255,255,.72) !important;
+}
+
+.applications-delete-button,
+.saved-jobs-delete-button,
+.resumes-delete-button,
+.projects-delete-button {
+  color: #ff5963 !important;
+}
+
+.applications-button svg,
+.saved-jobs-button svg,
+.resumes-button svg,
+.projects-button svg,
+.applications-action-button svg,
+.saved-jobs-action-button svg,
+.resumes-action-button svg,
+.projects-action-button svg {
+  color: currentColor !important;
+}
+
+/* Lists */
+.applications-list,
+.saved-jobs-list,
+.resumes-list,
+.projects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.applications-item,
+.saved-jobs-item,
+.resumes-item,
+.projects-item {
+  padding: 16px;
+  background: rgba(255,255,255,.035) !important;
+  border: 1px solid rgba(255,255,255,.09) !important;
+  border-radius: 14px !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+.applications-item:hover,
+.saved-jobs-item:hover,
+.resumes-item:hover,
+.projects-item:hover {
+  border-color: rgba(239,35,60,.38) !important;
+  background: rgba(239,35,60,.055) !important;
+}
+
+.applications-item-header,
+.saved-jobs-item-header,
+.resumes-item-header,
+.projects-item-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.applications-item h3,
+.saved-jobs-item h3,
+.resumes-item h3,
+.projects-item h3 {
+  margin: 0;
+  color: #fff !important;
+  font-size: 16px;
+}
+
+.applications-company,
+.applications-date,
+.saved-jobs-company,
+.saved-jobs-item-meta,
+.resumes-target-role,
+.resumes-item-meta,
+.projects-description {
+  color: rgba(255,255,255,.60) !important;
+}
+
+.applications-item-actions,
+.saved-jobs-item-actions,
+.resumes-item-actions,
+.projects-item-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.applications-date,
+.saved-jobs-meta-item,
+.resumes-item-meta > div {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255,255,255,.55) !important;
+  font-size: 12px;
+}
+
+.applications-date svg,
+.saved-jobs-meta-item svg,
+.resumes-item-meta svg,
+.projects-item-icon {
+  color: #ef233c !important;
+}
+
+.applications-notes-preview,
+.saved-jobs-notes,
+.resumes-notes,
+.projects-notes {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,.028) !important;
+  border: 1px solid rgba(255,255,255,.07) !important;
+  border-radius: 10px;
+  color: rgba(255,255,255,.66) !important;
+  font-size: 13px;
+}
+
+.saved-jobs-item-meta,
+.resumes-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.projects-description {
+  margin: 12px 0 0;
+  line-height: 1.55;
+}
+
+.projects-tech-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.projects-tech-tag,
+.resumes-primary-badge,
+.projects-status,
+.saved-jobs-company {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 4px 8px;
+  border: 1px solid rgba(239,35,60,.35) !important;
+  border-radius: 999px;
+  background: rgba(239,35,60,.10) !important;
+  color: #fff !important;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Empty states */
+.applications-empty-state,
+.saved-jobs-empty-state,
+.resumes-empty-state,
+.projects-empty-state {
+  display: flex;
+  min-height: 170px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 7px;
+  padding: 28px 16px;
+  background: rgba(255,255,255,.025) !important;
+  border: 1px dashed rgba(255,255,255,.11) !important;
+  border-radius: 13px;
+  text-align: center;
+}
+
+.applications-empty-state svg,
+.saved-jobs-empty-state svg,
+.resumes-empty-state svg,
+.projects-empty-state svg {
+  color: #ef233c !important;
+}
+
+.applications-empty-state h3,
+.saved-jobs-empty-state h3,
+.resumes-empty-state h3,
+.projects-empty-state h3 {
+  margin: 4px 0 0;
+  color: #fff !important;
+}
+
+.applications-empty-state p,
+.saved-jobs-empty-state p,
+.resumes-empty-state p,
+.projects-empty-state p {
+  margin: 0;
+  color: rgba(255,255,255,.55) !important;
+}
+
+/* Responsive */
+@media (max-width: 1000px) {
+  .applications-stats-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .projects-stats-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .applications-form-grid,
+  .saved-jobs-form-grid,
+  .resumes-form-grid,
+  .projects-form-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+
+@media (max-width: 700px) {
+  .applications-page,
+  .saved-jobs-page,
+  .resumes-page,
+  .interviews-page,
+  .projects-page { padding: 14px; }
+
+  .applications-header,
+  .saved-jobs-header,
+  .resumes-header,
+  .interviews-header,
+  .projects-header { flex-direction: column; }
+
+  .applications-stats-grid,
+  .projects-stats-grid,
+  .resumes-summary-grid,
+  .saved-jobs-summary-grid,
+  .applications-form-grid,
+  .saved-jobs-form-grid,
+  .resumes-form-grid,
+  .projects-form-grid,
+  .applications-filters,
+  .projects-filters { grid-template-columns: 1fr; }
+
+  .applications-header > button,
+  .saved-jobs-header > button,
+  .resumes-header > button,
+  .projects-header > button { width: 100%; }
+}
+
+
+/* =========================================================
+   TASKBAR CAREER — FINAL SPACING / INTERVIEWS REPAIR
+   ========================================================= */
+
+/* Give every Career page comfortable space from the sidebar,
+   top edge and right edge. */
+.applications-page,
+.saved-jobs-page,
+.resumes-page,
+.interviews-page,
+.projects-page {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 30px 32px 40px !important;
+}
+
+/* Header button must never touch the page edge. */
+.applications-header,
+.saved-jobs-header,
+.resumes-header,
+.interviews-header,
+.projects-header {
+  margin-bottom: 28px !important;
+  padding: 0 !important;
+}
+
+/* Keep title and header button visually separated. */
+.applications-header > button,
+.saved-jobs-header > button,
+.resumes-header > button,
+.interviews-header > button,
+.projects-header > button {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+/* Form/card spacing. */
+.applications-form-card,
+.saved-jobs-form-card,
+.resumes-form-card,
+.interviews-form-card,
+.projects-form-card {
+  margin-top: 24px !important;
+  padding: 24px !important;
+}
+
+/* Save / Cancel buttons need breathing room and must not touch
+   the form fields or card edges. */
+.applications-form-actions,
+.saved-jobs-form-actions,
+.resumes-form-actions,
+.interviews-form-actions,
+.projects-form-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 14px !important;
+  margin-top: 26px !important;
+  padding-top: 6px !important;
+}
+
+.applications-form-actions button,
+.saved-jobs-form-actions button,
+.resumes-form-actions button,
+.interviews-form-actions button,
+.projects-form-actions button {
+  margin: 0 !important;
+  min-width: 118px;
+}
+
+/* Consistent dark-glass secondary/cancel button. */
+.applications-button-secondary,
+.saved-jobs-button-secondary,
+.resumes-button-secondary,
+.interviews-button-secondary,
+.projects-button-secondary {
+  background: rgba(8, 8, 12, 0.72) !important;
+  border: 1px solid rgba(255,255,255,.14) !important;
+  color: #fff !important;
+}
+
+.applications-button-secondary:hover,
+.saved-jobs-button-secondary:hover,
+.resumes-button-secondary:hover,
+.interviews-button-secondary:hover,
+.projects-button-secondary:hover {
+  background: rgba(20,20,24,.88) !important;
+  border-color: rgba(239,35,60,.55) !important;
+}
+
+/* ---------- Interviews: complete visual structure ---------- */
+
+.interviews-page {
+  color: #fff !important;
+}
+
+.interviews-header,
+.interviews-stats-grid,
+.interviews-filters,
+.interviews-card {
+  position: relative;
+}
+
+.interviews-stats-grid {
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px !important;
+  margin-bottom: 20px !important;
+}
+
+.interviews-stat-card {
+  min-height: 92px;
+  padding: 18px !important;
+  border-radius: 14px !important;
+}
+
+.interviews-filters {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 210px;
+  gap: 14px !important;
+  margin-bottom: 24px !important;
+}
+
+.interviews-card {
+  padding: 24px !important;
+  border-radius: 16px !important;
+  background: rgba(8,8,12,.88) !important;
+  background-image: none !important;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  box-shadow: 0 14px 40px rgba(0,0,0,.28) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+}
+
+.interviews-form-header,
+.interviews-list-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 18px !important;
+  margin-bottom: 20px !important;
+}
+
+.interviews-form-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px !important;
+}
+
+.interviews-form-field {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  min-width: 0;
+}
+
+.interviews-form-field > span {
+  color: rgba(255,255,255,.72) !important;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.interviews-input,
+.interviews-select {
+  width: 100% !important;
+  min-height: 44px !important;
+  box-sizing: border-box !important;
+  background: rgba(0,0,0,.42) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,.14) !important;
+  border-radius: 10px !important;
+}
+
+.interviews-textarea {
+  min-height: 120px !important;
+}
+
+.interviews-list {
+  display: grid !important;
+  gap: 14px !important;
+}
+
+.interviews-item {
+  padding: 18px !important;
+  border-radius: 14px !important;
+  background: rgba(255,255,255,.045) !important;
+  border: 1px solid rgba(255,255,255,.10) !important;
+}
+
+.interviews-item-header {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 18px !important;
+}
+
+.interviews-item-main {
+  min-width: 0;
+}
+
+.interviews-status-select {
+  width: 160px !important;
+  flex: 0 0 160px;
+}
+
+.interviews-item-actions {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  margin-top: 18px !important;
+  padding-top: 14px !important;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+
+.interviews-action-button {
+  min-height: 38px;
+  padding: 8px 13px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+}
+
+.interviews-icon-button {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px !important;
+  background: rgba(0,0,0,.38) !important;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  color: #fff !important;
+}
+
+.interviews-icon-button svg {
+  color: #ef233c !important;
+}
+
+.interviews-title-row svg,
+.interviews-stat-card svg {
+  color: #ef233c !important;
+}
+
+.interviews-title,
+.interviews-list-title,
+.interviews-item-title {
+  color: #fff !important;
+}
+
+.interviews-company,
+.interviews-meta-item svg {
+  color: rgba(255,255,255,.62);
+}
+
+.interviews-meta-item svg {
+  color: #ef233c !important;
+}
+
+.interviews-empty-state {
+  padding: 42px 20px !important;
+  text-align: center;
+  border-radius: 12px;
+  background: rgba(255,255,255,.025) !important;
+  border: 1px dashed rgba(255,255,255,.12) !important;
+}
+
+.interviews-empty-icon {
+  color: #ef233c !important;
+}
+
+.interviews-empty-title {
+  color: #fff !important;
+}
+
+.interviews-empty-text {
+  color: rgba(255,255,255,.58) !important;
+}
+
+/* Remove unwanted shine from all Career components. */
+.applications-page *,
+.saved-jobs-page *,
+.resumes-page *,
+.interviews-page *,
+.projects-page * {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 900px) {
+  .applications-page,
+  .saved-jobs-page,
+  .resumes-page,
+  .interviews-page,
+  .projects-page {
+    padding: 24px 22px 34px !important;
+  }
+
+  .interviews-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .interviews-filters,
+  .interviews-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .interviews-status-select {
+    width: 100% !important;
+    flex-basis: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .applications-page,
+  .saved-jobs-page,
+  .resumes-page,
+  .interviews-page,
+  .projects-page {
+    padding: 18px 16px 28px !important;
+  }
+
+  .applications-header,
+  .saved-jobs-header,
+  .resumes-header,
+  .interviews-header,
+  .projects-header {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+
+  .interviews-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .interviews-card,
+  .interviews-form-card {
+    padding: 18px !important;
+  }
+
+  .interviews-form-actions {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+
+  .interviews-form-actions button {
+    width: 100%;
+  }
+}

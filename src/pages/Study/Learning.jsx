@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getTopics, saveTopics } from "../utils/db";
+import { getTopics, saveTopics } from "../../utils/db";
 import {
   BookOpen,
   CheckCircle,
@@ -15,7 +15,7 @@ import {
   calculatePercentage,
   getTodayLocalDateKey,
   formatMinutes,
-} from "../utils/calculations";
+} from "../../utils/calculations";
 
 const INITIAL_TOPICS = [
   {
@@ -457,7 +457,7 @@ function Learning() {
       timeSpent:
         topic.timeSpent || 0,
       plannedDate:
-        topic.plannedDate || "",
+        topic.plannedDate || topic.date || "",
     });
 
     setShowForm(true);
@@ -784,7 +784,14 @@ function Learning() {
       {/* ADD / EDIT FORM */}
 
       {showForm && (
-        <section className="add-topic-card">
+        <section
+          className="add-topic-card"
+          style={{
+            display: "block",
+            position: "relative",
+            zIndex: 100,
+          }}
+        >
 
           <div className="add-topic-header">
 
@@ -826,6 +833,14 @@ function Learning() {
                 value={
                   topicForm.name
                 }
+                style={{
+                  display: "block",
+                  width: "100%",
+                  minHeight: "44px",
+                  cursor: "pointer",
+                  position: "relative",
+                  zIndex: 101,
+                }}
                 onChange={(
                   event
                 ) =>
@@ -948,13 +963,26 @@ function Learning() {
 
             {/* PLANNED DATE */}
 
-            <div className="form-group">
+            <div
+              className="form-group"
+              style={{
+                minWidth: 0,
+                display: "block",
+              }}
+            >
 
-              <label>
+              <label
+                htmlFor="learning-planned-date"
+                style={{
+                  display: "block",
+                  marginBottom: "8px",
+                }}
+              >
                 Planned Date
               </label>
 
               <input
+                id="learning-planned-date"
                 type="date"
                 value={
                   topicForm.plannedDate
@@ -1343,11 +1371,14 @@ function Learning() {
                   <button
                     type="button"
                     className="edit-button"
-                    onClick={() =>
-                      openEditForm(
-                        topic
-                      )
-                    }
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      openEditForm(topic);
+                    }}
+                    onMouseDown={(event) => {
+                      event.stopPropagation();
+                    }}
                     title="Edit topic"
                   >
 

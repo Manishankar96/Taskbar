@@ -14,6 +14,9 @@ import {
   UserCircle,
   Activity as ActivityIcon,
   BarChart3,
+  Lightbulb,
+  AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
 
 import {
@@ -32,7 +35,6 @@ import {
   getWater,
   getScreenTime,
   getActivities,
-  getQuickTasks,
   getAssessments,
   getTimetable,
   getProfile,
@@ -65,7 +67,6 @@ function Home() {
   const [screenTime, setScreenTime] = useState([]);
   const [studySessions, setStudySessions] = useState([]);
   const [activities, setActivities] = useState([]);
-  const [quickTasks, setQuickTasks] = useState([]);
   const [assessments, setAssessments] = useState([]);
   const [timetable, setTimetable] = useState([]);
   const [profile, setProfile] = useState(null);
@@ -98,7 +99,6 @@ function Home() {
           screenTimeData,
           studySessionsData,
           activitiesData,
-          quickTasksData,
           assessmentsData,
           timetableData,
           profileData,
@@ -109,7 +109,6 @@ function Home() {
           getScreenTime(),
           getStudySessions(),
           getActivities(),
-          getQuickTasks(),
           getAssessments(),
           getTimetable(),
           getProfile(),
@@ -148,12 +147,6 @@ function Home() {
         setActivities(
           Array.isArray(activitiesData)
             ? activitiesData
-            : []
-        );
-
-        setQuickTasks(
-          Array.isArray(quickTasksData)
-            ? quickTasksData
             : []
         );
 
@@ -366,18 +359,6 @@ function Home() {
     });
 
 
-    // Quick tasks
-    quickTasks.forEach((task) => {
-      if (task.status === "completed") {
-        addDate(
-          task.completedAt ||
-          task.completedDate ||
-          task.date
-        );
-      }
-    });
-
-
     // Assessments
     assessments.forEach((assessment) => {
       if (
@@ -487,15 +468,16 @@ function Home() {
 
 
     // Current streak is calendar-aware and fully automatic.
+    // A day counts only when there is real dashboard activity.
+    // There is no maximum streak length.
     //
     // Example:
-    // Day 1 -> activity
-    // Day 2 -> activity
-    // Day 3 -> new day (no activity yet)
-    // Current streak = 3.
-    //
-    // If Day 3 finishes without activity, then on Day 4
-    // the streak becomes 0 because Day 3 was missed.
+    // Day 1 -> activity = streak 1
+    // Day 2 -> activity = streak 2
+    // Day 3 -> no activity yet = still shows 2
+    // Day 3 -> activity = streak 3
+    // Day 4 -> no activity while Day 3 was active = still 3
+    // If an entire day is missed, the next active day starts at 1.
     let current = 0;
 
     const todayDate = toDate(today);
@@ -534,31 +516,27 @@ function Home() {
       }
     }
 
-    // When today has not been used yet, yesterday's
-    // consecutive streak is still alive during today.
-    // Today counts as the current streak day automatically.
+    // Today is NOT counted until there is actual activity.
+    // If today has no activity yet, keep yesterday's consecutive
+    // streak alive temporarily. If yesterday was already missed,
+    // the streak is broken and current becomes 0.
     else if (
       dateSet.has(yesterdayKey)
     ) {
       let cursorDate =
         toDate(yesterdayKey);
 
-      let completedDays = 0;
-
       while (
         dateSet.has(
           getDateKey(cursorDate)
         )
       ) {
-        completedDays += 1;
+        current += 1;
 
         cursorDate.setDate(
           cursorDate.getDate() - 1
         );
       }
-
-      current =
-        completedDays + 1;
     }
 
     best = Math.max(
@@ -574,7 +552,6 @@ function Home() {
     topics,
     water,
     activities,
-    quickTasks,
     assessments,
     screenTime,
     studySessions,
@@ -876,43 +853,6 @@ function Home() {
 
 
   /* =====================================================
-     QUICK TASKS
-  ===================================================== */
-
-  const pendingTasks =
-    useMemo(() => {
-
-      const priorityOrder = {
-        High: 0,
-        Medium: 1,
-        Low: 2,
-      };
-
-      return quickTasks
-        .filter(
-          (task) =>
-            task.status !==
-            "completed"
-        )
-        .sort(
-          (a, b) =>
-            (
-              priorityOrder[
-                a.priority
-              ] ?? 3
-            ) -
-            (
-              priorityOrder[
-                b.priority
-              ] ?? 3
-            )
-        )
-        .slice(0, 4);
-
-    }, [quickTasks]);
-
-
-  /* =====================================================
      UPCOMING ASSESSMENTS
   ===================================================== */
 
@@ -1064,6 +1004,445 @@ function Home() {
 
 
   /* =====================================================
+     SMART SUGGESTIONS
+  ===================================================== */
+
+  const [centralTasks, setCentralTasks] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadCentralTasksForHome() {
+      try {
+        const [
+          topicsData,
+          goalsData,
+          assessmentsData,
+          timetableData,
+        ] = await Promise.all([
+          getTopics(),
+          getGoals(),
+          getAssessments(),
+          getTimetable(),
+        ]);
+
+        const todayKey = getTodayLocalDateKey();
+
+        const readLocalList = (key) => {
+          try {
+            const value = JSON.parse(
+              localStorage.getItem(key) || "[]"
+            );
+            return Array.isArray(value) ? value : [];
+          } catch {
+            return [];
+          }
+        };
+
+        const tasks = [];
+
+        /*
+         * Learning
+         * Same rule as Central To-Do:
+         * only topics with plannedDate become tasks.
+         */
+        (Array.isArray(topicsData) ? topicsData : []).forEach(
+          (topic) => {
+            if (!topic?.plannedDate) return;
+
+            tasks.push({
+              id: `learning-${topic.id}`,
+              title: topic.name || "Learning Topic",
+              date: topic.plannedDate,
+              completed: topic.status === "completed",
+              source: "Learning",
+            });
+          }
+        );
+
+        /*
+         * Goals
+         * Same rule as Central To-Do:
+         * only goals with targetDate become tasks.
+         */
+        (Array.isArray(goalsData) ? goalsData : []).forEach(
+          (goal) => {
+            if (!goal?.targetDate) return;
+
+            tasks.push({
+              id: `goal-${goal.id}`,
+              title: goal.title || goal.name || "Goal",
+              date: goal.targetDate,
+              completed: goal.status === "completed",
+              source: "Goals",
+            });
+          }
+        );
+
+        /*
+         * Assessments
+         * Same date/status model as Central To-Do.
+         */
+        (Array.isArray(assessmentsData)
+          ? assessmentsData
+          : []
+        ).forEach((assessment) => {
+          if (!assessment?.date) return;
+
+          tasks.push({
+            id: `assessment-${assessment.id}`,
+            title: `Assessment: ${
+              assessment.title || "Assessment"
+            }`,
+            date: assessment.date,
+            completed:
+              assessment.status === "completed" ||
+              assessment.status === "complete",
+            source: "Assessments",
+          });
+        });
+
+        /*
+         * Timetable
+         * Only today's timetable entries are shown as today's
+         * scheduled tasks.
+         */
+        const weekdayNames = [
+          "Sunday",
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+        ];
+
+        const todayWeekday =
+          weekdayNames[new Date().getDay()];
+
+        (Array.isArray(timetableData)
+          ? timetableData
+          : []
+        )
+          .filter(
+            (entry) => entry?.day === todayWeekday
+          )
+          .forEach((entry) => {
+            tasks.push({
+              id: `timetable-${entry.id}`,
+              title:
+                entry.activity ||
+                entry.title ||
+                "Scheduled activity",
+              date: todayKey,
+              completed: false,
+              source: "Timetable",
+            });
+          });
+
+        /*
+         * Personal To-Do
+         */
+        readLocalList("taskbar-todo-list").forEach(
+          (task) => {
+            const date =
+              task.date ||
+              task.dueDate ||
+              "";
+
+            tasks.push({
+              id: `todo-${task.id}`,
+              title:
+                task.title ||
+                task.task ||
+                "Task",
+              date,
+              completed:
+                task.completed === true ||
+                task.status === "completed" ||
+                task.status === "complete",
+              source: "To-Do",
+            });
+          }
+        );
+
+        /*
+         * Job Preparation
+         */
+        readLocalList(
+          "taskbar-job-preparation"
+        ).forEach((task) => {
+          if (!task?.dueDate) return;
+
+          tasks.push({
+            id: `job-preparation-${task.id}`,
+            title:
+              task.title ||
+              "Job Preparation Task",
+            date: task.dueDate,
+            completed:
+              task.completed === true,
+            source: "Job Preparation",
+          });
+        });
+
+        /*
+         * Applications
+         */
+        readLocalList(
+          "taskbar-job-applications"
+        ).forEach((application) => {
+          if (!application?.followUpDate) return;
+
+          const closed =
+            application.status === "Rejected" ||
+            application.status === "Withdrawn" ||
+            application.status === "Selected";
+
+          tasks.push({
+            id: `application-follow-up-${application.id}`,
+            title: `Follow up: ${
+              application.role ||
+              "Job Application"
+            } – ${
+              application.company ||
+              "Company"
+            }`,
+            date: application.followUpDate,
+            completed:
+              closed ||
+              application.followUpCompleted === true,
+            source: "Applications",
+          });
+        });
+
+        /*
+         * Saved Jobs
+         * Same special Central To-Do rule:
+         * only Action Date = TODAY becomes a task.
+         */
+        readLocalList(
+          "taskbar-saved-jobs"
+        ).forEach((job) => {
+          if (job?.actionDate !== todayKey) return;
+
+          tasks.push({
+            id: `saved-job-action-${job.id}`,
+            title: `Apply: ${
+              job.role || "Job"
+            } – ${
+              job.company || "Company"
+            }`,
+            date: job.actionDate,
+            completed:
+              job.actionCompleted === true,
+            source: "Saved Jobs",
+          });
+        });
+
+        /*
+         * Interviews
+         */
+        readLocalList(
+          "taskbar-interviews"
+        ).forEach((interview) => {
+          if (!interview?.date) return;
+
+          const completedStatuses = [
+            "Completed",
+            "Passed",
+            "Failed",
+            "Cancelled",
+          ];
+
+          tasks.push({
+            id: `interview-${interview.id}`,
+            title: `Interview – ${
+              interview.company ||
+              "Company"
+            } – ${
+              interview.role ||
+              "Job Role"
+            }`,
+            date: interview.date,
+            completed:
+              completedStatuses.includes(
+                interview.status
+              ),
+            source: "Interviews",
+          });
+        });
+
+        /*
+         * Remove duplicate IDs.
+         */
+        const uniqueTasks = Array.from(
+          new Map(
+            tasks.map((task) => [
+              task.id,
+              task,
+            ])
+          ).values()
+        );
+
+        if (active) {
+          setCentralTasks(uniqueTasks);
+        }
+      } catch (error) {
+        console.error(
+          "Failed to load Smart Suggestions:",
+          error
+        );
+
+        if (active) {
+          setCentralTasks([]);
+        }
+      }
+    }
+
+    loadCentralTasksForHome();
+
+    const refresh = () =>
+      loadCentralTasksForHome();
+
+    const events = [
+      "taskbarTodoUpdated",
+      "taskbarJobPreparationUpdated",
+      "taskbarApplicationsUpdated",
+      "taskbarSavedJobsUpdated",
+      "taskbarInterviewsUpdated",
+      "taskbarTopicsUpdated",
+      "taskbarGoalsUpdated",
+      "taskbarAssessmentsUpdated",
+      "taskbarTimetableUpdated",
+      "storage",
+    ];
+
+    events.forEach((eventName) =>
+      window.addEventListener(
+        eventName,
+        refresh
+      )
+    );
+
+    return () => {
+      active = false;
+
+      events.forEach((eventName) =>
+        window.removeEventListener(
+          eventName,
+          refresh
+        )
+      );
+    };
+  }, []);
+
+  const smartSuggestions = useMemo(() => {
+    const overdue = centralTasks
+      .filter(
+        (task) =>
+          task.date &&
+          task.date < today &&
+          !task.completed
+      )
+      .sort((a, b) =>
+        a.date.localeCompare(b.date)
+      );
+
+    const todayPending = centralTasks.filter(
+      (task) =>
+        task.date === today &&
+        !task.completed
+    );
+
+    const todayCompleted =
+      centralTasks.filter(
+        (task) =>
+          task.date === today &&
+          task.completed
+      );
+
+    const suggestions = [];
+
+    if (overdue.length > 0) {
+      suggestions.push({
+        type: "overdue",
+        icon: <AlertCircle size={19} />,
+        title: `${overdue.length} overdue task${
+          overdue.length === 1
+            ? ""
+            : "s"
+        } need attention`,
+        detail:
+          overdue.length === 1
+            ? overdue[0].title
+            : overdue
+                .slice(0, 3)
+                .map(
+                  (task) =>
+                    task.title
+                )
+                .join(" • "),
+      });
+    }
+
+    if (todayPending.length > 0) {
+      suggestions.push({
+        type: "today",
+        icon: <CheckSquare size={19} />,
+        title: `${todayPending.length} task${
+          todayPending.length === 1
+            ? ""
+            : "s"
+        } pending today`,
+        detail: todayPending
+          .slice(0, 5)
+          .map(
+            (task) =>
+              task.title
+          )
+          .join(" • "),
+      });
+    }
+
+    if (todayCompleted.length > 0) {
+      suggestions.push({
+        type: "completed",
+        icon: <CheckCircle2 size={19} />,
+        title: `${todayCompleted.length} task${
+          todayCompleted.length === 1
+            ? ""
+            : "s"
+        } completed today`,
+        detail:
+          "Completed tasks are counted automatically.",
+      });
+    }
+
+    if (
+      todayPending.length === 0 &&
+      overdue.length === 0
+    ) {
+      suggestions.push({
+        type: "clear",
+        icon: <Lightbulb size={19} />,
+        title:
+          "No pending Central To-Do tasks right now",
+        detail:
+          "Your scheduled tasks are clear.",
+      });
+    }
+
+    return {
+      overdue,
+      todayPending,
+      todayCompleted,
+      suggestions:
+        suggestions.slice(0, 4),
+    };
+  }, [centralTasks, today]);
+
+  /* =====================================================
      LOADING
   ===================================================== */
 
@@ -1182,6 +1561,156 @@ function Home() {
 
       </section>
 
+
+      {/* =================================================
+          SMART SUGGESTIONS
+      ================================================= */}
+
+      <section
+        className="section-card smart-suggestions-card"
+        style={{
+          padding: "24px",
+          marginBottom: "24px",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          className="section-title"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            marginBottom: "8px",
+          }}
+        >
+          <Lightbulb size={22} />
+          <h2 style={{ margin: 0 }}>Smart Suggestions</h2>
+        </div>
+
+        <p
+          className="home-subtitle"
+          style={{
+            margin: "0 0 18px",
+            lineHeight: 1.5,
+          }}
+        >
+          Based on your Central To-Do list for today.
+        </p>
+
+        <div
+          className="smart-suggestions-list"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px",
+          }}
+        >
+          {smartSuggestions.suggestions.map((suggestion, index) => (
+            <div
+              className={`smart-suggestion-item smart-suggestion-${suggestion.type}`}
+              key={`${suggestion.type}-${index}`}
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "12px",
+                padding: "14px 16px",
+                borderRadius: "12px",
+                background: "rgba(255, 255, 255, 0.04)",
+                border: "1px solid rgba(255, 255, 255, 0.10)",
+                minWidth: 0,
+              }}
+            >
+              <div
+                className="smart-suggestion-icon"
+                style={{
+                  flex: "0 0 auto",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "34px",
+                  height: "34px",
+                  borderRadius: "9px",
+                  background: "rgba(255, 0, 0, 0.12)",
+                }}
+              >
+                {suggestion.icon}
+              </div>
+
+              <div
+                className="smart-suggestion-content"
+                style={{
+                  minWidth: 0,
+                  flex: "1 1 auto",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "5px",
+                  lineHeight: 1.45,
+                }}
+              >
+                <strong
+                  style={{
+                    display: "block",
+                    margin: 0,
+                    lineHeight: 1.35,
+                  }}
+                >
+                  {suggestion.title}
+                </strong>
+
+                <span
+                  style={{
+                    display: "block",
+                    margin: 0,
+                    lineHeight: 1.45,
+                    whiteSpace: "normal",
+                    overflowWrap: "anywhere",
+                  }}
+                >
+                  {suggestion.detail}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div
+          className="smart-todo-summary"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px 20px",
+            marginTop: "18px",
+            paddingTop: "16px",
+            borderTop: "1px solid rgba(255, 255, 255, 0.10)",
+          }}
+        >
+          <span style={{ whiteSpace: "nowrap" }}>
+            Today: <strong>{smartSuggestions.todayPending.length}</strong>{" "}
+            pending
+          </span>
+
+          <span style={{ whiteSpace: "nowrap" }}>
+            <strong>{smartSuggestions.todayCompleted.length}</strong>{" "}
+            completed
+          </span>
+
+          <span style={{ whiteSpace: "nowrap" }}>
+            <strong>{smartSuggestions.overdue.length}</strong> overdue
+          </span>
+
+          <Link
+            to="/todo-list"
+            className="view-button"
+            style={{
+              marginLeft: "auto",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Open Central To-Do →
+          </Link>
+        </div>
+      </section>
 
       {/* =================================================
           SUMMARY CARDS
@@ -1442,56 +1971,6 @@ function Home() {
       ================================================= */}
 
       <section className="two-column">
-
-        {/* QUICK TASKS */}
-
-        <div className="section-card">
-
-          <div className="section-title">
-
-            <CheckSquare
-              size={22}
-            />
-
-            <h2>
-              Quick Tasks
-            </h2>
-
-          </div>
-
-
-          {pendingTasks.length === 0 && (
-            <p className="empty-topics">
-              Nothing pending. Nice work!
-            </p>
-          )}
-
-
-          {pendingTasks.map(
-            (task) => (
-              <div
-                className="task-item"
-                key={task.id}
-              >
-
-                <span>
-                  ☐ {task.task}
-                </span>
-
-              </div>
-            )
-          )}
-
-
-          <Link
-            to="/quick-tasks"
-            className="view-button"
-          >
-            View all tasks →
-          </Link>
-
-        </div>
-
 
         {/* ASSESSMENTS */}
 

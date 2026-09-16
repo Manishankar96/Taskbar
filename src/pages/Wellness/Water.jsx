@@ -10,9 +10,9 @@ import {
   getWater,
   getItem,
   putItem,
-} from "../utils/db";
+} from "../../utils/db";
 
-import { calculateWaterPercentage } from "../utils/calculations";
+import { calculateWaterPercentage } from "../../utils/calculations";
 
 /* =========================================================
    SMALL WATER GLASS STYLES

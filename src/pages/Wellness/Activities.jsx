@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Activity as ActivityIcon, Plus, Pencil, Trash2, X } from "lucide-react";
-import { getActivities, saveActivities } from "../utils/db";
-import { formatMinutes, getTodayLocalDateKey, sumBy } from "../utils/calculations";
+import { getActivities, saveActivities } from "../../utils/db";
+import { formatMinutes, getTodayLocalDateKey, sumBy } from "../../utils/calculations";
 
 const CATEGORIES = ["Coding", "Story Writing", "Reading", "Exercise", "Other Skills"];
 
