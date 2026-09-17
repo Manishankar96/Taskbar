@@ -19,10 +19,6 @@ import {
 } from "../../utils/db";
 
 import {
-  syncDeleteToFirestore,
-} from "../../firebase/sync";
-
-import {
   calculateDaysRemaining,
   calculatePercentage,
 } from "../../utils/calculations";
@@ -67,10 +63,6 @@ const PERSONAL_SKILLS = [
 // ========================================
 
 function Goals() {
-  // ========================================
-  // STATE
-  // ========================================
-
   const [goals, setGoals] = useState([]);
   const [topics, setTopics] = useState([]);
 
@@ -203,25 +195,13 @@ function Goals() {
   // ========================================
 
   function calculateGoalProgress(goal) {
-    // ----------------------------------------
-    // COMPLETED GOAL
-    // ----------------------------------------
-
     if (goal.status === "completed") {
       return 100;
     }
 
-    // ----------------------------------------
-    // NO SKILL
-    // ----------------------------------------
-
     if (!goal.skill) {
       return 0;
     }
-
-    // ----------------------------------------
-    // FIND TOPICS FOR THIS SKILL
-    // ----------------------------------------
 
     const skillTopics = topics.filter(
       (topic) =>
@@ -230,17 +210,9 @@ function Goals() {
           goal.skill.toLowerCase()
     );
 
-    // ----------------------------------------
-    // NO TOPICS
-    // ----------------------------------------
-
     if (skillTopics.length === 0) {
       return 0;
     }
-
-    // ----------------------------------------
-    // COMPLETED TOPICS
-    // ----------------------------------------
 
     const completedTopics =
       skillTopics.filter(
@@ -248,18 +220,10 @@ function Goals() {
           topic.status === "completed"
       ).length;
 
-    // ----------------------------------------
-    // CALCULATE PERCENTAGE
-    // ----------------------------------------
-
     const percentage = calculatePercentage(
       completedTopics,
       skillTopics.length
     );
-
-    // ----------------------------------------
-    // SAFETY CHECK
-    // ----------------------------------------
 
     if (!Number.isFinite(percentage)) {
       return 0;
@@ -378,10 +342,6 @@ function Goals() {
   async function handleSubmit(event) {
     event.preventDefault();
 
-    // ----------------------------------------
-    // VALIDATION
-    // ----------------------------------------
-
     if (!goalForm.title.trim()) {
       alert("Please enter a Goal Title.");
       return;
@@ -464,7 +424,7 @@ function Goals() {
       }
 
       // ======================================
-      // SAVE TO INDEXEDDB
+      // SAVE TO FIREBASE
       // ======================================
 
       await saveGoals(updatedGoals);
@@ -512,11 +472,15 @@ function Goals() {
             item.id !== goal.id
         );
 
+      // ======================================
+      // SAVE UPDATED LIST TO FIREBASE
+      // ======================================
+
       await saveGoals(updatedGoals);
 
-      // Remove the matching goal from Firestore so it
-      // cannot return after a refresh.
-      await syncDeleteToFirestore("goals", goal.id);
+      // ======================================
+      // UPDATE UI
+      // ======================================
 
       setGoals(updatedGoals);
     } catch (error) {
@@ -553,7 +517,15 @@ function Goals() {
             : goal
         );
 
+      // ======================================
+      // SAVE TO FIREBASE
+      // ======================================
+
       await saveGoals(updatedGoals);
+
+      // ======================================
+      // UPDATE UI
+      // ======================================
 
       setGoals(updatedGoals);
     } catch (error) {
@@ -596,10 +568,6 @@ function Goals() {
           goal.status === "in-progress"
       ).length;
 
-    // ----------------------------------------
-    // AVERAGE PROGRESS
-    // ----------------------------------------
-
     let averageProgress = 0;
 
     if (total > 0) {
@@ -631,10 +599,6 @@ function Goals() {
         );
     }
 
-    // ----------------------------------------
-    // FINAL SAFETY CHECK
-    // ----------------------------------------
-
     if (
       !Number.isFinite(
         averageProgress
@@ -659,11 +623,15 @@ function Goals() {
   if (loading) {
     return (
       <div className="goals-page">
-        <h1>🎯 Goals</h1>
+
+        <h1>
+          🎯 Goals
+        </h1>
 
         <p>
           Loading goals...
         </p>
+
       </div>
     );
   }
@@ -682,6 +650,7 @@ function Goals() {
       <div className="page-header">
 
         <div>
+
           <h1>
             🎯 Goals
           </h1>
@@ -691,6 +660,7 @@ function Goals() {
             automatically measure
             your progress.
           </p>
+
         </div>
 
         <Target size={42} />
@@ -702,8 +672,6 @@ function Goals() {
       ================================== */}
 
       <section className="goal-stats">
-
-        {/* TOTAL */}
 
         <div className="goal-stat-card">
 
@@ -719,8 +687,6 @@ function Goals() {
 
         </div>
 
-        {/* COMPLETED */}
-
         <div className="goal-stat-card">
 
           <CheckCircle size={25} />
@@ -735,8 +701,6 @@ function Goals() {
 
         </div>
 
-        {/* PENDING */}
-
         <div className="goal-stat-card">
 
           <Clock size={25} />
@@ -750,8 +714,6 @@ function Goals() {
           </strong>
 
         </div>
-
-        {/* AVERAGE PROGRESS */}
 
         <div className="goal-stat-card">
 
@@ -830,7 +792,9 @@ function Goals() {
               className="close-button"
               onClick={closeForm}
             >
+
               <X size={20} />
+
             </button>
 
           </div>
@@ -912,8 +876,6 @@ function Goals() {
                   Select a skill
                 </option>
 
-                {/* LEARNING */}
-
                 <optgroup label="📚 Learning Skills">
 
                   {allLearningSkills.map(
@@ -929,8 +891,6 @@ function Goals() {
 
                 </optgroup>
 
-                {/* PERSONAL */}
-
                 <optgroup label="🌱 Personal Skills">
 
                   {PERSONAL_SKILLS.map(
@@ -945,8 +905,6 @@ function Goals() {
                   )}
 
                 </optgroup>
-
-                {/* OTHER */}
 
                 <optgroup label="✨ Other">
 
@@ -1028,9 +986,11 @@ function Goals() {
               type="submit"
               className="primary-button"
             >
+
               {editingGoal
                 ? "Save Changes"
                 : "Add Goal"}
+
             </button>
 
           </form>
@@ -1101,27 +1061,15 @@ function Goals() {
 
             {goals.map((goal) => {
 
-              // --------------------------------
-              // CALCULATE SAFE PROGRESS
-              // --------------------------------
-
               const progress =
                 calculateGoalProgress(
                   goal
                 );
 
-              // --------------------------------
-              // TOPIC STATS
-              // --------------------------------
-
               const topicStats =
                 getGoalTopicStats(
                   goal
                 );
-
-              // --------------------------------
-              // DAYS REMAINING
-              // --------------------------------
 
               const daysRemaining =
                 goal.targetDate
@@ -1137,9 +1085,7 @@ function Goals() {
                   key={goal.id}
                 >
 
-                  {/* ==========================
-                      CARD HEADER
-                  ========================== */}
+                  {/* CARD HEADER */}
 
                   <div className="goal-card-header">
 
@@ -1158,8 +1104,6 @@ function Goals() {
 
                     <div className="goal-actions">
 
-                      {/* EDIT */}
-
                       <button
                         type="button"
                         className="edit-button"
@@ -1176,8 +1120,6 @@ function Goals() {
                         />
 
                       </button>
-
-                      {/* DELETE */}
 
                       <button
                         type="button"
@@ -1200,9 +1142,7 @@ function Goals() {
 
                   </div>
 
-                  {/* ==========================
-                      SKILL
-                  ========================== */}
+                  {/* SKILL */}
 
                   <div className="goal-skill">
 
@@ -1220,9 +1160,7 @@ function Goals() {
 
                   </div>
 
-                  {/* ==========================
-                      PROGRESS HEADER
-                  ========================== */}
+                  {/* PROGRESS HEADER */}
 
                   <div className="goal-progress-header">
 
@@ -1236,9 +1174,7 @@ function Goals() {
 
                   </div>
 
-                  {/* ==========================
-                      PROGRESS BAR
-                  ========================== */}
+                  {/* PROGRESS BAR */}
 
                   <div className="goal-progress">
 
@@ -1252,9 +1188,7 @@ function Goals() {
 
                   </div>
 
-                  {/* ==========================
-                      TOPIC COUNT
-                  ========================== */}
+                  {/* TOPIC COUNT */}
 
                   {topicStats.total > 0 ? (
 
@@ -1271,6 +1205,7 @@ function Goals() {
                       {goal.skill}
 
                       {" "}
+
                       topics completed
 
                     </p>
@@ -1287,13 +1222,9 @@ function Goals() {
 
                   )}
 
-                  {/* ==========================
-                      DETAILS
-                  ========================== */}
+                  {/* DETAILS */}
 
                   <div className="goal-details">
-
-                    {/* TARGET DATE */}
 
                     <div>
 
@@ -1311,8 +1242,6 @@ function Goals() {
 
                     </div>
 
-                    {/* DAYS */}
-
                     <div>
 
                       <Clock
@@ -1327,8 +1256,6 @@ function Goals() {
                       </span>
 
                     </div>
-
-                    {/* STATUS */}
 
                     <select
                       value={

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getTopics, saveTopics } from "../../utils/db";
+
 import {
   BookOpen,
   CheckCircle,
@@ -11,6 +12,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
+
 import {
   calculatePercentage,
   getTodayLocalDateKey,
@@ -146,29 +148,24 @@ function Learning() {
   });
 
   // ========================================
-  // LOAD TOPICS FROM INDEXEDDB
+  // LOAD TOPICS FROM FIREBASE
   // ========================================
 
   useEffect(() => {
     async function loadTopics() {
       try {
-        const savedTopics =
-          await getTopics();
+        const savedTopics = await getTopics();
 
         /*
-          IMPORTANT FIX:
+          An empty Firestore collection can mean
+          the user intentionally deleted all topics.
 
-          An empty IndexedDB store can mean
-          the user intentionally deleted all
-          topics.
+          Therefore we do not use an empty array
+          as the first-time setup signal.
 
-          Therefore we MUST NOT use:
-
-          savedTopics.length === 0
-
-          as the signal for first-time setup.
-
-          We use a separate initialization flag.
+          A local initialization flag is used only
+          to determine whether starter topics have
+          already been created.
         */
 
         const initialized =
@@ -176,21 +173,12 @@ function Learning() {
             LEARNING_INITIALIZED_KEY
           ) === "true";
 
-        if (
-          savedTopics.length > 0
-        ) {
+        if (savedTopics.length > 0) {
           /*
-            Existing data always wins.
+            Existing Firebase data always wins.
           */
 
-          setTopics(
-            savedTopics
-          );
-
-          /*
-            If data already exists, make sure
-            the initialization flag is set.
-          */
+          setTopics(savedTopics);
 
           if (!initialized) {
             localStorage.setItem(
@@ -198,29 +186,21 @@ function Learning() {
               "true"
             );
           }
-        } else if (
-          !initialized
-        ) {
+        } else if (!initialized) {
           /*
             Genuine first-time setup.
 
-            Insert the starter topics only once.
+            Create starter topics once.
           */
 
           const starterTopics =
-            INITIAL_TOPICS.map(
-              (topic) => ({
-                ...topic,
-              })
-            );
+            INITIAL_TOPICS.map((topic) => ({
+              ...topic,
+            }));
 
-          await saveTopics(
-            starterTopics
-          );
+          await saveTopics(starterTopics);
 
-          setTopics(
-            starterTopics
-          );
+          setTopics(starterTopics);
 
           localStorage.setItem(
             LEARNING_INITIALIZED_KEY,
@@ -228,13 +208,11 @@ function Learning() {
           );
         } else {
           /*
-            IMPORTANT:
+            Initialized + empty Firebase collection
+            means the user intentionally removed all
+            topics.
 
-            Initialized + empty database
-            means the user has intentionally
-            removed all topics.
-
-            Keep it empty.
+            Keep the list empty.
           */
 
           setTopics([]);
@@ -246,11 +224,8 @@ function Learning() {
         );
 
         /*
-          Do NOT reinsert hardcoded topics
-          when an error occurs.
-
-          Keeping the UI empty is safer than
-          unexpectedly recreating user data.
+          Do not recreate starter data when
+          Firebase loading fails.
         */
 
         setTopics([]);
@@ -267,52 +242,41 @@ function Learning() {
   // ========================================
 
   const stats = useMemo(() => {
-    const activeTopics =
-      topics.filter(
-        (topic) =>
-          topic.status !== "future"
-      );
+    const activeTopics = topics.filter(
+      (topic) =>
+        topic.status !== "future"
+    );
 
     const completed =
       activeTopics.filter(
         (topic) =>
-          topic.status ===
-          "completed"
+          topic.status === "completed"
       ).length;
 
     const inProgress =
       activeTopics.filter(
         (topic) =>
-          topic.status ===
-          "in-progress"
+          topic.status === "in-progress"
       ).length;
 
     const remaining =
       activeTopics.filter(
         (topic) =>
-          topic.status ===
-          "remaining"
+          topic.status === "remaining"
       ).length;
 
     const future =
       topics.filter(
         (topic) =>
-          topic.status ===
-          "future"
+          topic.status === "future"
       ).length;
 
     return {
-      total:
-        activeTopics.length,
-
+      total: activeTopics.length,
       completed,
-
       inProgress,
-
       remaining,
-
       future,
-
       progress:
         calculatePercentage(
           completed,
@@ -355,73 +319,48 @@ function Learning() {
   // SKILL PROGRESS
   // ========================================
 
-  const skillProgress =
-    useMemo(() => {
-      const map = new Map();
+  const skillProgress = useMemo(() => {
+    const map = new Map();
 
-      topics.forEach(
-        (topic) => {
-          if (
-            !map.has(
-              topic.skill
-            )
-          ) {
-            map.set(
-              topic.skill,
-              {
-                skill:
-                  topic.skill,
+    topics.forEach((topic) => {
+      if (!map.has(topic.skill)) {
+        map.set(topic.skill, {
+          skill: topic.skill,
+          total: 0,
+          completed: 0,
+          timeSpent: 0,
+        });
+      }
 
-                total: 0,
+      const entry = map.get(topic.skill);
 
-                completed: 0,
+      entry.total += 1;
 
-                timeSpent: 0,
-              }
-            );
-          }
+      if (
+        topic.status ===
+        "completed"
+      ) {
+        entry.completed += 1;
+      }
 
-          const entry =
-            map.get(
-              topic.skill
-            );
+      entry.timeSpent +=
+        Number(topic.timeSpent) || 0;
+    });
 
-          entry.total += 1;
-
-          if (
-            topic.status ===
-            "completed"
-          ) {
-            entry.completed +=
-              1;
-          }
-
-          entry.timeSpent +=
-            Number(
-              topic.timeSpent
-            ) || 0;
-        }
+    return Array.from(map.values())
+      .map((entry) => ({
+        ...entry,
+        progress:
+          calculatePercentage(
+            entry.completed,
+            entry.total
+          ),
+      }))
+      .sort(
+        (a, b) =>
+          b.total - a.total
       );
-
-      return Array.from(
-        map.values()
-      )
-        .map(
-          (entry) => ({
-            ...entry,
-
-            progress:
-              calculatePercentage(
-                entry.completed,
-                entry.total
-              ),
-          })
-        )
-        .sort(
-          (a, b) =>
-            b.total - a.total
-        );
-    }, [topics]);
+  }, [topics]);
 
   // ========================================
   // OPEN ADD FORM
@@ -445,9 +384,7 @@ function Learning() {
   // OPEN EDIT FORM
   // ========================================
 
-  function openEditForm(
-    topic
-  ) {
+  function openEditForm(topic) {
     setEditingTopic(topic);
 
     setTopicForm({
@@ -457,7 +394,9 @@ function Learning() {
       timeSpent:
         topic.timeSpent || 0,
       plannedDate:
-        topic.plannedDate || topic.date || "",
+        topic.plannedDate ||
+        topic.date ||
+        "",
     });
 
     setShowForm(true);
@@ -476,9 +415,7 @@ function Learning() {
   // SAVE ADD / EDIT
   // ========================================
 
-  async function handleSubmit(
-    event
-  ) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
     if (
@@ -489,14 +426,12 @@ function Learning() {
     }
 
     let updatedTopics;
+    let changedTopic;
 
-    const timeSpent =
-      Math.max(
-        0,
-        Number(
-          topicForm.timeSpent
-        ) || 0
-      );
+    const timeSpent = Math.max(
+      0,
+      Number(topicForm.timeSpent) || 0
+    );
 
     // ========================================
     // EDIT
@@ -511,39 +446,69 @@ function Learning() {
         topicForm.status ===
         "completed";
 
-      updatedTopics =
-        topics.map(
+      const existingTopic =
+        topics.find(
           (topic) =>
             topic.id ===
             editingTopic.id
-              ? {
-                  ...topic,
-
-                  name:
-                    topicForm.name.trim(),
-
-                  skill:
-                    topicForm.skill.trim(),
-
-                  status:
-                    topicForm.status,
-
-                  timeSpent,
-
-                  plannedDate:
-                    topicForm.plannedDate,
-
-                  completedAt:
-                    nowCompleted &&
-                    !wasCompleted
-                      ? getTodayLocalDateKey()
-                      : nowCompleted
-                      ? topic.completedAt ||
-                        getTodayLocalDateKey()
-                      : topic.completedAt,
-                }
-              : topic
         );
+
+      if (!existingTopic) {
+        return;
+      }
+
+      changedTopic = {
+        ...existingTopic,
+
+        name:
+          topicForm.name.trim(),
+
+        skill:
+          topicForm.skill.trim(),
+
+        status:
+          topicForm.status,
+
+        timeSpent,
+
+        plannedDate:
+          topicForm.plannedDate,
+
+        updatedAt:
+          new Date().toISOString(),
+      };
+
+      /*
+        IMPORTANT:
+
+        Never send completedAt: undefined
+        to Firestore.
+
+        If the topic is completed, keep its
+        existing completion date or create
+        today's date.
+
+        If it is not completed, simply do
+        not add completedAt to the object.
+      */
+
+      if (nowCompleted) {
+        changedTopic.completedAt =
+          wasCompleted &&
+          existingTopic.completedAt
+            ? existingTopic.completedAt
+            : getTodayLocalDateKey();
+      } else {
+        delete changedTopic.completedAt;
+      }
+
+      updatedTopics = topics.map(
+        (topic) =>
+          topic.id ===
+          editingTopic.id
+            ? changedTopic
+            : topic
+      );
     }
 
     // ========================================
@@ -551,7 +516,7 @@ function Learning() {
     // ========================================
 
     else {
-      const newTopic = {
+      changedTopic = {
         id: Date.now(),
 
         name:
@@ -568,42 +533,49 @@ function Learning() {
         plannedDate:
           topicForm.plannedDate,
 
-        completedAt:
-          topicForm.status ===
-          "completed"
-            ? getTodayLocalDateKey()
-            : undefined,
+        updatedAt:
+          new Date().toISOString(),
       };
+
+      /*
+        IMPORTANT FIRESTORE FIX:
+
+        Do not use:
+
+        completedAt: undefined
+
+        Firestore rejects undefined values.
+
+        Only add completedAt when the topic
+        is actually completed.
+      */
+
+      if (
+        topicForm.status ===
+        "completed"
+      ) {
+        changedTopic.completedAt =
+          getTodayLocalDateKey();
+      }
 
       updatedTopics = [
         ...topics,
-        newTopic,
+        changedTopic,
       ];
     }
 
-    try {
-      /*
-        Save to IndexedDB FIRST.
-      */
+    // ========================================
+    // SAVE TO FIREBASE
+    // ========================================
 
+    try {
       await saveTopics(
         updatedTopics
       );
 
-      /*
-        Update React state only after
-        IndexedDB succeeds.
-      */
-
       setTopics(
         updatedTopics
       );
-
-      /*
-        The user has now interacted with
-        the learning data, so initialization
-        is definitely complete.
-      */
 
       localStorage.setItem(
         LEARNING_INITIALIZED_KEY,
@@ -616,6 +588,13 @@ function Learning() {
         "Failed to save topic:",
         error
       );
+
+      alert(
+        `Failed to save topic.\n\n${
+          error?.message ||
+          "Please try again."
+        }`
+      );
     }
   }
 
@@ -623,9 +602,7 @@ function Learning() {
   // DELETE TOPIC
   // ========================================
 
-  async function deleteTopic(
-    topic
-  ) {
+  async function deleteTopic(topic) {
     const confirmed =
       window.confirm(
         `Delete "${topic.name}"?\n\nThis topic will be permanently removed.`
@@ -638,20 +615,16 @@ function Learning() {
     const updatedTopics =
       topics.filter(
         (item) =>
-          item.id !==
-          topic.id
+          item.id !== topic.id
       );
 
     try {
       /*
-        Save FIRST.
+        saveTopics() replaces the Firebase
+        topics collection with the updated list.
 
-        If this was the final topic,
-        IndexedDB becomes [].
-
-        Because the initialization flag
-        remains true, refresh will NOT
-        recreate the starter topics.
+        Therefore the deleted topic is removed
+        from Firestore as well.
       */
 
       await saveTopics(
@@ -671,6 +644,13 @@ function Learning() {
         "Failed to delete topic:",
         error
       );
+
+      alert(
+        `Failed to delete topic.\n\n${
+          error?.message ||
+          "Please try again."
+        }`
+      );
     }
   }
 
@@ -683,30 +663,42 @@ function Learning() {
     newStatus
   ) {
     const updatedTopics =
-      topics.map(
-        (topic) =>
-          topic.id === id
-            ? {
-                ...topic,
+      topics.map((topic) => {
+        if (topic.id !== id) {
+          return topic;
+        }
 
-                status:
-                  newStatus,
+        const updatedTopic = {
+          ...topic,
 
-                completedAt:
-                  newStatus ===
-                  "completed"
-                    ? topic.completedAt ||
-                      getTodayLocalDateKey()
-                    : topic.completedAt,
-              }
-            : topic
-      );
+          status:
+            newStatus,
+
+          updatedAt:
+            new Date().toISOString(),
+        };
+
+        /*
+          IMPORTANT:
+
+          Do not store undefined in Firestore.
+        */
+
+        if (
+          newStatus ===
+          "completed"
+        ) {
+          updatedTopic.completedAt =
+            topic.completedAt ||
+            getTodayLocalDateKey();
+        } else {
+          delete updatedTopic.completedAt;
+        }
+
+        return updatedTopic;
+      });
 
     try {
-      /*
-        Save FIRST.
-      */
-
       await saveTopics(
         updatedTopics
       );
@@ -724,6 +716,13 @@ function Learning() {
         "Failed to update topic status:",
         error
       );
+
+      alert(
+        `Failed to update topic.\n\n${
+          error?.message ||
+          "Please try again."
+        }`
+      );
     }
   }
 
@@ -734,6 +733,7 @@ function Learning() {
   if (loading) {
     return (
       <div className="learning-page">
+
         <h1>
           📚 Learning
         </h1>
@@ -741,6 +741,7 @@ function Learning() {
         <p>
           Loading topics...
         </p>
+
       </div>
     );
   }
@@ -752,11 +753,20 @@ function Learning() {
   return (
     <div className="learning-page">
 
-      {/* HEADER */}
+      {/* ==================================
+          HEADER
+      ================================== */}
 
-      <div className="page-header">
+      <div
+        className="page-header"
+        style={{
+          position: "relative",
+          zIndex: 1000,
+        }}
+      >
 
         <div>
+
           <h1>
             📚 Learning
           </h1>
@@ -766,22 +776,39 @@ function Learning() {
             topics and learning
             progress.
           </p>
+
         </div>
 
+        {/* ==================================
+            ADD TOPIC BUTTON
+        ================================== */}
+
         <button
+          type="button"
           className="add-topic-button"
-          onClick={
-            openAddForm
-          }
+          onClick={openAddForm}
+          onMouseDown={(event) => {
+            event.stopPropagation();
+          }}
+          style={{
+            position: "relative",
+            zIndex: 9999,
+            pointerEvents: "auto",
+            cursor: "pointer",
+          }}
         >
+
           <Plus size={18} />
 
           Add Topic
+
         </button>
 
       </div>
 
-      {/* ADD / EDIT FORM */}
+      {/* ==================================
+          ADD / EDIT FORM
+      ================================== */}
 
       {showForm && (
         <section
@@ -804,19 +831,17 @@ function Learning() {
             <button
               type="button"
               className="close-button"
-              onClick={
-                closeForm
-              }
+              onClick={closeForm}
             >
+
               <X size={20} />
+
             </button>
 
           </div>
 
           <form
-            onSubmit={
-              handleSubmit
-            }
+            onSubmit={handleSubmit}
           >
 
             {/* TOPIC NAME */}
@@ -833,20 +858,9 @@ function Learning() {
                 value={
                   topicForm.name
                 }
-                style={{
-                  display: "block",
-                  width: "100%",
-                  minHeight: "44px",
-                  cursor: "pointer",
-                  position: "relative",
-                  zIndex: 101,
-                }}
-                onChange={(
-                  event
-                ) =>
+                onChange={(event) =>
                   setTopicForm({
                     ...topicForm,
-
                     name:
                       event.target
                         .value,
@@ -870,12 +884,9 @@ function Learning() {
                 value={
                   topicForm.skill
                 }
-                onChange={(
-                  event
-                ) =>
+                onChange={(event) =>
                   setTopicForm({
                     ...topicForm,
-
                     skill:
                       event.target
                         .value,
@@ -897,12 +908,9 @@ function Learning() {
                 value={
                   topicForm.status
                 }
-                onChange={(
-                  event
-                ) =>
+                onChange={(event) =>
                   setTopicForm({
                     ...topicForm,
-
                     status:
                       event.target
                         .value,
@@ -946,12 +954,9 @@ function Learning() {
                 value={
                   topicForm.timeSpent
                 }
-                onChange={(
-                  event
-                ) =>
+                onChange={(event) =>
                   setTopicForm({
                     ...topicForm,
-
                     timeSpent:
                       event.target
                         .value,
@@ -987,12 +992,9 @@ function Learning() {
                 value={
                   topicForm.plannedDate
                 }
-                onChange={(
-                  event
-                ) =>
+                onChange={(event) =>
                   setTopicForm({
                     ...topicForm,
-
                     plannedDate:
                       event.target
                         .value,
@@ -1002,13 +1004,17 @@ function Learning() {
 
             </div>
 
+            {/* SAVE TOPIC */}
+
             <button
               type="submit"
               className="save-topic-button"
             >
+
               {editingTopic
                 ? "Save Changes"
                 : "Add Topic"}
+
             </button>
 
           </form>
@@ -1016,7 +1022,9 @@ function Learning() {
         </section>
       )}
 
-      {/* OVERALL PROGRESS */}
+      {/* ==================================
+          OVERALL PROGRESS
+      ================================== */}
 
       <section className="learning-overview">
 
@@ -1044,7 +1052,8 @@ function Learning() {
           <div
             className="progress-fill"
             style={{
-              width: `${stats.progress}%`,
+              width:
+                `${stats.progress}%`,
             }}
           />
 
@@ -1058,7 +1067,9 @@ function Learning() {
 
       </section>
 
-      {/* STATISTICS */}
+      {/* ==================================
+          STATISTICS
+      ================================== */}
 
       <section className="learning-stats">
 
@@ -1124,10 +1135,11 @@ function Learning() {
 
       </section>
 
-      {/* SKILL PROGRESS */}
+      {/* ==================================
+          SKILL PROGRESS
+      ================================== */}
 
-      {skillProgress.length >
-        0 && (
+      {skillProgress.length > 0 && (
         <section className="learning-section skill-progress-section">
 
           <div className="topic-header">
@@ -1151,11 +1163,10 @@ function Learning() {
 
             {skillProgress.map(
               (skill) => (
+
                 <div
                   className="skill-progress-row"
-                  key={
-                    skill.skill
-                  }
+                  key={skill.skill}
                 >
 
                   <div className="skill-progress-info">
@@ -1165,13 +1176,11 @@ function Learning() {
                     </strong>
 
                     <span>
-                      {
-                        skill.completed
-                      }
+
+                      {skill.completed}
                       /
-                      {
-                        skill.total
-                      }{" "}
+                      {skill.total}
+                      {" "}
                       topics
 
                       {skill.timeSpent >
@@ -1179,6 +1188,7 @@ function Learning() {
                         ` • ${formatMinutes(
                           skill.timeSpent
                         )} spent`}
+
                     </span>
 
                   </div>
@@ -1190,7 +1200,8 @@ function Learning() {
                       <div
                         className="progress-fill"
                         style={{
-                          width: `${skill.progress}%`,
+                          width:
+                            `${skill.progress}%`,
                         }}
                       />
 
@@ -1198,16 +1209,14 @@ function Learning() {
 
                     <span className="skill-progress-percent">
 
-                      {
-                        skill.progress
-                      }
-                      %
+                      {skill.progress}%
 
                     </span>
 
                   </div>
 
                 </div>
+
               )
             )}
 
@@ -1216,7 +1225,9 @@ function Learning() {
         </section>
       )}
 
-      {/* TOPIC TRACKER */}
+      {/* ==================================
+          TOPIC TRACKER
+      ================================== */}
 
       <section className="learning-section">
 
@@ -1235,6 +1246,8 @@ function Learning() {
 
           </div>
 
+          {/* SEARCH */}
+
           <input
             type="text"
             className="skill-search-input"
@@ -1242,9 +1255,7 @@ function Learning() {
             value={
               skillQuery
             }
-            onChange={(
-              event
-            ) =>
+            onChange={(event) =>
               setSkillQuery(
                 event.target
                   .value
@@ -1252,13 +1263,11 @@ function Learning() {
             }
           />
 
+          {/* FILTER */}
+
           <select
-            value={
-              filter
-            }
-            onChange={(
-              event
-            ) =>
+            value={filter}
+            onChange={(event) =>
               setFilter(
                 event.target
                   .value
@@ -1290,7 +1299,9 @@ function Learning() {
 
         </div>
 
-        {/* TOPIC LIST */}
+        {/* ==================================
+            TOPIC LIST
+        ================================== */}
 
         <div className="topic-list">
 
@@ -1337,9 +1348,7 @@ function Learning() {
                     value={
                       topic.status
                     }
-                    onChange={(
-                      event
-                    ) =>
+                    onChange={(event) =>
                       updateTopicStatus(
                         topic.id,
                         event.target
@@ -1410,14 +1419,17 @@ function Learning() {
                 </div>
 
               </div>
+
             )
           )}
 
           {filteredTopics.length ===
             0 && (
+
             <p className="empty-topics">
               No topics found.
             </p>
+
           )}
 
         </div>

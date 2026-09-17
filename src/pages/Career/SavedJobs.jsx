@@ -12,7 +12,12 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
-const STORAGE_KEY = "taskbar-saved-jobs";
+import {
+  getItemsFromFirestore,
+  saveItemsToFirestore,
+} from "../../firebase/firestore";
+
+const SAVED_JOBS_COLLECTION = "savedJobs";
 const SAVED_JOBS_UPDATED_EVENT = "taskbarSavedJobsUpdated";
 
 const EMPTY_FORM = {
@@ -33,27 +38,18 @@ function getTodayDate() {
   const date = new Date();
 
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+
+  const month = String(date.getMonth() + 1).padStart(
+    2,
+    "0"
+  );
+
+  const day = String(date.getDate()).padStart(
+    2,
+    "0"
+  );
 
   return `${year}-${month}-${day}`;
-}
-
-function loadSavedJobs() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-
-    if (!saved) {
-      return [];
-    }
-
-    const parsed = JSON.parse(saved);
-
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    console.error("Failed to load saved jobs:", error);
-    return [];
-  }
 }
 
 function formatDate(dateString) {
@@ -75,14 +71,48 @@ function formatDate(dateString) {
 }
 
 export default function SavedJobs() {
-  const [jobs, setJobs] = useState(loadSavedJobs);
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(jobs));
+    let cancelled = false;
 
+    async function loadSavedJobs() {
+      try {
+        const stored = await getItemsFromFirestore(
+          SAVED_JOBS_COLLECTION
+        );
+
+        if (!cancelled) {
+          setJobs(Array.isArray(stored) ? stored : []);
+        }
+      } catch (error) {
+        console.error(
+          "Failed to load saved jobs from Firebase:",
+          error
+        );
+
+        if (!cancelled) {
+          setJobs([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadSavedJobs();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     window.dispatchEvent(
       new Event(SAVED_JOBS_UPDATED_EVENT)
     );
@@ -97,9 +127,15 @@ export default function SavedJobs() {
 
     return jobs.filter((job) => {
       return (
-        job.company?.toLowerCase().includes(searchText) ||
-        job.role?.toLowerCase().includes(searchText) ||
-        job.location?.toLowerCase().includes(searchText)
+        job.company
+          ?.toLowerCase()
+          .includes(searchText) ||
+        job.role
+          ?.toLowerCase()
+          .includes(searchText) ||
+        job.location
+          ?.toLowerCase()
+          .includes(searchText)
       );
     });
   }, [jobs, search]);
@@ -107,7 +143,7 @@ export default function SavedJobs() {
   function openAddForm() {
     setForm({
       ...EMPTY_FORM,
-      savedDate: getTodayDate(),
+      actionDate: "",
     });
 
     setShowForm(true);
@@ -125,11 +161,13 @@ export default function SavedJobs() {
     }));
   }
 
-  function saveJob() {
+  async function saveJob() {
     if (!form.company.trim() || !form.role.trim()) {
       alert("Please enter Company and Job Role.");
       return;
     }
+
+    const now = new Date().toISOString();
 
     const newJob = {
       id: createId(),
@@ -142,16 +180,33 @@ export default function SavedJobs() {
       actionCompleted: false,
       notes: form.notes.trim(),
       savedDate: getTodayDate(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
     };
 
-    setJobs((current) => [newJob, ...current]);
+    const updatedJobs = [newJob, ...jobs];
 
-    closeForm();
+    try {
+      await saveItemsToFirestore(
+        SAVED_JOBS_COLLECTION,
+        updatedJobs
+      );
+
+      setJobs(updatedJobs);
+      closeForm();
+    } catch (error) {
+      console.error(
+        "Failed to save job to Firebase:",
+        error
+      );
+
+      alert(
+        "Saved job could not be saved. Please try again."
+      );
+    }
   }
 
-  function deleteJob(id) {
+  async function deleteJob(id) {
     const confirmed = window.confirm(
       "Remove this saved job?"
     );
@@ -160,8 +215,45 @@ export default function SavedJobs() {
       return;
     }
 
-    setJobs((current) =>
-      current.filter((job) => job.id !== id)
+    const updatedJobs = jobs.filter(
+      (job) => job.id !== id
+    );
+
+    try {
+      await saveItemsToFirestore(
+        SAVED_JOBS_COLLECTION,
+        updatedJobs
+      );
+
+      setJobs(updatedJobs);
+    } catch (error) {
+      console.error(
+        "Failed to delete saved job from Firebase:",
+        error
+      );
+
+      alert(
+        "Saved job could not be removed. Please try again."
+      );
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="saved-jobs-page">
+        <div className="saved-jobs-header">
+          <div>
+            <div className="saved-jobs-title-row">
+              <Bookmark size={28} />
+              <h1>Saved Jobs</h1>
+            </div>
+
+            <p className="saved-jobs-subtitle">
+              Loading saved jobs...
+            </p>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -446,6 +538,7 @@ function SavedJobCard({ job, onDelete }) {
 
         <div className="saved-jobs-meta-item">
           <CalendarDays size={15} />
+
           <span>
             Saved: {formatDate(job.savedDate)}
           </span>
@@ -461,7 +554,9 @@ function SavedJobCard({ job, onDelete }) {
 
             <span>
               Action: {formatDate(job.actionDate)}
-              {job.actionCompleted ? " • Completed" : ""}
+              {job.actionCompleted
+                ? " • Completed"
+                : ""}
             </span>
           </div>
         )}

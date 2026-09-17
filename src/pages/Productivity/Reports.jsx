@@ -36,6 +36,11 @@ import {
   ensureDailyReportHistory,
 } from "../../utils/db";
 
+import {
+  getItemsFromFirestore,
+  subscribeToFirestoreCollection,
+} from "../../firebase/firestore";
+
 
 /* =========================================================
    HELPERS
@@ -357,6 +362,12 @@ function Reports() {
         assessmentData,
         streakData,
         reportData,
+        incomeData,
+        expenseData,
+        jobPreparationDataFromFirestore,
+        applicationsData,
+        savedJobsData,
+        interviewsData,
       ] = await Promise.all([
         getTopics(),
         getGoals(),
@@ -371,6 +382,12 @@ function Reports() {
         getAssessments(),
         getStreak(),
         getDailyReports(),
+        getItemsFromFirestore("income"),
+        getItemsFromFirestore("expenses"),
+        getItemsFromFirestore("jobPreparation"),
+        getItemsFromFirestore("applications"),
+        getItemsFromFirestore("savedJobs"),
+        getItemsFromFirestore("interviews"),
       ]);
 
       setTopics(
@@ -417,61 +434,40 @@ function Reports() {
         Array.isArray(assessmentData) ? assessmentData : []
       );
 
-      try {
-        const storedIncome = JSON.parse(
-          localStorage.getItem("taskbar-income") || "[]"
-        );
-        const storedExpenses = JSON.parse(
-          localStorage.getItem("taskbar-expenses") || "[]"
-        );
+      setIncomeList(
+        Array.isArray(incomeData) ? incomeData : []
+      );
 
-        setIncomeList(
-          Array.isArray(storedIncome) ? storedIncome : []
-        );
-        setExpenseList(
-          Array.isArray(storedExpenses) ? storedExpenses : []
-        );
-      } catch (financeError) {
-        console.error("Finance reports loading error:", financeError);
-        setIncomeList([]);
-        setExpenseList([]);
-      }
+      setExpenseList(
+        Array.isArray(expenseData) ? expenseData : []
+      );
 
-      try {
-        const storedJobPreparation = JSON.parse(
-          localStorage.getItem("taskbar-job-preparation") || "{}"
-        );
-        const storedApplications = JSON.parse(
-          localStorage.getItem("taskbar-job-applications") || "[]"
-        );
-        const storedSavedJobs = JSON.parse(
-          localStorage.getItem("taskbar-saved-jobs") || "[]"
-        );
-        const storedInterviews = JSON.parse(
-          localStorage.getItem("taskbar-interviews") || "[]"
-        );
+      const jobPreparationItems = Array.isArray(
+        jobPreparationDataFromFirestore
+      )
+        ? jobPreparationDataFromFirestore
+        : [];
 
-        setJobPreparationData(
-          storedJobPreparation && typeof storedJobPreparation === "object"
-            ? storedJobPreparation
-            : { tasks: [] }
-        );
-        setApplicationsList(
-          Array.isArray(storedApplications) ? storedApplications : []
-        );
-        setSavedJobsList(
-          Array.isArray(storedSavedJobs) ? storedSavedJobs : []
-        );
-        setInterviewsList(
-          Array.isArray(storedInterviews) ? storedInterviews : []
-        );
-      } catch (careerError) {
-        console.error("Career reports loading error:", careerError);
-        setJobPreparationData({ tasks: [] });
-        setApplicationsList([]);
-        setSavedJobsList([]);
-        setInterviewsList([]);
-      }
+      const jobPreparationObject =
+        jobPreparationItems.length === 1 &&
+        Array.isArray(jobPreparationItems[0]?.tasks)
+          ? jobPreparationItems[0]
+          : {
+              tasks: jobPreparationItems.flatMap((item) =>
+                Array.isArray(item?.tasks) ? item.tasks : []
+              ),
+            };
+
+      setJobPreparationData(jobPreparationObject);
+      setApplicationsList(
+        Array.isArray(applicationsData) ? applicationsData : []
+      );
+      setSavedJobsList(
+        Array.isArray(savedJobsData) ? savedJobsData : []
+      );
+      setInterviewsList(
+        Array.isArray(interviewsData) ? interviewsData : []
+      );
 
       if (
         Array.isArray(streakData) &&
@@ -502,8 +498,70 @@ function Reports() {
 ======================================================= */
 
   useEffect(() => {
-    loadReports();
-  }, [today]);
+    const unsubscribers = [];
+    let mounted = true;
+
+    const normalizeJobPreparation = (items) => {
+      const rows = Array.isArray(items) ? items : [];
+
+      if (rows.length === 1 && Array.isArray(rows[0]?.tasks)) {
+        return rows[0];
+      }
+
+      return {
+        tasks: rows.flatMap((item) =>
+          Array.isArray(item?.tasks) ? item.tasks : []
+        ),
+      };
+    };
+
+    const addListener = (collectionName, callback) => {
+      try {
+        const unsubscribe = subscribeToFirestoreCollection(
+          collectionName,
+          (items) => {
+            if (!mounted) return;
+            callback(Array.isArray(items) ? items : []);
+          },
+          (error) => {
+            console.error(
+              `Reports Firestore listener error (${collectionName}):`,
+              error
+            );
+          }
+        );
+
+        if (typeof unsubscribe === "function") {
+          unsubscribers.push(unsubscribe);
+        }
+      } catch (error) {
+        console.error(
+          `Reports could not subscribe to ${collectionName}:`,
+          error
+        );
+      }
+    };
+
+    addListener("income", (items) => setIncomeList(items));
+    addListener("expenses", (items) => setExpenseList(items));
+    addListener("jobPreparation", (items) =>
+      setJobPreparationData(normalizeJobPreparation(items))
+    );
+    addListener("applications", (items) => setApplicationsList(items));
+    addListener("savedJobs", (items) => setSavedJobsList(items));
+    addListener("interviews", (items) => setInterviewsList(items));
+
+    return () => {
+      mounted = false;
+      unsubscribers.forEach((unsubscribe) => {
+        try {
+          unsubscribe();
+        } catch (error) {
+          console.error("Reports listener cleanup error:", error);
+        }
+      });
+    };
+  }, []);
 
 
   /* =======================================================

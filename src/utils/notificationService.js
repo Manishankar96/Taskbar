@@ -14,17 +14,8 @@
 import { LocalNotifications } from "@capacitor/local-notifications";
 
 import {
-  getProfile,
-  getTopics,
-  getGoals,
-  getWater,
-  getActivities,
-  getAssessments,
-  getTodoList,
-  getStudySessions,
-  getDiet,
-  getScreenTime,
-} from "./db";
+  getItemsFromFirestore,
+} from "../firebase/firestore";
 
 import {
   getTodayLocalDateKey,
@@ -40,7 +31,6 @@ const STORAGE_KEY = "taskbar-smart-notification-state";
 const MAX_NOTIFICATIONS_PER_DAY = 3;
 
 // Three daily notification opportunities.
-// These are intentionally separated through the day.
 const DAILY_WINDOWS = [
   {
     key: "morning",
@@ -149,15 +139,27 @@ function isPending(item) {
 // SETTINGS
 // ============================================================
 
-function areSmartNotificationsEnabled() {
+async function getSettings() {
   try {
-    const raw = localStorage.getItem("taskbar-settings");
+    const settings = await getItemsFromFirestore("settings");
 
-    if (!raw) {
-      return true;
+    if (Array.isArray(settings)) {
+      return settings[0] || {};
     }
 
-    const settings = JSON.parse(raw);
+    if (settings && typeof settings === "object") {
+      return settings;
+    }
+
+    return {};
+  } catch {
+    return {};
+  }
+}
+
+async function areSmartNotificationsEnabled() {
+  try {
+    const settings = await getSettings();
 
     return settings?.remindersEnabled !== false;
   } catch {
@@ -284,10 +286,12 @@ export async function requestSmartNotificationPermission() {
   }
 
   try {
-    let permission = await LocalNotifications.checkPermissions();
+    let permission =
+      await LocalNotifications.checkPermissions();
 
     if (permission.display !== "granted") {
-      permission = await LocalNotifications.requestPermissions();
+      permission =
+        await LocalNotifications.requestPermissions();
     }
 
     return {
@@ -308,6 +312,55 @@ export async function requestSmartNotificationPermission() {
 }
 
 // ============================================================
+// FIRESTORE HELPERS
+// ============================================================
+
+async function getCollection(collectionName) {
+  try {
+    const items =
+      await getItemsFromFirestore(collectionName);
+
+    return safeArray(items);
+  } catch (error) {
+    console.error(
+      `TASKBAR smart notification Firestore read failed: ${collectionName}`,
+      error
+    );
+
+    return [];
+  }
+}
+
+async function getSingleProfile() {
+  try {
+    const profileItems =
+      await getCollection("profile");
+
+    if (profileItems.length === 0) {
+      return null;
+    }
+
+    const profile = profileItems[0];
+
+    if (
+      profile &&
+      typeof profile === "object" &&
+      profile.profile &&
+      typeof profile.profile === "object"
+    ) {
+      return {
+        ...profile.profile,
+        ...profile,
+      };
+    }
+
+    return profile;
+  } catch {
+    return null;
+  }
+}
+
+// ============================================================
 // LOAD ALL TASKBAR DATA
 // ============================================================
 
@@ -323,30 +376,55 @@ async function loadTaskbarData() {
     studySessions,
     diet,
     screenTime,
+    jobPreparation,
+    applications,
+    savedJobs,
+    interviews,
+    income,
+    expenses,
+    budgets,
   ] = await Promise.all([
-    getProfile().catch(() => null),
-    getTopics().catch(() => []),
-    getGoals().catch(() => []),
-    getWater().catch(() => []),
-    getActivities().catch(() => []),
-    getAssessments().catch(() => []),
-    getTodoList().catch(() => []),
-    getStudySessions().catch(() => []),
-    getDiet().catch(() => []),
-    getScreenTime().catch(() => []),
+    getSingleProfile(),
+    getCollection("topics"),
+    getCollection("goals"),
+    getCollection("water"),
+    getCollection("activities"),
+    getCollection("assessments"),
+    getCollection("todoList"),
+    getCollection("studySessions"),
+    getCollection("diet"),
+    getCollection("screenTime"),
+    getCollection("jobPreparation"),
+    getCollection("applications"),
+    getCollection("savedJobs"),
+    getCollection("interviews"),
+    getCollection("income"),
+    getCollection("expenses"),
+    getCollection("budgets"),
   ]);
 
   return {
     profile,
-    topics: safeArray(topics),
-    goals: safeArray(goals),
-    water: safeArray(water),
-    activities: safeArray(activities),
-    assessments: safeArray(assessments),
-    todoList: safeArray(todoList),
-    studySessions: safeArray(studySessions),
-    diet: safeArray(diet),
-    screenTime: safeArray(screenTime),
+    topics,
+    goals,
+    water,
+    activities,
+    assessments,
+    todoList,
+    studySessions,
+    diet,
+    screenTime,
+    career: {
+      jobPreparation,
+      applications,
+      savedJobs,
+      interviews,
+    },
+    finance: {
+      income,
+      expenses,
+      budgets,
+    },
   };
 }
 
@@ -408,7 +486,8 @@ function getUpcomingItems(
       if (!dateKey) continue;
 
       try {
-        const difference = diffInLocalDays(today, dateKey);
+        const difference =
+          diffInLocalDays(today, dateKey);
 
         return difference >= 0 && difference <= days;
       } catch {
@@ -494,7 +573,6 @@ function getWaterStats(water) {
     }
   }
 
-  // If records don't contain target, use common TASKBAR default.
   if (target <= 0) {
     target = 2500;
   }
@@ -751,45 +829,18 @@ function isImportant(item) {
 // CAREER DATA
 // ============================================================
 
-// Career data has historically been stored separately from
-// IndexedDB. We read it safely when available.
-
-function readLocalStorageArray(key) {
-  try {
-    const raw = localStorage.getItem(key);
-
-    if (!raw) return [];
-
-    const parsed = JSON.parse(raw);
-
-    return Array.isArray(parsed)
-      ? parsed
-      : [];
-  } catch {
-    return [];
-  }
-}
-
-function getCareerStats() {
+function getCareerStats(careerData = {}) {
   const jobPreparation =
-    readLocalStorageArray(
-      "taskbar-job-preparation"
-    );
+    safeArray(careerData.jobPreparation);
 
   const applications =
-    readLocalStorageArray(
-      "taskbar-job-applications"
-    );
+    safeArray(careerData.applications);
 
   const savedJobs =
-    readLocalStorageArray(
-      "taskbar-saved-jobs"
-    );
+    safeArray(careerData.savedJobs);
 
   const interviews =
-    readLocalStorageArray(
-      "taskbar-interviews"
-    );
+    safeArray(careerData.interviews);
 
   const today = getTodayLocalDateKey();
 
@@ -803,16 +854,20 @@ function getCareerStats() {
 
       if (!dateKey) return false;
 
-      return (
-        diffInLocalDays(
-          dateKey,
-          today
-        ) <= 0
-      );
+      try {
+        return (
+          diffInLocalDays(
+            dateKey,
+            today
+          ) <= 0
+        );
+      } catch {
+        return false;
+      }
     });
 
-  const followUps = applications.filter(
-    (item) => {
+  const followUps =
+    applications.filter((item) => {
       if (isCompleted(item)) return false;
 
       const dateKey =
@@ -820,8 +875,7 @@ function getCareerStats() {
         getDateKey(item?.nextFollowUp);
 
       return dateKey === today;
-    }
-  );
+    });
 
   const upcomingInterviews =
     interviews.filter((item) => {
@@ -833,12 +887,16 @@ function getCareerStats() {
 
       if (!dateKey) return false;
 
-      const days = diffInLocalDays(
-        today,
-        dateKey
-      );
+      try {
+        const days = diffInLocalDays(
+          today,
+          dateKey
+        );
 
-      return days >= 0 && days <= 2;
+        return days >= 0 && days <= 2;
+      } catch {
+        return false;
+      }
     });
 
   return {
@@ -853,33 +911,27 @@ function getCareerStats() {
 // FINANCE DATA
 // ============================================================
 
-function getFinanceStats() {
+function getFinanceStats(financeData = {}) {
   const income =
-    readLocalStorageArray(
-      "taskbar-income"
-    );
+    safeArray(financeData.income);
 
   const expenses =
-    readLocalStorageArray(
-      "taskbar-expenses"
-    );
+    safeArray(financeData.expenses);
 
   const budgets =
-    readLocalStorageArray(
-      "taskbar-budget"
-    );
+    safeArray(financeData.budgets);
 
-  const today = getTodayLocalDateKey();
+  const today =
+    getTodayLocalDateKey();
 
-  const todayExpenses = expenses.filter(
-    (item) => {
+  const todayExpenses =
+    expenses.filter((item) => {
       const dateKey =
         getDateKey(item?.date) ||
         getDateKey(item?.createdAt);
 
       return dateKey === today;
-    }
-  );
+    });
 
   let todayExpenseAmount = 0;
 
@@ -948,6 +1000,8 @@ function buildCandidates(data) {
     studySessions,
     diet,
     screenTime,
+    career,
+    finance,
   } = data;
 
   const name = getProfileName(profile);
@@ -1042,14 +1096,14 @@ function buildCandidates(data) {
   // 4. INTERVIEW
   // ----------------------------------------------------------
 
-  const career =
-    getCareerStats();
+  const careerStats =
+    getCareerStats(career);
 
   if (
-    career.upcomingInterviews.length > 0
+    careerStats.upcomingInterviews.length > 0
   ) {
     const interview =
-      career.upcomingInterviews[0];
+      careerStats.upcomingInterviews[0];
 
     const interviewDate =
       getDateKey(interview?.date) ||
@@ -1094,7 +1148,7 @@ function buildCandidates(data) {
   // ----------------------------------------------------------
 
   if (
-    career.followUps.length > 0
+    careerStats.followUps.length > 0
   ) {
     candidates.push(
       createCandidate({
@@ -1116,10 +1170,10 @@ function buildCandidates(data) {
   // ----------------------------------------------------------
 
   if (
-    career.duePreparation.length > 0
+    careerStats.duePreparation.length > 0
   ) {
     const item =
-      career.duePreparation[0];
+      careerStats.duePreparation[0];
 
     candidates.push(
       createCandidate({
@@ -1353,7 +1407,34 @@ function buildCandidates(data) {
   }
 
   // ----------------------------------------------------------
-  // 14. POSITIVE BACKUP
+  // 14. FINANCE
+  // ----------------------------------------------------------
+
+  const financeStats =
+    getFinanceStats(finance);
+
+  if (
+    financeStats.budgetAmount > 0 &&
+    financeStats.todayExpenseAmount >
+      financeStats.budgetAmount
+  ) {
+    candidates.push(
+      createCandidate({
+        key: "finance-budget",
+        type: "finance",
+        priority: 45,
+        title:
+          `💰 ${name}, keep an eye on today's spending`,
+        body:
+          "Today's expenses have crossed the available budget amount. Take a quick look at your spending when you have a moment. 📊",
+        reason:
+          "budget exceeded",
+      })
+    );
+  }
+
+  // ----------------------------------------------------------
+  // 15. POSITIVE BACKUP
   // ----------------------------------------------------------
 
   candidates.push(
@@ -1435,6 +1516,7 @@ function chooseCandidate(
           item.type === "career" ||
           item.type === "goal" ||
           item.type === "wellness" ||
+          item.type === "finance" ||
           item.type === "motivation"
       );
 
@@ -1451,7 +1533,7 @@ function chooseCandidate(
 // ============================================================
 
 export async function buildSmartNotificationPlan() {
-  if (!areSmartNotificationsEnabled()) {
+  if (!(await areSmartNotificationsEnabled())) {
     return [];
   }
 
@@ -1491,7 +1573,6 @@ export async function buildSmartNotificationPlan() {
       );
     }
 
-    // Never exceed the configured daily limit.
     return plan.slice(
       0,
       MAX_NOTIFICATIONS_PER_DAY
@@ -1505,6 +1586,7 @@ export async function buildSmartNotificationPlan() {
     return [];
   }
 }
+
 // ============================================================
 // GET NEXT DATE/TIME FOR A DAILY WINDOW
 // ============================================================
@@ -1547,8 +1629,7 @@ export async function scheduleSmartNotification(
     return false;
   }
 
-  // Respect Settings -> Reminders & Smart Notifications.
-  if (!areSmartNotificationsEnabled()) {
+  if (!(await areSmartNotificationsEnabled())) {
     return false;
   }
 
@@ -1588,6 +1669,13 @@ export async function scheduleSmartNotification(
       return false;
     }
 
+    if (
+      scheduledDate.getTime() <=
+      Date.now()
+    ) {
+      return false;
+    }
+
     const dateKey =
       getDateKey(scheduledDate);
 
@@ -1597,8 +1685,6 @@ export async function scheduleSmartNotification(
         dateKey
       );
 
-    // Remove an existing notification
-    // with the same smart-notification ID.
     await LocalNotifications.cancel({
       notifications: [
         {
@@ -1710,8 +1796,7 @@ export async function scheduleTodaySmartNotifications() {
     };
   }
 
-  // Respect Settings.
-  if (!areSmartNotificationsEnabled()) {
+  if (!(await areSmartNotificationsEnabled())) {
     return {
       scheduled: 0,
       plan: [],
@@ -1822,10 +1907,7 @@ export async function refreshSmartNotifications() {
     };
   }
 
-  // If notifications are disabled,
-  // make sure existing smart notifications
-  // are removed.
-  if (!areSmartNotificationsEnabled()) {
+  if (!(await areSmartNotificationsEnabled())) {
     await cancelSmartNotifications();
 
     return {
@@ -1876,8 +1958,7 @@ export async function initializeSmartNotifications() {
     };
   }
 
-  // Settings -> Reminders & Smart Notifications OFF.
-  if (!areSmartNotificationsEnabled()) {
+  if (!(await areSmartNotificationsEnabled())) {
     await cancelSmartNotifications();
 
     return {
@@ -1938,8 +2019,7 @@ export async function sendTestSmartNotification() {
     return false;
   }
 
-  // Respect the Settings switch here too.
-  if (!areSmartNotificationsEnabled()) {
+  if (!(await areSmartNotificationsEnabled())) {
     return false;
   }
 
@@ -1952,9 +2032,7 @@ export async function sendTestSmartNotification() {
     }
 
     const profile =
-      await getProfile().catch(
-        () => null
-      );
+      await getSingleProfile();
 
     const name =
       getProfileName(profile);
@@ -1963,8 +2041,6 @@ export async function sendTestSmartNotification() {
       SMART_NOTIFICATION_BASE_ID +
       99999;
 
-    // Cancel an older test notification
-    // before creating a new one.
     await LocalNotifications.cancel({
       notifications: [
         {

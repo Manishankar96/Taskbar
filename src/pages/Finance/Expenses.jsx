@@ -13,8 +13,14 @@ import {
   FileText,
 } from "lucide-react";
 
-const STORAGE_KEY = "taskbar-expenses";
-const INCOME_KEY = "taskbar-income";
+import { getIncome } from "../../utils/db";
+import {
+  getItemsFromFirestore,
+  saveItemsToFirestore,
+  deleteItemFromFirestore,
+} from "../../firebase/firestore";
+
+const EXPENSE_COLLECTION = "expenses";
 const FINANCE_EVENT = "taskbar-finance-updated";
 
 const emptyForm = {
@@ -53,21 +59,6 @@ function formatDate(date) {
   });
 }
 
-function getStoredList(key) {
-  try {
-    const saved = localStorage.getItem(key);
-
-    if (!saved) return [];
-
-    const parsed = JSON.parse(saved);
-
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    console.error(`Failed to load ${key}:`, error);
-    return [];
-  }
-}
-
 export default function Expenses() {
   const [expenseList, setExpenseList] = useState([]);
   const [incomeList, setIncomeList] = useState([]);
@@ -78,17 +69,34 @@ export default function Expenses() {
 
   const [editingId, setEditingId] = useState(null);
 
+  const [loading, setLoading] = useState(true);
+
   /* =========================================================
-     LOAD FINANCE DATA
+     LOAD FINANCE DATA FROM FIREBASE
      ========================================================= */
 
-  function loadFinanceData() {
-    setExpenseList(getStoredList(STORAGE_KEY));
-    setIncomeList(getStoredList(INCOME_KEY));
+  async function loadFinanceData() {
+    try {
+      setLoading(true);
+
+      const [expenses, income] = await Promise.all([
+        getItemsFromFirestore(EXPENSE_COLLECTION),
+        getIncome(),
+      ]);
+
+      setExpenseList(Array.isArray(expenses) ? expenses : []);
+      setIncomeList(Array.isArray(income) ? income : []);
+    } catch (error) {
+      console.error("Failed to load finance data:", error);
+      setExpenseList([]);
+      setIncomeList([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   /* =========================================================
-     SYNC INCOME + EXPENSES
+     SYNC FINANCE DATA
      ========================================================= */
 
   useEffect(() => {
@@ -98,59 +106,31 @@ export default function Expenses() {
       loadFinanceData();
     };
 
-    const handleStorageUpdate = (event) => {
-      if (
-        event.key === STORAGE_KEY ||
-        event.key === INCOME_KEY
-      ) {
-        loadFinanceData();
-      }
-    };
-
-    window.addEventListener(
-      FINANCE_EVENT,
-      handleFinanceUpdate
-    );
-
-    window.addEventListener(
-      "storage",
-      handleStorageUpdate
-    );
+    window.addEventListener(FINANCE_EVENT, handleFinanceUpdate);
 
     return () => {
-      window.removeEventListener(
-        FINANCE_EVENT,
-        handleFinanceUpdate
-      );
-
-      window.removeEventListener(
-        "storage",
-        handleStorageUpdate
-      );
+      window.removeEventListener(FINANCE_EVENT, handleFinanceUpdate);
     };
   }, []);
 
   /* =========================================================
-     SAVE EXPENSES
+     SAVE EXPENSES TO FIREBASE
      ========================================================= */
 
-  function persistExpenses(nextList) {
+  async function persistExpenses(nextList) {
     try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(nextList)
+      await saveItemsToFirestore(
+        EXPENSE_COLLECTION,
+        nextList
       );
 
       setExpenseList(nextList);
 
-      window.dispatchEvent(
-        new Event(FINANCE_EVENT)
-      );
+      window.dispatchEvent(new Event(FINANCE_EVENT));
     } catch (error) {
-      console.error(
-        "Failed to save expenses:",
-        error
-      );
+      console.error("Failed to save expenses:", error);
+
+      alert("Failed to save expense. Please try again.");
     }
   }
 
@@ -334,7 +314,7 @@ export default function Expenses() {
      SUBMIT EXPENSE
      ========================================================= */
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
     if (!form.name.trim()) {
@@ -355,7 +335,9 @@ export default function Expenses() {
       return;
     }
 
-    /* UPDATE */
+    /* =======================================================
+       UPDATE
+       ======================================================= */
 
     if (editingId) {
       const nextList = expenseList.map(
@@ -374,10 +356,12 @@ export default function Expenses() {
             : item
       );
 
-      persistExpenses(nextList);
+      await persistExpenses(nextList);
     }
 
-    /* ADD */
+    /* =======================================================
+       ADD
+       ======================================================= */
 
     else {
       const newExpense = {
@@ -399,7 +383,7 @@ export default function Expenses() {
           new Date().toISOString(),
       };
 
-      persistExpenses([
+      await persistExpenses([
         newExpense,
         ...expenseList,
       ]);
@@ -412,18 +396,38 @@ export default function Expenses() {
      DELETE EXPENSE
      ========================================================= */
 
-  function deleteExpense(id) {
+  async function deleteExpense(id) {
     const confirmed = window.confirm(
       "Are you sure you want to delete this expense?"
     );
 
     if (!confirmed) return;
 
-    const nextList = expenseList.filter(
-      (item) => item.id !== id
-    );
+    try {
+      await deleteItemFromFirestore(
+        EXPENSE_COLLECTION,
+        id
+      );
 
-    persistExpenses(nextList);
+      const nextList = expenseList.filter(
+        (item) => item.id !== id
+      );
+
+      setExpenseList(nextList);
+
+      window.dispatchEvent(
+        new Event(FINANCE_EVENT)
+      );
+    } catch (error) {
+      console.error(
+        "Failed to delete expense:",
+        error
+      );
+
+      alert(
+        "Failed to delete expense. Please try again."
+      );
+    }
   }
 
   return (
@@ -700,6 +704,7 @@ export default function Expenses() {
           <span className="list-count">
 
             {expenseCount}{" "}
+
             {expenseCount === 1
               ? "entry"
               : "entries"}
@@ -708,7 +713,25 @@ export default function Expenses() {
 
         </div>
 
-        {sortedExpenses.length === 0 ? (
+        {loading ? (
+
+          <div className="empty-state">
+
+            <div className="empty-state-icon">
+              <WalletCards size={25} />
+            </div>
+
+            <h3 className="empty-state-title">
+              Loading expenses...
+            </h3>
+
+            <p className="empty-state-text">
+              Fetching your finance data from Firebase.
+            </p>
+
+          </div>
+
+        ) : sortedExpenses.length === 0 ? (
 
           <div className="empty-state">
 

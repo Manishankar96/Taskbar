@@ -6739,9 +6739,9 @@ a:hover svg,
   position: relative;
 }
 
-/* Desktop sidebar */
+/* Desktop sidebar - fixed to the full viewport */
 .app-shell > .sidebar {
-  position: sticky !important;
+  position: fixed !important;
   top: 0 !important;
   left: 0 !important;
 
@@ -6765,7 +6765,7 @@ a:hover svg,
   max-width: none !important;
 
   position: relative !important;
-  margin: 0 !important;
+  margin: 0 0 0 255px !important;
 
   overflow-x: hidden !important;
 }
@@ -6815,6 +6815,7 @@ a:hover svg,
   .app-shell > .main-content {
     width: 100% !important;
     flex: none !important;
+    margin-left: 0 !important;
   }
 }
 

@@ -7,12 +7,14 @@ import {
 } from "lucide-react";
 
 import {
-  getWater,
-  getItem,
-  putItem,
-} from "../../utils/db";
+  getItemsFromFirestore,
+  saveItemToFirestore,
+  subscribeToFirestoreCollection,
+} from "../../firebase/firestore";
 
 import { calculateWaterPercentage } from "../../utils/calculations";
+
+const WATER_COLLECTION = "water";
 
 /* =========================================================
    SMALL WATER GLASS STYLES
@@ -596,7 +598,7 @@ function Water() {
       try {
         setLoading(true);
 
-        const records = await getWater();
+        const records = await getItemsFromFirestore(WATER_COLLECTION);
 
         // Prefer the new canonical daily record if it exists.
         const canonicalRecord = records.find(
@@ -657,8 +659,9 @@ function Water() {
           } else {
             const newRecord = createTodayRecord();
 
-            await putItem(
-              "water",
+            await saveItemToFirestore(
+              WATER_COLLECTION,
+              String(newRecord.id),
               newRecord
             );
 
@@ -687,8 +690,68 @@ function Water() {
 
     loadWater();
 
+    const unsubscribe = subscribeToFirestoreCollection(
+      WATER_COLLECTION,
+      (records) => {
+        if (!mounted) return;
+
+        try {
+          const canonicalRecord = records.find(
+            (record) =>
+              record?.id === today &&
+              (record?.consumed !== undefined ||
+                record?.consumedMl !== undefined)
+          );
+
+          if (canonicalRecord) {
+            setWater(
+              normalizeWaterRecord(canonicalRecord)
+            );
+            return;
+          }
+
+          const todayRows = records.filter(
+            (record) =>
+              record?.date === today ||
+              record?.id === today
+          );
+
+          if (todayRows.length > 0) {
+            const aggregate = todayRows.find(
+              (record) =>
+                record?.consumed !== undefined ||
+                record?.consumedMl !== undefined
+            );
+
+            const consumed = aggregate
+              ? getWaterAmount(aggregate)
+              : todayRows.reduce(
+                  (total, record) =>
+                    total + getWaterAmount(record),
+                  0
+                );
+
+            setWater(
+              normalizeWaterRecord(
+                aggregate || todayRows[0],
+                consumed
+              )
+            );
+          }
+        } catch (error) {
+          console.error(
+            "Failed to process water updates:",
+            error
+          );
+        }
+      }
+    );
+
     return () => {
       mounted = false;
+      if (unsubscribe) {
+        unsubscribe();
+      }
     };
   }, [today]);
 
@@ -728,8 +791,9 @@ function Water() {
     setSaving(true);
 
     try {
-      await putItem(
-        "water",
+      await saveItemToFirestore(
+        WATER_COLLECTION,
+        String(record.id),
         record
       );
 
@@ -750,7 +814,7 @@ function Water() {
 
   async function getLatestRecord() {
     try {
-      const records = await getWater();
+      const records = await getItemsFromFirestore(WATER_COLLECTION);
 
       const canonical = records.find(
         (record) =>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+
 import {
   Bell,
   Plus,
@@ -12,13 +13,21 @@ import {
 import { LocalNotifications } from "@capacitor/local-notifications";
 
 import {
-  getReminders,
-  saveReminders,
-} from "../../utils/db";
+  getItemsFromFirestore,
+  saveItemToFirestore,
+  deleteItemFromFirestore,
+  subscribeToFirestoreCollection,
+} from "../../firebase/firestore";
 
 import {
   getTodayLocalDateKey,
 } from "../../utils/calculations";
+
+const REMINDERS_COLLECTION = "reminders";
+
+/* =========================================================
+   DATE HELPERS
+========================================================= */
 
 function getToday() {
   return getTodayLocalDateKey();
@@ -28,13 +37,17 @@ function isNativeApp() {
   return (
     typeof window !== "undefined" &&
     window.Capacitor &&
-    typeof window.Capacitor.isNativePlatform === "function" &&
+    typeof window.Capacitor.isNativePlatform ===
+      "function" &&
     window.Capacitor.isNativePlatform()
   );
 }
 
 function getReminderDateTime(reminder) {
-  if (!reminder?.date || !reminder?.time) {
+  if (
+    !reminder?.date ||
+    !reminder?.time
+  ) {
     return null;
   }
 
@@ -47,19 +60,37 @@ function getReminderDateTime(reminder) {
     : value;
 }
 
+/* =========================================================
+   NOTIFICATION ID
+========================================================= */
+
 function getNotificationId(reminder) {
-  const raw = String(reminder?.id ?? "");
+  const raw = String(
+    reminder?.id ?? ""
+  );
 
   let hash = 0;
 
-  for (let index = 0; index < raw.length; index += 1) {
+  for (
+    let index = 0;
+    index < raw.length;
+    index += 1
+  ) {
     hash =
-      (hash * 31 + raw.charCodeAt(index)) %
+      (hash * 31 +
+        raw.charCodeAt(index)) %
       2147483647;
   }
 
-  return Math.max(1, Math.abs(hash));
+  return Math.max(
+    1,
+    Math.abs(hash)
+  );
 }
+
+/* =========================================================
+   BROWSER NOTIFICATION KEY
+========================================================= */
 
 function getNotificationKey(reminder) {
   return (
@@ -72,12 +103,17 @@ function getNotificationKey(reminder) {
   );
 }
 
+/* =========================================================
+   FORMAT TIME
+========================================================= */
+
 function formatReminderTime(time) {
   if (!time) return "";
 
-  const [hours, minutes] = String(time)
-    .split(":")
-    .map(Number);
+  const [hours, minutes] =
+    String(time)
+      .split(":")
+      .map(Number);
 
   if (
     !Number.isFinite(hours) ||
@@ -88,32 +124,57 @@ function formatReminderTime(time) {
 
   const date = new Date();
 
-  date.setHours(hours, minutes, 0, 0);
+  date.setHours(
+    hours,
+    minutes,
+    0,
+    0
+  );
 
-  return date.toLocaleTimeString("en-IN", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
+  return date.toLocaleTimeString(
+    "en-IN",
+    {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }
+  );
 }
 
-function formatReminderDate(dateString) {
+/* =========================================================
+   FORMAT DATE
+========================================================= */
+
+function formatReminderDate(
+  dateString
+) {
   if (!dateString) return "";
 
   const date = new Date(
     `${dateString}T00:00:00`
   );
 
-  if (Number.isNaN(date.getTime())) {
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
     return dateString;
   }
 
-  return date.toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return date.toLocaleDateString(
+    "en-IN",
+    {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }
+  );
 }
+
+/* =========================================================
+   FORM
+========================================================= */
 
 const emptyForm = {
   title: "",
@@ -121,60 +182,195 @@ const emptyForm = {
   time: "",
 };
 
+/* =========================================================
+   COMPONENT
+========================================================= */
+
 function Reminders() {
-  const [reminders, setReminders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editingReminder, setEditingReminder] =
-    useState(null);
-  const [form, setForm] = useState(emptyForm);
+  const [reminders, setReminders] =
+    useState([]);
 
-  const [notificationMessage, setNotificationMessage] =
-    useState("");
+  const [loading, setLoading] =
+    useState(true);
 
-  const [notificationPermission, setNotificationPermission] =
-    useState("unknown");
+  const [showForm, setShowForm] =
+    useState(false);
 
-  /*
-   * =========================================================
-   * LOAD
-   * =========================================================
-   */
+  const [
+    editingReminder,
+    setEditingReminder,
+  ] = useState(null);
+
+  const [form, setForm] =
+    useState(emptyForm);
+
+  const [
+    notificationMessage,
+    setNotificationMessage,
+  ] = useState("");
+
+  const [
+    notificationPermission,
+    setNotificationPermission,
+  ] = useState("unknown");
+
+  /* =========================================================
+     NORMALIZE FIRESTORE DATA
+  ========================================================= */
+
+  function normalizeReminders(items) {
+    return (
+      Array.isArray(items)
+        ? items
+        : []
+    )
+      .filter(
+        (reminder) =>
+          reminder?.id !==
+            undefined &&
+          reminder?.id !== null
+      )
+      .map((reminder) => ({
+        ...reminder,
+        id: String(reminder.id),
+
+        enabled:
+          reminder.enabled !==
+          false,
+
+        notified:
+          reminder.notified ===
+          true,
+      }));
+  }
+
+  /* =========================================================
+     LOAD FROM FIRESTORE
+  ========================================================= */
 
   useEffect(() => {
+    let mounted = true;
+    let unsubscribe = null;
+
     async function load() {
       try {
-        const saved = await getReminders();
+        const cloudReminders =
+          await getItemsFromFirestore(
+            REMINDERS_COLLECTION
+          );
 
-        const normalized = (
-          Array.isArray(saved) ? saved : []
-        ).map((reminder) => ({
-          ...reminder,
-          enabled:
-            reminder.enabled !== false,
-          notified:
-            reminder.notified === true,
-        }));
+        if (!mounted) {
+          return;
+        }
+
+        const normalized =
+          normalizeReminders(
+            cloudReminders
+          );
 
         setReminders(normalized);
+
+        /* =====================================================
+           REAL-TIME FIRESTORE SYNC
+        ===================================================== */
+
+        unsubscribe =
+          subscribeToFirestoreCollection(
+            REMINDERS_COLLECTION,
+            (items) => {
+              if (!mounted) {
+                return;
+              }
+
+              const normalizedItems =
+                normalizeReminders(
+                  items
+                );
+
+              setReminders(
+                normalizedItems
+              );
+            },
+            (error) => {
+              console.error(
+                "Reminders real-time sync error:",
+                error
+              );
+            }
+          );
       } catch (error) {
         console.error(
           "Failed to load reminders:",
           error
         );
+
+        if (mounted) {
+          setReminders([]);
+        }
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     }
 
     load();
+
+    return () => {
+      mounted = false;
+
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
-  /*
-   * =========================================================
-   * CHECK NOTIFICATION PERMISSION
-   * =========================================================
-   */
+  /* =========================================================
+     FIRESTORE SAVE
+  ========================================================= */
+
+  async function persistReminder(
+    reminder
+  ) {
+    const normalizedReminder = {
+      ...reminder,
+
+      id: String(reminder.id),
+
+      enabled:
+        reminder.enabled !== false,
+
+      notified:
+        reminder.notified === true,
+    };
+
+    try {
+      await saveItemToFirestore(
+        REMINDERS_COLLECTION,
+        String(
+          normalizedReminder.id
+        ),
+        normalizedReminder
+      );
+
+      return true;
+    } catch (error) {
+      console.error(
+        "Failed to save reminder:",
+        error
+      );
+
+      alert(
+        "Failed to save reminder. Please try again."
+      );
+
+      return false;
+    }
+  }
+
+  /* =========================================================
+     CHECK NOTIFICATION PERMISSION
+  ========================================================= */
 
   useEffect(() => {
     async function checkPermission() {
@@ -184,7 +380,8 @@ function Reminders() {
             await LocalNotifications.checkPermissions();
 
           setNotificationPermission(
-            result.display || "unknown"
+            result.display ||
+              "unknown"
           );
 
           return;
@@ -213,43 +410,23 @@ function Reminders() {
     checkPermission();
   }, []);
 
-  /*
-   * =========================================================
-   * PERSIST
-   * =========================================================
-   */
-
-  async function persist(updated) {
-    setReminders(updated);
-
-    try {
-      await saveReminders(updated);
-    } catch (error) {
-      console.error(
-        "Failed to save reminders:",
-        error
-      );
-    }
-  }
-
-  /*
-   * =========================================================
-   * REQUEST NOTIFICATION PERMISSION
-   * =========================================================
-   */
+  /* =========================================================
+     REQUEST NOTIFICATION PERMISSION
+  ========================================================= */
 
   async function requestNotificationPermission() {
     try {
-      /*
-       * ANDROID / CAPACITOR
-       */
+      /* =====================================================
+         ANDROID / CAPACITOR
+      ===================================================== */
 
       if (isNativeApp()) {
         let permission =
           await LocalNotifications.checkPermissions();
 
         if (
-          permission.display !== "granted"
+          permission.display !==
+          "granted"
         ) {
           permission =
             await LocalNotifications.requestPermissions();
@@ -260,7 +437,8 @@ function Reminders() {
         );
 
         if (
-          permission.display === "granted"
+          permission.display ===
+          "granted"
         ) {
           setNotificationMessage(
             "Phone notifications are enabled."
@@ -276,9 +454,9 @@ function Reminders() {
         return false;
       }
 
-      /*
-       * WEB FALLBACK
-       */
+      /* =====================================================
+         WEB FALLBACK
+      ===================================================== */
 
       if (
         typeof Notification ===
@@ -357,11 +535,9 @@ function Reminders() {
     }
   }
 
-  /*
-   * =========================================================
-   * SCHEDULE NATIVE NOTIFICATION
-   * =========================================================
-   */
+  /* =========================================================
+     SCHEDULE NATIVE NOTIFICATION
+  ========================================================= */
 
   async function scheduleNativeNotification(
     reminder
@@ -371,14 +547,17 @@ function Reminders() {
     }
 
     const scheduled =
-      getReminderDateTime(reminder);
+      getReminderDateTime(
+        reminder
+      );
 
     if (!scheduled) {
       return false;
     }
 
     if (
-      scheduled.getTime() <= Date.now()
+      scheduled.getTime() <=
+      Date.now()
     ) {
       return false;
     }
@@ -392,51 +571,56 @@ function Reminders() {
       }
 
       const notificationId =
-        getNotificationId(reminder);
+        getNotificationId(
+          reminder
+        );
 
-      /*
-       * Cancel the old notification first.
-       * This is important when editing a reminder.
-       */
+      /* Cancel previous notification */
 
       try {
-        await LocalNotifications.cancel({
-          notifications: [
-            {
-              id: notificationId,
-            },
-          ],
-        });
+        await LocalNotifications.cancel(
+          {
+            notifications: [
+              {
+                id: notificationId,
+              },
+            ],
+          }
+        );
       } catch {
         // Notification may not exist yet.
       }
 
-      await LocalNotifications.schedule({
-        notifications: [
-          {
-            id: notificationId,
+      await LocalNotifications.schedule(
+        {
+          notifications: [
+            {
+              id: notificationId,
 
-            title:
-              "🔔 Taskbar Reminder",
+              title:
+                "🔔 Taskbar Reminder",
 
-            body:
-              reminder.title,
+              body:
+                reminder.title,
 
-            schedule: {
-              at: scheduled,
-              allowWhileIdle: true,
+              schedule: {
+                at: scheduled,
+                allowWhileIdle:
+                  true,
+              },
+
+              sound: "default",
+
+              extra: {
+                reminderId:
+                  String(
+                    reminder.id
+                  ),
+              },
             },
-
-            sound:
-              "default",
-
-            extra: {
-              reminderId:
-                String(reminder.id),
-            },
-          },
-        ],
-      });
+          ],
+        }
+      );
 
       return true;
     } catch (error) {
@@ -453,11 +637,9 @@ function Reminders() {
     }
   }
 
-  /*
-   * =========================================================
-   * CANCEL NATIVE NOTIFICATION
-   * =========================================================
-   */
+  /* =========================================================
+     CANCEL NATIVE NOTIFICATION
+  ========================================================= */
 
   async function cancelNativeNotification(
     reminder
@@ -467,16 +649,18 @@ function Reminders() {
     }
 
     try {
-      await LocalNotifications.cancel({
-        notifications: [
-          {
-            id:
-              getNotificationId(
-                reminder
-              ),
-          },
-        ],
-      });
+      await LocalNotifications.cancel(
+        {
+          notifications: [
+            {
+              id:
+                getNotificationId(
+                  reminder
+                ),
+            },
+          ],
+        }
+      );
     } catch (error) {
       console.error(
         "Failed to cancel native notification:",
@@ -485,11 +669,9 @@ function Reminders() {
     }
   }
 
-  /*
-   * =========================================================
-   * SCHEDULE ALL ACTIVE REMINDERS
-   * =========================================================
-   */
+  /* =========================================================
+     SCHEDULE ALL ACTIVE NATIVE REMINDERS
+  ========================================================= */
 
   async function scheduleAllNativeReminders(
     reminderList
@@ -507,7 +689,8 @@ function Reminders() {
 
     for (const reminder of reminderList) {
       if (
-        reminder.enabled === false
+        reminder.enabled ===
+        false
       ) {
         await cancelNativeNotification(
           reminder
@@ -535,11 +718,9 @@ function Reminders() {
     }
   }
 
-  /*
-   * =========================================================
-   * ENABLE NOTIFICATIONS
-   * =========================================================
-   */
+  /* =========================================================
+     ENABLE NOTIFICATIONS
+  ========================================================= */
 
   async function enableNotifications() {
     const granted =
@@ -561,9 +742,9 @@ function Reminders() {
       return;
     }
 
-    /*
-     * WEB FALLBACK
-     */
+    /* =====================================================
+       WEB FALLBACK
+    ===================================================== */
 
     const now = new Date();
 
@@ -591,18 +772,31 @@ function Reminders() {
         }
       );
 
-    await persist(updated);
+    setReminders(updated);
+
+    try {
+      await Promise.all(
+        updated.map((reminder) =>
+          persistReminder(
+            reminder
+          )
+        )
+      );
+    } catch (error) {
+      console.error(
+        "Failed to update reminders:",
+        error
+      );
+    }
 
     setNotificationMessage(
       "Browser notifications are enabled."
     );
   }
 
-  /*
-   * =========================================================
-   * ADD
-   * =========================================================
-   */
+  /* =========================================================
+     ADD
+  ========================================================= */
 
   function openAddForm() {
     setEditingReminder(null);
@@ -617,13 +811,13 @@ function Reminders() {
     setShowForm(true);
   }
 
-  /*
-   * =========================================================
-   * EDIT
-   * =========================================================
-   */
+  /* =========================================================
+     EDIT
+  ========================================================= */
 
-  function openEditForm(reminder) {
+  function openEditForm(
+    reminder
+  ) {
     setEditingReminder(reminder);
 
     setForm({
@@ -642,11 +836,9 @@ function Reminders() {
     setShowForm(true);
   }
 
-  /*
-   * =========================================================
-   * CLOSE
-   * =========================================================
-   */
+  /* =========================================================
+     CLOSE
+  ========================================================= */
 
   function closeForm() {
     setShowForm(false);
@@ -661,13 +853,13 @@ function Reminders() {
     setNotificationMessage("");
   }
 
-  /*
-   * =========================================================
-   * SAVE FORM
-   * =========================================================
-   */
+  /* =========================================================
+     SAVE FORM
+  ========================================================= */
 
-  async function handleSubmit(event) {
+  async function handleSubmit(
+    event
+  ) {
     event.preventDefault();
 
     if (
@@ -710,10 +902,9 @@ function Reminders() {
       return;
     }
 
-    /*
-     * If editing, cancel the old
-     * native notification first.
-     */
+    /* =====================================================
+       CANCEL OLD NATIVE NOTIFICATION
+    ===================================================== */
 
     if (editingReminder) {
       await cancelNativeNotification(
@@ -724,9 +915,10 @@ function Reminders() {
     const reminder = {
       ...(editingReminder || {}),
 
-      id:
+      id: String(
         editingReminder?.id ??
-        Date.now(),
+          Date.now()
+      ),
 
       title:
         form.title.trim(),
@@ -742,31 +934,54 @@ function Reminders() {
         false,
 
       notified: false,
+
+      updatedAt:
+        new Date().toISOString(),
+
+      createdAt:
+        editingReminder?.createdAt ||
+        new Date().toISOString(),
     };
 
-    let updated;
+    /* =====================================================
+       SAVE TO FIRESTORE FIRST
+    ===================================================== */
 
-    if (editingReminder) {
-      updated =
-        reminders.map(
+    const success =
+      await persistReminder(
+        reminder
+      );
+
+    if (!success) {
+      return;
+    }
+
+    /* =====================================================
+       UPDATE LOCAL UI
+    ===================================================== */
+
+    setReminders((previous) => {
+      if (editingReminder) {
+        return previous.map(
           (item) =>
-            item.id ===
-            editingReminder.id
+            String(item.id) ===
+            String(
+              editingReminder.id
+            )
               ? reminder
               : item
         );
-    } else {
-      updated = [
-        ...reminders,
+      }
+
+      return [
+        ...previous,
         reminder,
       ];
-    }
+    });
 
-    await persist(updated);
-
-    /*
-     * Native Android
-     */
+    /* =====================================================
+       NATIVE ANDROID
+    ===================================================== */
 
     if (
       isNativeApp() &&
@@ -785,9 +1000,9 @@ function Reminders() {
         );
       }
     } else {
-      /*
-       * Web
-       */
+      /* ===================================================
+         WEB
+      =================================================== */
 
       const granted =
         await requestNotificationPermission();
@@ -802,11 +1017,9 @@ function Reminders() {
     closeForm();
   }
 
-  /*
-   * =========================================================
-   * ENABLE / DISABLE INDIVIDUAL REMINDER
-   * =========================================================
-   */
+  /* =========================================================
+     ENABLE / DISABLE INDIVIDUAL REMINDER
+  ========================================================= */
 
   async function toggleReminder(
     reminder
@@ -818,6 +1031,10 @@ function Reminders() {
       getReminderDateTime(
         reminder
       );
+
+    /* =====================================================
+       ENABLE
+    ===================================================== */
 
     if (newEnabled) {
       if (!scheduled) {
@@ -843,18 +1060,27 @@ function Reminders() {
         ...reminder,
         enabled: true,
         notified: false,
+        updatedAt:
+          new Date().toISOString(),
       };
 
-      const updated =
-        reminders.map(
-          (item) =>
-            item.id ===
-            reminder.id
-              ? updatedReminder
-              : item
+      const success =
+        await persistReminder(
+          updatedReminder
         );
 
-      await persist(updated);
+      if (!success) {
+        return;
+      }
+
+      setReminders((previous) =>
+        previous.map((item) =>
+          String(item.id) ===
+          String(reminder.id)
+            ? updatedReminder
+            : item
+        )
+      );
 
       if (isNativeApp()) {
         const scheduledSuccessfully =
@@ -885,40 +1111,56 @@ function Reminders() {
       return;
     }
 
-    /*
-     * Disable
-     */
+    /* =====================================================
+       DISABLE
+    ===================================================== */
 
     await cancelNativeNotification(
       reminder
     );
 
-    localStorage.removeItem(
-      getNotificationKey(
-        reminder
-      )
-    );
+    try {
+      localStorage.removeItem(
+        getNotificationKey(
+          reminder
+        )
+      );
+    } catch (error) {
+      console.error(
+        "Failed to clear browser notification key:",
+        error
+      );
+    }
 
-    const updated =
-      reminders.map(
-        (item) =>
-          item.id ===
-          reminder.id
-            ? {
-                ...item,
-                enabled: false,
-              }
-            : item
+    const updatedReminder = {
+      ...reminder,
+      enabled: false,
+      updatedAt:
+        new Date().toISOString(),
+    };
+
+    const success =
+      await persistReminder(
+        updatedReminder
       );
 
-    await persist(updated);
+    if (!success) {
+      return;
+    }
+
+    setReminders((previous) =>
+      previous.map((item) =>
+        String(item.id) ===
+        String(reminder.id)
+          ? updatedReminder
+          : item
+      )
+    );
   }
 
-  /*
-   * =========================================================
-   * DELETE
-   * =========================================================
-   */
+  /* =========================================================
+     DELETE
+  ========================================================= */
 
   async function deleteReminder(
     reminder
@@ -936,32 +1178,47 @@ function Reminders() {
       reminder
     );
 
-    localStorage.removeItem(
-      getNotificationKey(
-        reminder
-      )
-    );
+    try {
+      localStorage.removeItem(
+        getNotificationKey(
+          reminder
+        )
+      );
+    } catch (error) {
+      console.error(
+        "Failed to clear browser notification key:",
+        error
+      );
+    }
 
-    await persist(
-      reminders.filter(
-        (item) =>
-          item.id !==
-          reminder.id
-      )
-    );
+    try {
+      await deleteItemFromFirestore(
+        REMINDERS_COLLECTION,
+        String(reminder.id)
+      );
+
+      setReminders((previous) =>
+        previous.filter(
+          (item) =>
+            String(item.id) !==
+            String(reminder.id)
+        )
+      );
+    } catch (error) {
+      console.error(
+        "Failed to delete reminder:",
+        error
+      );
+
+      alert(
+        "Failed to delete reminder. Please try again."
+      );
+    }
   }
 
-  /*
-   * =========================================================
-   * WEB FALLBACK SCHEDULER
-   * =========================================================
-   *
-   * This is used only when running
-   * TASKBAR in a normal browser.
-   *
-   * Android uses native scheduled
-   * notifications instead.
-   */
+  /* =========================================================
+     WEB FALLBACK SCHEDULER
+  ========================================================= */
 
   useEffect(() => {
     if (
@@ -987,10 +1244,9 @@ function Reminders() {
         return;
       }
 
-      const now =
-        Date.now();
+      const now = Date.now();
 
-      let changed = false;
+      const changedReminders = [];
 
       const updated =
         reminders.map(
@@ -1025,17 +1281,31 @@ function Reminders() {
                 reminder
               );
 
-            if (
-              localStorage.getItem(
-                key
-              )
-            ) {
-              changed = true;
+            let alreadyNotified =
+              false;
 
-              return {
+            try {
+              alreadyNotified =
+                Boolean(
+                  localStorage.getItem(
+                    key
+                  )
+                );
+            } catch {
+              alreadyNotified = false;
+            }
+
+            if (alreadyNotified) {
+              const updatedReminder = {
                 ...reminder,
                 notified: true,
               };
+
+              changedReminders.push(
+                updatedReminder
+              );
+
+              return updatedReminder;
             }
 
             try {
@@ -1049,17 +1319,25 @@ function Reminders() {
                 }
               );
 
-              localStorage.setItem(
-                key,
-                "true"
-              );
+              try {
+                localStorage.setItem(
+                  key,
+                  "true"
+                );
+              } catch {
+                // Ignore localStorage failure.
+              }
 
-              changed = true;
-
-              return {
+              const updatedReminder = {
                 ...reminder,
                 notified: true,
               };
+
+              changedReminders.push(
+                updatedReminder
+              );
+
+              return updatedReminder;
             } catch (error) {
               console.error(
                 "Failed to show browser reminder:",
@@ -1072,16 +1350,20 @@ function Reminders() {
         );
 
       if (
-        changed &&
+        changedReminders.length >
+          0 &&
         !cancelled
       ) {
-        setReminders(
-          updated
-        );
+        setReminders(updated);
 
         try {
-          await saveReminders(
-            updated
+          await Promise.all(
+            changedReminders.map(
+              (reminder) =>
+                persistReminder(
+                  reminder
+                )
+            )
           );
         } catch (error) {
           console.error(
@@ -1131,11 +1413,9 @@ function Reminders() {
     loading,
   ]);
 
-  /*
-   * =========================================================
-   * RESCHEDULE NATIVE REMINDERS WHEN APP LOADS
-   * =========================================================
-   */
+  /* =========================================================
+     RESCHEDULE NATIVE REMINDERS WHEN APP LOADS
+  ========================================================= */
 
   useEffect(() => {
     if (
@@ -1155,13 +1435,12 @@ function Reminders() {
     scheduleExistingReminders();
   }, [
     loading,
+    reminders,
   ]);
 
-  /*
-   * =========================================================
-   * DATE GROUPS
-   * =========================================================
-   */
+  /* =========================================================
+     DATE GROUPS
+  ========================================================= */
 
   const today =
     getToday();
@@ -1240,15 +1519,14 @@ function Reminders() {
         false
     ).length;
 
-  /*
-   * =========================================================
-   * LOADING
-   * =========================================================
-   */
+  /* =========================================================
+     LOADING
+  ========================================================= */
 
   if (loading) {
     return (
       <div className="module-page">
+
         <h1>
           🔔 Reminders
         </h1>
@@ -1256,15 +1534,14 @@ function Reminders() {
         <p>
           Loading reminders...
         </p>
+
       </div>
     );
   }
 
-  /*
-   * =========================================================
-   * REMINDER ROW
-   * =========================================================
-   */
+  /* =========================================================
+     REMINDER ROW
+  ========================================================= */
 
   function ReminderRow({
     reminder,
@@ -1298,6 +1575,7 @@ function Reminders() {
         className="topic-row"
         key={reminder.id}
       >
+
         <div className="topic-information">
 
           <strong>
@@ -1305,6 +1583,7 @@ function Reminders() {
           </strong>
 
           <span>
+
             {!isToday &&
               `${formatReminderDate(
                 reminder.date
@@ -1317,11 +1596,14 @@ function Reminders() {
             {" • "}
 
             {status}
+
           </span>
 
         </div>
 
         <div className="topic-actions">
+
+          {/* ENABLE / DISABLE */}
 
           <button
             type="button"
@@ -1338,6 +1620,7 @@ function Reminders() {
               )
             }
           >
+
             {reminder.enabled ===
             false ? (
               <BellOff
@@ -1348,7 +1631,10 @@ function Reminders() {
                 size={17}
               />
             )}
+
           </button>
+
+          {/* EDIT */}
 
           <button
             type="button"
@@ -1364,6 +1650,8 @@ function Reminders() {
               size={17}
             />
           </button>
+
+          {/* DELETE */}
 
           <button
             type="button"
@@ -1381,24 +1669,26 @@ function Reminders() {
           </button>
 
         </div>
+
       </div>
     );
   }
 
-  /*
-   * =========================================================
-   * UI
-   * =========================================================
-   */
+  /* =========================================================
+     UI
+  ========================================================= */
 
   return (
     <div className="module-page">
 
-      {/* HEADER */}
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
 
       <div className="page-header">
 
         <div>
+
           <h1>
             🔔 Reminders
           </h1>
@@ -1406,9 +1696,11 @@ function Reminders() {
           <p>
             Set date and time based reminders.
           </p>
+
         </div>
 
         <button
+          type="button"
           className="add-topic-button"
           onClick={
             openAddForm
@@ -1420,12 +1712,14 @@ function Reminders() {
 
       </div>
 
-
-      {/* STATS */}
+      {/* =====================================================
+          STATS
+      ===================================================== */}
 
       <section className="stat-grid">
 
         <div className="stat-card">
+
           <Bell size={25} />
 
           <span>
@@ -1435,9 +1729,11 @@ function Reminders() {
           <strong>
             {reminders.length}
           </strong>
+
         </div>
 
         <div className="stat-card">
+
           <CheckCircle2
             size={25}
           />
@@ -1449,9 +1745,11 @@ function Reminders() {
           <strong>
             {activeCount}
           </strong>
+
         </div>
 
         <div className="stat-card">
+
           <Bell size={25} />
 
           <span>
@@ -1461,12 +1759,14 @@ function Reminders() {
           <strong>
             {todayReminders.length}
           </strong>
+
         </div>
 
       </section>
 
-
-      {/* NOTIFICATION STATUS */}
+      {/* =====================================================
+          NOTIFICATION STATUS
+      ===================================================== */}
 
       <section
         className="section-card"
@@ -1502,7 +1802,9 @@ function Reminders() {
         >
           Permission status:{" "}
           <strong>
-            {notificationPermission}
+            {
+              notificationPermission
+            }
           </strong>
         </p>
 
@@ -1533,7 +1835,9 @@ function Reminders() {
               marginTop: 10,
             }}
           >
-            {notificationMessage}
+            {
+              notificationMessage
+            }
           </p>
         )}
 
@@ -1545,14 +1849,17 @@ function Reminders() {
               opacity: 0.75,
             }}
           >
-            Android notifications are scheduled natively and do not depend on a JavaScript timer.
+            Android notifications are
+            scheduled natively and do not
+            depend on a JavaScript timer.
           </p>
         )}
 
       </section>
 
-
-      {/* FORM */}
+      {/* =====================================================
+          FORM
+      ===================================================== */}
 
       {showForm && (
 
@@ -1590,6 +1897,8 @@ function Reminders() {
             }
           >
 
+            {/* REMINDER */}
+
             <div className="form-group">
 
               <label>
@@ -1606,12 +1915,15 @@ function Reminders() {
                   setForm({
                     ...form,
                     title:
-                      event.target.value,
+                      event.target
+                        .value,
                   })
                 }
               />
 
             </div>
+
+            {/* DATE */}
 
             <div className="form-group">
 
@@ -1629,12 +1941,15 @@ function Reminders() {
                   setForm({
                     ...form,
                     date:
-                      event.target.value,
+                      event.target
+                        .value,
                   })
                 }
               />
 
             </div>
+
+            {/* TIME */}
 
             <div className="form-group">
 
@@ -1651,7 +1966,8 @@ function Reminders() {
                   setForm({
                     ...form,
                     time:
-                      event.target.value,
+                      event.target
+                        .value,
                   })
                 }
               />
@@ -1672,8 +1988,9 @@ function Reminders() {
         </section>
       )}
 
-
-      {/* TODAY */}
+      {/* =====================================================
+          TODAY
+      ===================================================== */}
 
       <section
         className="learning-section"
@@ -1685,6 +2002,7 @@ function Reminders() {
         <div className="topic-header">
 
           <div>
+
             <h2>
               Today's Reminders
             </h2>
@@ -1692,6 +2010,7 @@ function Reminders() {
             <p>
               Reminders scheduled for today.
             </p>
+
           </div>
 
         </div>
@@ -1701,8 +2020,12 @@ function Reminders() {
           {todayReminders.map(
             (reminder) => (
               <ReminderRow
-                reminder={reminder}
-                key={reminder.id}
+                reminder={
+                  reminder
+                }
+                key={
+                  reminder.id
+                }
               />
             )
           )}
@@ -1718,8 +2041,9 @@ function Reminders() {
 
       </section>
 
-
-      {/* UPCOMING */}
+      {/* =====================================================
+          UPCOMING
+      ===================================================== */}
 
       <section
         className="learning-section"
@@ -1731,6 +2055,7 @@ function Reminders() {
         <div className="topic-header">
 
           <div>
+
             <h2>
               Upcoming Reminders
             </h2>
@@ -1738,6 +2063,7 @@ function Reminders() {
             <p>
               Reminders scheduled after today.
             </p>
+
           </div>
 
         </div>
@@ -1747,8 +2073,12 @@ function Reminders() {
           {upcomingReminders.map(
             (reminder) => (
               <ReminderRow
-                reminder={reminder}
-                key={reminder.id}
+                reminder={
+                  reminder
+                }
+                key={
+                  reminder.id
+                }
               />
             )
           )}
@@ -1764,8 +2094,9 @@ function Reminders() {
 
       </section>
 
-
-      {/* PAST */}
+      {/* =====================================================
+          PAST
+      ===================================================== */}
 
       {pastReminders.length >
         0 && (
@@ -1780,6 +2111,7 @@ function Reminders() {
           <div className="topic-header">
 
             <div>
+
               <h2>
                 Past Reminders
               </h2>
@@ -1787,6 +2119,7 @@ function Reminders() {
               <p>
                 Previous reminder dates.
               </p>
+
             </div>
 
           </div>
@@ -1796,8 +2129,12 @@ function Reminders() {
             {pastReminders.map(
               (reminder) => (
                 <ReminderRow
-                  reminder={reminder}
-                  key={reminder.id}
+                  reminder={
+                    reminder
+                  }
+                  key={
+                    reminder.id
+                  }
                 />
               )
             )}

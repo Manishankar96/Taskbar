@@ -12,16 +12,9 @@ import {
 import { auth } from "./auth";
 import { db } from "./firestore";
 
-import {
-  getItems,
-  saveItems,
-  putItem,
-  deleteItem,
-} from "../utils/db";
-
 
 /* =========================================================
-   TASKBAR STORES
+   TASKBAR FIRESTORE COLLECTIONS
    ========================================================= */
 
 const SYNC_STORES = [
@@ -103,22 +96,150 @@ function getUserDocument(storeName, itemId) {
 
 
 /* =========================================================
-   LOCAL → FIRESTORE
+   FIRESTORE → APP
    ========================================================= */
 
 /*
- * Upload one IndexedDB item to Firestore.
+ * Read one complete Firestore collection.
+ *
+ * Firebase is the source of truth.
+ * No IndexedDB/localStorage operation happens here.
+ */
+export async function getStoreFromFirestore(storeName) {
+  if (!SYNC_STORES.includes(storeName)) {
+    throw new Error(
+      `Invalid Firestore store: ${storeName}`
+    );
+  }
+
+  const collectionRef =
+    getUserCollection(storeName);
+
+  const snapshot =
+    await getDocs(collectionRef);
+
+  return snapshot.docs.map(
+    (document) => ({
+      id: document.id,
+      ...document.data(),
+    })
+  );
+}
+
+
+/*
+ * Read all TASKBAR collections from Firestore.
+ */
+export async function getAllStoresFromFirestore() {
+  getCurrentUser();
+
+  const data = {};
+
+  for (const storeName of SYNC_STORES) {
+    try {
+      data[storeName] =
+        await getStoreFromFirestore(
+          storeName
+        );
+    } catch (error) {
+      console.error(
+        `❌ Failed reading ${storeName} from Firestore:`,
+        error
+      );
+
+      data[storeName] = [];
+    }
+  }
+
+  return data;
+}
+
+
+/* =========================================================
+   INITIAL SYNC
+   ========================================================= */
+
+/*
+ * Firebase-only initial load.
+ *
+ * IMPORTANT:
+ * This function no longer reads from
+ * or writes to IndexedDB.
+ *
+ * Firebase is now the source of truth.
+ */
+export async function initialSync(
+  storeName
+) {
+  if (!SYNC_STORES.includes(storeName)) {
+    throw new Error(
+      `Invalid Firestore store: ${storeName}`
+    );
+  }
+
+  const items =
+    await getStoreFromFirestore(
+      storeName
+    );
+
+  console.log(
+    `☁️ ${storeName} loaded from Firestore: ${items.length} items`
+  );
+
+  return items;
+}
+
+
+/*
+ * Firebase-only initial load
+ * for every TASKBAR collection.
+ */
+export async function syncAllFromFirestore() {
+  getCurrentUser();
+
+  console.log(
+    "☁️ Loading TASKBAR data from Firestore..."
+  );
+
+  const data =
+    await getAllStoresFromFirestore();
+
+  console.log(
+    "✅ TASKBAR Firestore data loaded."
+  );
+
+  return data;
+}
+
+
+/* =========================================================
+   FIRESTORE WRITE
+   ========================================================= */
+
+/*
+ * Save ONE item directly to Firestore.
+ *
+ * Firebase is the main database.
+ * No local database write is performed.
  */
 export async function syncItemToFirestore(
   storeName,
   item
 ) {
+  if (!SYNC_STORES.includes(storeName)) {
+    throw new Error(
+      `Invalid Firestore store: ${storeName}`
+    );
+  }
+
   if (
     !item ||
     item.id === undefined ||
     item.id === null
   ) {
-    return;
+    throw new Error(
+      `A valid item.id is required for ${storeName}.`
+    );
   }
 
   const documentRef =
@@ -134,18 +255,34 @@ export async function syncItemToFirestore(
       merge: true,
     }
   );
+
+  console.log(
+    `☁️ Saved ${storeName}/${item.id} to Firestore`
+  );
+
+  return item;
 }
 
 
 /*
- * Upload one complete IndexedDB store
- * to Firestore.
+ * Save an entire collection
+ * directly to Firestore.
  */
 export async function syncStoreToFirestore(
-  storeName
+  storeName,
+  items = []
 ) {
-  const items =
-    await getItems(storeName);
+  if (!SYNC_STORES.includes(storeName)) {
+    throw new Error(
+      `Invalid Firestore store: ${storeName}`
+    );
+  }
+
+  if (!Array.isArray(items)) {
+    throw new Error(
+      `items must be an array for ${storeName}.`
+    );
+  }
 
   for (const item of items) {
     await syncItemToFirestore(
@@ -155,74 +292,7 @@ export async function syncStoreToFirestore(
   }
 
   console.log(
-    `☁️ ${storeName} synced to Firestore`
-  );
-}
-
-
-/*
- * Upload all Taskbar stores.
- *
- * We will use this later.
- */
-export async function syncAllToFirestore() {
-  getCurrentUser();
-
-  console.log(
-    "☁️ Starting IndexedDB → Firestore sync..."
-  );
-
-  for (const storeName of SYNC_STORES) {
-    try {
-      await syncStoreToFirestore(
-        storeName
-      );
-    } catch (error) {
-      console.error(
-        `❌ Failed syncing ${storeName}:`,
-        error
-      );
-    }
-  }
-
-  console.log(
-    "✅ IndexedDB → Firestore sync completed."
-  );
-}
-
-
-/* =========================================================
-   FIRESTORE → LOCAL
-   ========================================================= */
-
-/*
- * Download one Firestore collection
- * into IndexedDB.
- */
-export async function syncStoreFromFirestore(
-  storeName
-) {
-  const collectionRef =
-    getUserCollection(storeName);
-
-  const snapshot =
-    await getDocs(collectionRef);
-
-  const items =
-    snapshot.docs.map(
-      (document) => ({
-        id: document.id,
-        ...document.data(),
-      })
-    );
-
-  await saveItems(
-    storeName,
-    items
-  );
-
-  console.log(
-    `📥 ${storeName} downloaded from Firestore`
+    `☁️ ${storeName} saved to Firestore`
   );
 
   return items;
@@ -230,417 +300,52 @@ export async function syncStoreFromFirestore(
 
 
 /*
- * Download all Taskbar stores.
+ * Save all TASKBAR data directly
+ * to Firestore.
  *
- * We will use this later.
+ * Expected shape:
+ *
+ * {
+ *   topics: [...],
+ *   goals: [...],
+ *   ...
+ * }
  */
-export async function syncAllFromFirestore() {
+export async function syncAllToFirestore(
+  data = {}
+) {
   getCurrentUser();
 
   console.log(
-    "📥 Starting Firestore → IndexedDB sync..."
+    "☁️ Starting TASKBAR → Firestore save..."
   );
 
   for (const storeName of SYNC_STORES) {
+    const items =
+      data[storeName];
+
+    if (!Array.isArray(items)) {
+      continue;
+    }
+
     try {
-      await syncStoreFromFirestore(
-        storeName
+      await syncStoreToFirestore(
+        storeName,
+        items
       );
     } catch (error) {
       console.error(
-        `❌ Failed downloading ${storeName}:`,
+        `❌ Failed saving ${storeName}:`,
         error
       );
     }
   }
 
   console.log(
-    "✅ Firestore → IndexedDB sync completed."
-  );
-}
-
-
-/* =========================================================
-   INITIAL SYNC
-   ========================================================= */
-
-/*
- * Initial synchronization for ONE store.
- *
- * Example:
- *
- * initialSync("quickNotes")
- *
- * This means ONLY quickNotes is touched.
- *
- * Rules:
- *
- * 1. If Firestore has data:
- *       Firestore → IndexedDB
- *
- * 2. If Firestore is empty:
- *       IndexedDB → Firestore
- *
- * This protects existing local data
- * during the first migration.
- */
-
-/* =========================================================
-   SAFE TIMESTAMP HELPER
-   ========================================================= */
-
-/*
- * Returns a comparable timestamp from an item.
- * Supports ISO date strings, numeric timestamps,
- * and Firestore Timestamp-like values.
- */
-function getUpdatedAtValue(item) {
-  if (!item || item.updatedAt === undefined || item.updatedAt === null) {
-    return null;
-  }
-
-  const value = item.updatedAt;
-
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-
-  if (
-    typeof value === "object" &&
-    typeof value.toMillis === "function"
-  ) {
-    const millis = value.toMillis();
-
-    return Number.isFinite(millis)
-      ? millis
-      : null;
-  }
-
-  if (typeof value === "string") {
-    const millis = Date.parse(value);
-
-    return Number.isNaN(millis)
-      ? null
-      : millis;
-  }
-
-  return null;
-}
-
-export async function initialSync(
-  storeName
-) {
-  getCurrentUser();
-
-  if (!SYNC_STORES.includes(storeName)) {
-    throw new Error(
-      `Invalid sync store: ${storeName}`
-    );
-  }
-
-  console.log(
-    `🔄 Starting safe initial sync for ${storeName}...`
+    "✅ TASKBAR → Firestore save completed."
   );
 
-  const collectionRef =
-    getUserCollection(storeName);
-
-  const snapshot =
-    await getDocs(collectionRef);
-
-  const localItems =
-    await getItems(storeName);
-
-  const cloudItems =
-    snapshot.docs.map(
-      (document) => ({
-        id: document.id,
-        ...document.data(),
-      })
-    );
-
-  /* -----------------------------------------
-     BOTH LOCAL + CLOUD DATA
-     -----------------------------------------
-     Do not blindly replace local data.
-
-     Rules:
-     1. Item exists only locally:
-        → upload it to Firestore.
-
-     2. Item exists only in Firestore:
-        → download it to IndexedDB.
-
-     3. Item exists in both:
-        → compare updatedAt when available.
-        → newer item wins.
-        → if no usable updatedAt exists,
-          keep the cloud version as the
-          existing migration behavior.
-     ----------------------------------------- */
-
-  if (cloudItems.length > 0) {
-    const localById = new Map(
-      localItems.map((item) => [
-        String(item.id),
-        item,
-      ])
-    );
-
-    const cloudById = new Map(
-      cloudItems.map((item) => [
-        String(item.id),
-        item,
-      ])
-    );
-
-    const mergedItems = [];
-
-    // Process every item known to either side.
-    const allIds = new Set([
-      ...localById.keys(),
-      ...cloudById.keys(),
-    ]);
-
-    for (const id of allIds) {
-      const localItem = localById.get(id);
-      const cloudItem = cloudById.get(id);
-
-      // Only local → upload and keep local copy.
-      if (localItem && !cloudItem) {
-        try {
-          await syncItemToFirestore(
-            storeName,
-            localItem
-          );
-        } catch (error) {
-          console.error(
-            `❌ Failed uploading local ${storeName}/${id}:`,
-            error
-          );
-        }
-
-        mergedItems.push(localItem);
-        continue;
-      }
-
-      // Only cloud → download.
-      if (!localItem && cloudItem) {
-        mergedItems.push(cloudItem);
-        continue;
-      }
-
-      // Exists on both sides.
-      const localUpdatedAt =
-        getUpdatedAtValue(localItem);
-
-      const cloudUpdatedAt =
-        getUpdatedAtValue(cloudItem);
-
-      if (
-        localUpdatedAt !== null &&
-        cloudUpdatedAt !== null
-      ) {
-        if (localUpdatedAt > cloudUpdatedAt) {
-          try {
-            await syncItemToFirestore(
-              storeName,
-              localItem
-            );
-          } catch (error) {
-            console.error(
-              `❌ Failed uploading newer local ${storeName}/${id}:`,
-              error
-            );
-          }
-
-          mergedItems.push(localItem);
-        } else {
-          mergedItems.push(cloudItem);
-        }
-      } else {
-        // No reliable timestamp.
-        // Preserve the existing migration rule:
-        // Firestore wins when cloud data exists.
-        mergedItems.push(cloudItem);
-      }
-    }
-
-    await saveItems(
-      storeName,
-      mergedItems
-    );
-
-    console.log(
-      `🔄 Safe merge completed for ${storeName}`
-    );
-
-    return mergedItems;
-  }
-
-  /* -----------------------------------------
-     FIRESTORE IS EMPTY
-     ----------------------------------------- */
-
-  if (localItems.length > 0) {
-    for (const item of localItems) {
-      try {
-        await syncItemToFirestore(
-          storeName,
-          item
-        );
-      } catch (error) {
-        console.error(
-          `❌ Failed uploading ${storeName}:`,
-          error
-        );
-      }
-    }
-
-    console.log(
-      `💾 → ☁️ ${storeName} uploaded from local storage`
-    );
-
-    return localItems;
-  }
-
-  console.log(
-    `ℹ️ ${storeName} has no local or cloud data.`
-  );
-
-  return [];
-}
-
-
-/* =========================================================
-   REAL-TIME LISTENER
-   ========================================================= */
-
-/*
- * Listen for changes to ONE Firestore collection.
- *
- * When another device changes data:
- *
- * Device A
- *    ↓
- * Firestore
- *    ↓
- * onSnapshot()
- *    ↓
- * IndexedDB
- *    ↓
- * Device B
- */
-export function listenToStore(
-  storeName
-) {
-  if (!SYNC_STORES.includes(storeName)) {
-    throw new Error(
-      `Invalid sync store: ${storeName}`
-    );
-  }
-
-  const collectionRef =
-    getUserCollection(storeName);
-
-  const unsubscribe =
-    onSnapshot(
-      collectionRef,
-      async (snapshot) => {
-        try {
-          const items =
-            snapshot.docs.map(
-              (document) => ({
-                id: document.id,
-                ...document.data(),
-              })
-            );
-
-          await saveItems(
-            storeName,
-            items
-          );
-
-          console.log(
-            `🔄 Real-time update: ${storeName}`
-          );
-
-        } catch (error) {
-          console.error(
-            `❌ Real-time update failed for ${storeName}:`,
-            error
-          );
-        }
-      },
-      (error) => {
-        console.error(
-          `❌ Firestore listener error for ${storeName}:`,
-          error
-        );
-      }
-    );
-
-  return unsubscribe;
-}
-
-
-/* =========================================================
-   LISTEN TO ALL STORES
-   ========================================================= */
-
-/*
- * Start real-time listeners for all stores.
- *
- * We will use this later after the
- * quickNotes test succeeds.
- */
-export function startRealtimeSync() {
-  getCurrentUser();
-
-  const unsubscribeFunctions = [];
-
-  for (const storeName of SYNC_STORES) {
-    try {
-      const unsubscribe =
-        listenToStore(storeName);
-
-      unsubscribeFunctions.push(
-        unsubscribe
-      );
-
-    } catch (error) {
-      console.error(
-        `❌ Could not listen to ${storeName}:`,
-        error
-      );
-    }
-  }
-
-  console.log(
-    "👂 Real-time Firestore sync started."
-  );
-
-  /*
-   * Return one cleanup function.
-   */
-  return () => {
-    unsubscribeFunctions.forEach(
-      (unsubscribe) => {
-        try {
-          unsubscribe();
-        } catch (error) {
-          console.error(
-            "❌ Failed to unsubscribe:",
-            error
-          );
-        }
-      }
-    );
-
-    console.log(
-      "🛑 Real-time Firestore sync stopped."
-    );
-  };
+  return data;
 }
 
 
@@ -648,18 +353,23 @@ export function startRealtimeSync() {
    DELETE FROM FIRESTORE
    ========================================================= */
 
-/*
- * Delete an item from Firestore.
- */
 export async function syncDeleteToFirestore(
   storeName,
   itemId
 ) {
+  if (!SYNC_STORES.includes(storeName)) {
+    throw new Error(
+      `Invalid Firestore store: ${storeName}`
+    );
+  }
+
   if (
     itemId === undefined ||
     itemId === null
   ) {
-    return;
+    throw new Error(
+      `A valid itemId is required for ${storeName}.`
+    );
   }
 
   const documentRef =
@@ -683,32 +393,24 @@ export async function syncDeleteToFirestore(
    ========================================================= */
 
 /*
- * Save locally first,
- * then upload to Firestore.
+ * Firebase-only save.
  *
- * We will connect this to db.js later.
+ * Old behavior:
+ *
+ * IndexedDB → Firestore
+ *
+ * New behavior:
+ *
+ * Firestore only
  */
 export async function saveAndSyncItem(
   storeName,
   item
 ) {
-  if (!item) {
-    throw new Error(
-      "Item is required."
-    );
-  }
-
-  await putItem(
+  return syncItemToFirestore(
     storeName,
     item
   );
-
-  await syncItemToFirestore(
-    storeName,
-    item
-  );
-
-  return item;
 }
 
 
@@ -717,24 +419,180 @@ export async function saveAndSyncItem(
    ========================================================= */
 
 /*
- * Delete locally first,
- * then delete from Firestore.
- *
- * We will connect this to db.js later.
+ * Firebase-only delete.
  */
 export async function deleteAndSyncItem(
   storeName,
   itemId
 ) {
-  await deleteItem(
+  return syncDeleteToFirestore(
     storeName,
     itemId
+  );
+}
+
+
+/* =========================================================
+   REAL-TIME FIRESTORE LISTENER
+   ========================================================= */
+
+/*
+ * Listen to one Firestore collection.
+ *
+ * IMPORTANT:
+ * This listener no longer writes
+ * received data into IndexedDB.
+ *
+ * It returns Firebase data
+ * through the onData callback.
+ *
+ * Example:
+ *
+ * listenToStore(
+ *   "topics",
+ *   (items) => {
+ *     setTopics(items);
+ *   }
+ * );
+ */
+export function listenToStore(
+  storeName,
+  onData
+) {
+  if (!SYNC_STORES.includes(storeName)) {
+    throw new Error(
+      `Invalid Firestore store: ${storeName}`
+    );
+  }
+
+  if (
+    onData !== undefined &&
+    typeof onData !== "function"
+  ) {
+    throw new Error(
+      "onData must be a function."
+    );
+  }
+
+  const collectionRef =
+    getUserCollection(
+      storeName
+    );
+
+  const unsubscribe =
+    onSnapshot(
+      collectionRef,
+
+      (snapshot) => {
+        const items =
+          snapshot.docs.map(
+            (document) => ({
+              id: document.id,
+              ...document.data(),
+            })
+          );
+
+        console.log(
+          `🔄 Firestore real-time update: ${storeName}`
+        );
+
+        if (onData) {
+          onData(items);
+        }
+      },
+
+      (error) => {
+        console.error(
+          `❌ Firestore listener error for ${storeName}:`,
+          error
+        );
+      }
+    );
+
+  return unsubscribe;
+}
+
+
+/* =========================================================
+   LISTEN TO ALL STORES
+   ========================================================= */
+
+/*
+ * Start Firebase real-time listeners.
+ *
+ * onData receives:
+ *
+ * {
+ *   storeName,
+ *   items
+ * }
+ *
+ * Nothing is written to IndexedDB.
+ */
+export function startRealtimeSync(
+  onData
+) {
+  getCurrentUser();
+
+  if (
+    onData !== undefined &&
+    typeof onData !== "function"
+  ) {
+    throw new Error(
+      "onData must be a function."
+    );
+  }
+
+  const unsubscribeFunctions = [];
+
+  for (const storeName of SYNC_STORES) {
+    try {
+      const unsubscribe =
+        listenToStore(
+          storeName,
+          (items) => {
+            if (onData) {
+              onData({
+                storeName,
+                items,
+              });
+            }
+          }
+        );
+
+      unsubscribeFunctions.push(
+        unsubscribe
+      );
+    } catch (error) {
+      console.error(
+        `❌ Could not listen to ${storeName}:`,
+        error
+      );
+    }
+  }
+
+  console.log(
+    "👂 Firebase real-time sync started."
   );
 
-  await syncDeleteToFirestore(
-    storeName,
-    itemId
-  );
+  return () => {
+    unsubscribeFunctions.forEach(
+      (unsubscribe) => {
+        try {
+          unsubscribe();
+        } catch (error) {
+          console.error(
+            "❌ Failed to unsubscribe:",
+            error
+          );
+        }
+      }
+    );
+
+    console.log(
+      "🛑 Firebase real-time sync stopped."
+    );
+  };
 }
 
 

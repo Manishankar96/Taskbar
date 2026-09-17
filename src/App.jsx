@@ -83,14 +83,12 @@ import {
 
 import Login from "./pages/Login";
 import { useAuth } from "./context/AuthContext";
+import PinLock from "./pages/PinLock";
+import ForgotPin from "./pages/ForgotPin";
+import PinSetup from "./pages/PinSetup";
+import { getPinStatus } from "./utils/pinLock";
 
 import { testFirestore } from "./firebase/firestoreTest";
-
-import {
-  SYNC_STORES,
-  initialSync,
-  startRealtimeSync,
-} from "./firebase/sync";
 
 import {
   initializeSmartNotifications,
@@ -110,116 +108,20 @@ function FirestoreTest() {
 }
 
 /* =========================================================
-   FIREBASE DATA SYNC
+   FIREBASE DATA SOURCE
    ========================================================= */
 
-function FirebaseDataSync() {
-  const { user } = useAuth();
+/*
+   TASKBAR now uses Firebase Firestore as its persistent
+   application data source.
 
-  const [autoSync, setAutoSync] = useState(() => {
-    try {
-      const stored = localStorage.getItem("taskbar-settings");
-      if (!stored) return true;
+   Individual pages access data through src/utils/db.js,
+   which now reads and writes directly to Firestore.
 
-      const parsed = JSON.parse(stored);
-      return parsed?.autoSync !== false;
-    } catch {
-      return true;
-    }
-  });
-
-  useEffect(() => {
-    function handleSettingsChange(event) {
-      if (event?.detail?.name === "autoSync") {
-        setAutoSync(event.detail.value !== false);
-        return;
-      }
-
-      try {
-        const stored = localStorage.getItem("taskbar-settings");
-        const parsed = stored ? JSON.parse(stored) : {};
-        setAutoSync(parsed?.autoSync !== false);
-      } catch {
-        setAutoSync(true);
-      }
-    }
-
-    window.addEventListener(
-      "taskbar-settings-changed",
-      handleSettingsChange
-    );
-
-    return () => {
-      window.removeEventListener(
-        "taskbar-settings-changed",
-        handleSettingsChange
-      );
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!user || !autoSync) {
-      if (!autoSync) {
-        console.log("⏸️ Taskbar automatic Firebase sync is OFF.");
-      }
-      return;
-    }
-
-    let unsubscribe = null;
-    let cancelled = false;
-
-    async function startSync() {
-      try {
-        console.log("🔄 Starting Taskbar data sync...");
-
-        // First synchronize every store safely.
-        // If Firestore has data, it is downloaded.
-        // If Firestore is empty, existing local data is uploaded.
-        for (const storeName of SYNC_STORES) {
-          if (cancelled) {
-            return;
-          }
-
-          try {
-            await initialSync(storeName);
-          } catch (error) {
-            console.error(
-              `❌ Initial sync failed for ${storeName}:`,
-              error
-            );
-          }
-        }
-
-        if (cancelled) {
-          return;
-        }
-
-        // After initial sync, keep every store updated in real time.
-        unsubscribe = startRealtimeSync();
-
-        console.log("✅ Taskbar full Firebase sync is active.");
-      } catch (error) {
-        console.error(
-          "❌ Taskbar Firebase sync failed:",
-          error
-        );
-      }
-    }
-
-    startSync();
-
-    return () => {
-      cancelled = true;
-
-      if (unsubscribe) {
-        unsubscribe();
-        unsubscribe = null;
-      }
-    };
-  }, [user, autoSync]);
-
-  return null;
-}
+   The old IndexedDB -> Firestore synchronization loop is
+   intentionally removed from App.jsx so the application does
+   not maintain a second persistent data store.
+*/
 
 /* =========================================================
    DAILY REPORT MANAGER
@@ -271,9 +173,13 @@ function SmartNotificationManager() {
   const [remindersEnabled, setRemindersEnabled] = useState(() => {
     try {
       const stored = localStorage.getItem("taskbar-settings");
-      if (!stored) return true;
+
+      if (!stored) {
+        return true;
+      }
 
       const parsed = JSON.parse(stored);
+
       return parsed?.remindersEnabled !== false;
     } catch {
       return true;
@@ -282,15 +188,31 @@ function SmartNotificationManager() {
 
   useEffect(() => {
     function handleSettingsChange(event) {
-      if (event?.detail?.name === "remindersEnabled") {
-        setRemindersEnabled(event.detail.value !== false);
+      if (
+        event?.detail?.name ===
+        "remindersEnabled"
+      ) {
+        setRemindersEnabled(
+          event.detail.value !== false
+        );
+
         return;
       }
 
       try {
-        const stored = localStorage.getItem("taskbar-settings");
-        const parsed = stored ? JSON.parse(stored) : {};
-        setRemindersEnabled(parsed?.remindersEnabled !== false);
+        const stored =
+          localStorage.getItem(
+            "taskbar-settings"
+          );
+
+        const parsed =
+          stored
+            ? JSON.parse(stored)
+            : {};
+
+        setRemindersEnabled(
+          parsed?.remindersEnabled !== false
+        );
       } catch {
         setRemindersEnabled(true);
       }
@@ -326,6 +248,7 @@ function SmartNotificationManager() {
               "⏸️ Taskbar reminders and smart notifications are OFF."
             );
           }
+
           return;
         }
 
@@ -345,7 +268,11 @@ function SmartNotificationManager() {
             `✅ Taskbar smart notifications active. Scheduled: ${result.scheduled}`
           );
 
-          if (Array.isArray(result.plan)) {
+          if (
+            Array.isArray(
+              result.plan
+            )
+          ) {
             console.log(
               "📋 Today's smart notification plan:",
               result.plan
@@ -369,7 +296,10 @@ function SmartNotificationManager() {
     return () => {
       cancelled = true;
     };
-  }, [user, remindersEnabled]);
+  }, [
+    user,
+    remindersEnabled,
+  ]);
 
   return null;
 }
@@ -379,7 +309,8 @@ function SmartNotificationManager() {
    ========================================================= */
 
 function getPreviousLocalDateKey() {
-  const date = new Date();
+  const date =
+    new Date();
 
   date.setDate(
     date.getDate() - 1
@@ -388,13 +319,15 @@ function getPreviousLocalDateKey() {
   const year =
     date.getFullYear();
 
-  const month = String(
-    date.getMonth() + 1
-  ).padStart(2, "0");
+  const month =
+    String(
+      date.getMonth() + 1
+    ).padStart(2, "0");
 
-  const day = String(
-    date.getDate()
-  ).padStart(2, "0");
+  const day =
+    String(
+      date.getDate()
+    ).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
 }
@@ -743,15 +676,18 @@ function SidebarGroup({
   onToggle,
   onNavigate,
 }) {
-  const location = useLocation();
+  const location =
+    useLocation();
 
-  const hasActiveItem = group.items.some(
-    (item) =>
-      location.pathname === item.path ||
-      location.pathname.startsWith(
-        `${item.path}/`
-      )
-  );
+  const hasActiveItem =
+    group.items.some(
+      (item) =>
+        location.pathname ===
+          item.path ||
+        location.pathname.startsWith(
+          `${item.path}/`
+        )
+    );
 
   return (
     <div className="sidebar-group">
@@ -765,7 +701,9 @@ function SidebarGroup({
         onClick={() =>
           onToggle(group.id)
         }
-        aria-expanded={isOpen}
+        aria-expanded={
+          isOpen
+        }
       >
         <span className="sidebar-group-title">
           <group.icon size={19} />
@@ -776,15 +714,20 @@ function SidebarGroup({
         </span>
 
         {isOpen ? (
-          <ChevronDown size={17} />
+          <ChevronDown
+            size={17}
+          />
         ) : (
-          <ChevronRight size={17} />
+          <ChevronRight
+            size={17}
+          />
         )}
       </button>
 
       {isOpen && (
         <div className="sidebar-group-items">
-          {group.items.length === 0 ? (
+          {group.items.length ===
+          0 ? (
             <div className="sidebar-coming-soon">
               Coming soon
             </div>
@@ -798,14 +741,18 @@ function SidebarGroup({
                 <NavLink
                   key={path}
                   to={path}
-                  className={({ isActive }) =>
+                  className={({
+                    isActive,
+                  }) =>
                     `sidebar-link sidebar-sub-link ${
                       isActive
                         ? "active"
                         : ""
                     }`
                   }
-                  onClick={onNavigate}
+                  onClick={
+                    onNavigate
+                  }
                 >
                   <Icon size={17} />
 
@@ -843,8 +790,13 @@ function MobileMoreMenu({
     >
       <div className="mobile-more-menu-header">
         <div>
-          <h2>More</h2>
-          <span>Taskbar</span>
+          <h2>
+            More
+          </h2>
+
+          <span>
+            Taskbar
+          </span>
         </div>
 
         <button
@@ -867,8 +819,13 @@ function MobileMoreMenu({
             <NavLink
               key={path}
               to={path}
-              end={path === "/profile"}
-              className={({ isActive }) =>
+              end={
+                path ===
+                "/profile"
+              }
+              className={({
+                isActive,
+              }) =>
                 `mobile-more-link ${
                   isActive
                     ? "active"
@@ -891,7 +848,6 @@ function MobileMoreMenu({
     </div>
   );
 }
-
 /* =========================================================
    MOBILE BOTTOM NAVIGATION
    ========================================================= */
@@ -900,7 +856,8 @@ function MobileBottomNavigation({
   onMore,
   moreOpen,
 }) {
-  const location = useLocation();
+  const location =
+    useLocation();
 
   return (
     <nav
@@ -915,8 +872,10 @@ function MobileBottomNavigation({
         }) => {
           const isActive =
             path === "/"
-              ? location.pathname === "/"
-              : location.pathname === path ||
+              ? location.pathname ===
+                "/"
+              : location.pathname ===
+                  path ||
                 location.pathname.startsWith(
                   `${path}/`
                 );
@@ -930,7 +889,9 @@ function MobileBottomNavigation({
                   ? "active"
                   : ""
               }`}
-              end={path === "/"}
+              end={
+                path === "/"
+              }
             >
               <Icon size={21} />
 
@@ -950,7 +911,9 @@ function MobileBottomNavigation({
             : ""
         }`}
         onClick={onMore}
-        aria-expanded={moreOpen}
+        aria-expanded={
+          moreOpen
+        }
         aria-label="Open more navigation"
       >
         {moreOpen ? (
@@ -972,12 +935,22 @@ function MobileBottomNavigation({
    ========================================================= */
 
 function PageBackground() {
-  const location = useLocation();
-  const isProfilePage = location.pathname === "/profile";
-  const [backgroundImage, setBackgroundImage] = useState(() => {
+  const location =
+    useLocation();
+
+  const isProfilePage =
+    location.pathname ===
+    "/profile";
+
+  const [
+    backgroundImage,
+    setBackgroundImage,
+  ] = useState(() => {
     try {
       return (
-        localStorage.getItem("taskbar-custom-page-background") ||
+        localStorage.getItem(
+          "taskbar-custom-page-background"
+        ) ||
         "/spiderman-bg.jpg"
       );
     } catch {
@@ -989,24 +962,40 @@ function PageBackground() {
     function loadBackground() {
       try {
         setBackgroundImage(
-          localStorage.getItem("taskbar-custom-page-background") ||
+          localStorage.getItem(
+            "taskbar-custom-page-background"
+          ) ||
             "/spiderman-bg.jpg"
         );
       } catch {
-        setBackgroundImage("/spiderman-bg.jpg");
+        setBackgroundImage(
+          "/spiderman-bg.jpg"
+        );
       }
     }
 
     loadBackground();
-    window.addEventListener("taskbar-background-changed", loadBackground);
-    window.addEventListener("storage", loadBackground);
+
+    window.addEventListener(
+      "taskbar-background-changed",
+      loadBackground
+    );
+
+    window.addEventListener(
+      "storage",
+      loadBackground
+    );
 
     return () => {
       window.removeEventListener(
         "taskbar-background-changed",
         loadBackground
       );
-      window.removeEventListener("storage", loadBackground);
+
+      window.removeEventListener(
+        "storage",
+        loadBackground
+      );
     };
   }, []);
 
@@ -1033,34 +1022,49 @@ function AppLayout() {
   const location =
     useLocation();
 
-  const [sidebarOpen, setSidebarOpen] =
-    useState(false);
+  const [
+    sidebarOpen,
+    setSidebarOpen,
+  ] = useState(false);
 
-  const [mobileMoreOpen, setMobileMoreOpen] =
-    useState(false);
+  const [
+    mobileMoreOpen,
+    setMobileMoreOpen,
+  ] = useState(false);
 
-  const [openGroups, setOpenGroups] =
-    useState({
-      study: true,
-      career: true,
-      productivity: true,
-      wellness: false,
-    });
+  const [
+    openGroups,
+    setOpenGroups,
+  ] = useState({
+    study: true,
+    career: true,
+    productivity: true,
+    wellness: false,
+  });
 
   const isProfilePage =
-    location.pathname === "/profile";
+    location.pathname ===
+    "/profile";
 
   useEffect(() => {
     setSidebarOpen(false);
     setMobileMoreOpen(false);
-  }, [location.pathname]);
+  }, [
+    location.pathname,
+  ]);
 
-  function toggleGroup(groupId) {
-    setOpenGroups((previous) => ({
-      ...previous,
-      [groupId]:
-        !previous[groupId],
-    }));
+  function toggleGroup(
+    groupId
+  ) {
+    setOpenGroups(
+      (previous) => ({
+        ...previous,
+        [groupId]:
+          !previous[
+            groupId
+          ],
+      })
+    );
   }
 
   function closeSidebar() {
@@ -1069,7 +1073,8 @@ function AppLayout() {
 
   function toggleMobileMore() {
     setMobileMoreOpen(
-      (previous) => !previous
+      (previous) =>
+        !previous
     );
   }
 
@@ -1087,7 +1092,8 @@ function AppLayout() {
           className="mobile-menu-button"
           onClick={() =>
             setSidebarOpen(
-              (previous) => !previous
+              (previous) =>
+                !previous
             )
           }
           aria-label={
@@ -1109,13 +1115,19 @@ function AppLayout() {
           type="button"
           className="sidebar-overlay"
           aria-label="Close navigation"
-          onClick={closeSidebar}
+          onClick={
+            closeSidebar
+          }
         />
       )}
 
       <MobileMoreMenu
-        isOpen={mobileMoreOpen}
-        onClose={closeMobileMore}
+        isOpen={
+          mobileMoreOpen
+        }
+        onClose={
+          closeMobileMore
+        }
       />
 
       <div
@@ -1147,56 +1159,72 @@ function AppLayout() {
           </div>
 
           <nav className="sidebar-nav">
-            {navigation.map((item) => {
-              if (
-                item.type === "single"
-              ) {
-                const Icon =
-                  item.icon;
+            {navigation.map(
+              (item) => {
+                if (
+                  item.type ===
+                  "single"
+                ) {
+                  const Icon =
+                    item.icon;
+
+                  return (
+                    <NavLink
+                      key={
+                        item.path
+                      }
+                      to={
+                        item.path
+                      }
+                      end={
+                        item.path ===
+                        "/"
+                      }
+                      className={({
+                        isActive,
+                      }) =>
+                        `sidebar-link ${
+                          isActive
+                            ? "active"
+                            : ""
+                        }`
+                      }
+                      onClick={
+                        closeSidebar
+                      }
+                    >
+                      <Icon
+                        size={19}
+                      />
+
+                      <span>
+                        {
+                          item.label
+                        }
+                      </span>
+                    </NavLink>
+                  );
+                }
 
                 return (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    end={
-                      item.path === "/"
+                  <SidebarGroup
+                    key={item.id}
+                    group={item}
+                    isOpen={
+                      openGroups[
+                        item.id
+                      ]
                     }
-                    className={({ isActive }) =>
-                      `sidebar-link ${
-                        isActive
-                          ? "active"
-                          : ""
-                      }`
+                    onToggle={
+                      toggleGroup
                     }
-                    onClick={
+                    onNavigate={
                       closeSidebar
                     }
-                  >
-                    <Icon size={19} />
-
-                    <span>
-                      {item.label}
-                    </span>
-                  </NavLink>
+                  />
                 );
               }
-
-              return (
-                <SidebarGroup
-                  key={item.id}
-                  group={item}
-                  isOpen={
-                    openGroups[item.id]
-                  }
-                  onToggle={
-                    toggleGroup
-                  }
-                  onNavigate={
-                    closeSidebar
-                  }
-                />
-              );
-            })}
+            )}
           </nav>
         </aside>
 
@@ -1461,12 +1489,125 @@ function AppLayout() {
           MOBILE BOTTOM NAVIGATION
       ================================================= */}
 
-      {!isProfilePage && (
-        <MobileBottomNavigation
-          onMore={toggleMobileMore}
-          moreOpen={mobileMoreOpen}
-        />
-      )}
+      <MobileBottomNavigation
+        onMore={
+          toggleMobileMore
+        }
+        moreOpen={
+          mobileMoreOpen
+        }
+      />
+    </>
+  );
+}
+/* =========================================================
+   PIN GATE
+   ========================================================= */
+
+function PinGate() {
+  const { user } = useAuth();
+  const [pinState, setPinState] = useState("checking");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const checkPin = async () => {
+      if (!user) {
+        return;
+      }
+
+      setPinState("checking");
+
+      try {
+        const pinStatus = await getPinStatus();
+
+        if (cancelled) {
+          return;
+        }
+
+        if (!pinStatus.exists) {
+          setPinState("setup");
+        } else if (!pinStatus.enabled) {
+          setPinState("unlocked");
+        } else {
+          setPinState("locked");
+        }
+      } catch (error) {
+        console.error("PIN status check failed:", error);
+
+        if (!cancelled) {
+          setPinState("setup");
+        }
+      }
+    };
+
+    checkPin();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  if (pinState === "checking") {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#0f0f0f",
+          color: "#fff",
+          fontSize: "18px",
+        }}
+      >
+        Loading Taskbar...
+      </div>
+    );
+  }
+
+  if (pinState === "setup") {
+    return (
+      <PinSetup
+        onComplete={() => {
+          setPinState("unlocked");
+        }}
+      />
+    );
+  }
+
+  if (pinState === "locked") {
+    return (
+      <PinLock
+        onSuccess={() => {
+          setPinState("unlocked");
+        }}
+        onForgotPin={() => {
+          setPinState("forgot");
+        }}
+      />
+    );
+  }
+
+  if (pinState === "forgot") {
+    return (
+      <ForgotPin
+        onBack={() => {
+          setPinState("locked");
+        }}
+        onComplete={() => {
+          setPinState("locked");
+        }}
+      />
+    );
+  }
+
+  return (
+    <>
+      <FirestoreTest />
+      <DailyReportManager />
+      <SmartNotificationManager />
+      <AppLayout />
     </>
   );
 }
@@ -1500,27 +1641,10 @@ function ProtectedApp() {
   }
 
   if (!user) {
-    return (
-      <Navigate
-        to="/login"
-        replace
-      />
-    );
+    return <Navigate to="/login" replace />;
   }
 
-  return (
-    <>
-      <FirestoreTest />
-
-      <FirebaseDataSync />
-
-      <DailyReportManager />
-
-      <SmartNotificationManager />
-
-      <AppLayout />
-    </>
-  );
+  return <PinGate />;
 }
 
 /* =========================================================
@@ -1533,16 +1657,12 @@ function App() {
       <Routes>
         <Route
           path="/login"
-          element={
-            <Login />
-          }
+          element={<Login />}
         />
 
         <Route
           path="/*"
-          element={
-            <ProtectedApp />
-          }
+          element={<ProtectedApp />}
         />
       </Routes>
     </BrowserRouter>

@@ -1,376 +1,141 @@
 // src/utils/db.js
 
-const DB_NAME = "personalDashboardDB";
-const DB_VERSION = 9;
+import {
+  collection,
+  doc,
+  getDocs,
+  setDoc,
+  deleteDoc,
+} from "firebase/firestore";
+
+import { auth } from "../firebase/auth";
+import { db } from "../firebase/firestore";
 
 const STORES = {
-  topics: "topics",
-  goals: "goals",
-  timetable: "timetable",
-  diet: "diet",
-  water: "water",
-  screenTime: "screenTime",
-  activities: "activities",
-  assessments: "assessments",
-  quickTasks: "quickTasks",
-  streak: "streak",
-  profile: "profile",
-  dailyReports: "dailyReports",
-
-  // PHASE 1
-  quickNotes: "quickNotes",
-  dailyTargets: "dailyTargets",
-  reminders: "reminders",
-  todoList: "todoList",
-  studySessions: "studySessions",
-
-  // CAREER
-  jobPreparation: "jobPreparation",
-  applications: "applications",
-  savedJobs: "savedJobs",
-  resumes: "resumes",
-  interviews: "interviews",
-  projects: "projects",
-
-  // FINANCE
-  income: "income",
-  expenses: "expenses",
-  budget: "budget",
-
-  // SETTINGS
-  settings: "settings",
+  topics: "topics", goals: "goals", timetable: "timetable", diet: "diet",
+  water: "water", screenTime: "screenTime", activities: "activities",
+  assessments: "assessments", quickTasks: "quickTasks", streak: "streak",
+  profile: "profile", dailyReports: "dailyReports", quickNotes: "quickNotes",
+  dailyTargets: "dailyTargets", reminders: "reminders", todoList: "todoList",
+  studySessions: "studySessions", jobPreparation: "jobPreparation",
+  applications: "applications", savedJobs: "savedJobs", resumes: "resumes",
+  interviews: "interviews", projects: "projects", income: "income",
+  expenses: "expenses", budget: "budget", settings: "settings",
 };
 
-let dbPromise = null;
+function requireUser() {
+  const user = auth.currentUser;
+  if (!user) throw new Error("User is not logged in.");
+  return user;
+}
 
-/* =========================================================
-   DATABASE
-========================================================= */
+function getCollection(storeName) {
+  const user = requireUser();
+  return collection(db, "users", user.uid, storeName);
+}
 
-function openDatabase() {
-  if (dbPromise) {
-    return dbPromise;
-  }
-
-  dbPromise = new Promise((resolve, reject) => {
-    const request = indexedDB.open(
-      DB_NAME,
-      DB_VERSION
-    );
-
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
-
-      Object.values(STORES).forEach((storeName) => {
-        if (!db.objectStoreNames.contains(storeName)) {
-          db.createObjectStore(storeName, {
-            keyPath: "id",
-          });
-        }
-      });
-    };
-
-    request.onsuccess = () => {
-      const database = request.result;
-
-      database.onversionchange = () => {
-        database.close();
-        dbPromise = null;
-      };
-
-      resolve(database);
-    };
-
-    request.onerror = () => {
-      reject(request.error);
-    };
-
-    request.onblocked = () => {
-      console.warn("IndexedDB upgrade is blocked.");
-    };
-  });
-
-  return dbPromise;
+function getDocument(storeName, id) {
+  const user = requireUser();
+  return doc(db, "users", user.uid, storeName, String(id));
 }
 
 /* =========================================================
-   GENERIC CRUD
+   FIREBASE CRUD
 ========================================================= */
 
 export async function getItems(storeName) {
-  const db = await openDatabase();
-
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(
-      storeName,
-      "readonly"
-    );
-
-    const store = transaction.objectStore(
-      storeName
-    );
-
-    const request = store.getAll();
-
-    request.onsuccess = () => {
-      resolve(request.result || []);
-    };
-
-    request.onerror = () => {
-      reject(request.error);
-    };
-  });
+  const snapshot = await getDocs(getCollection(storeName));
+  return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
 }
 
 export async function getItem(storeName, id) {
-  const db = await openDatabase();
-
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(
-      storeName,
-      "readonly"
-    );
-
-    const store = transaction.objectStore(
-      storeName
-    );
-
-    const request = store.get(id);
-
-    request.onsuccess = () => {
-      resolve(request.result || null);
-    };
-
-    request.onerror = () => {
-      reject(request.error);
-    };
-  });
+  const snapshot = await getDocs(getCollection(storeName));
+  const found = snapshot.docs.find((item) => String(item.id) === String(id));
+  return found ? { id: found.id, ...found.data() } : null;
 }
 
 export async function putItem(storeName, item) {
-  const db = await openDatabase();
-
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(
-      storeName,
-      "readwrite"
-    );
-
-    const store = transaction.objectStore(
-      storeName
-    );
-
-    const request = store.put(item);
-
-    request.onsuccess = () => {
-      resolve(item);
-    };
-
-    request.onerror = () => {
-      reject(request.error);
-    };
-  });
+  if (!item || item.id === undefined || item.id === null) {
+    throw new Error(`A valid item.id is required for ${storeName}.`);
+  }
+  await setDoc(getDocument(storeName, item.id), item, { merge: true });
+  return item;
 }
 
 export const addItem = putItem;
 export const updateItem = putItem;
 
 export async function deleteItem(storeName, id) {
-  const db = await openDatabase();
-
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(
-      storeName,
-      "readwrite"
-    );
-
-    const store = transaction.objectStore(
-      storeName
-    );
-
-    const request = store.delete(id);
-
-    request.onsuccess = () => {
-      resolve(true);
-    };
-
-    request.onerror = () => {
-      reject(request.error);
-    };
-  });
+  await deleteDoc(getDocument(storeName, id));
+  return true;
 }
 
-/* =========================================================
-   SAVE COMPLETE LIST
-========================================================= */
-
 export async function saveItems(storeName, items) {
-  const db = await openDatabase();
+  if (!Array.isArray(items)) throw new Error("saveItems expects an array");
 
-  if (!Array.isArray(items)) {
-    throw new Error(
-      "saveItems expects an array"
-    );
-  }
+  const snapshot = await getDocs(getCollection(storeName));
+  const incomingIds = new Set(
+    items
+      .map((item) => item?.id)
+      .filter((id) => id !== undefined && id !== null)
+      .map(String)
+  );
 
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(
-      storeName,
-      "readwrite"
-    );
+  await Promise.all(
+    snapshot.docs
+      .filter((item) => !incomingIds.has(String(item.id)))
+      .map((item) => deleteDoc(item.ref))
+  );
 
-    const store = transaction.objectStore(
-      storeName
-    );
-
-    transaction.oncomplete = () => {
-      resolve(items);
-    };
-
-    transaction.onerror = () => {
-      reject(transaction.error);
-    };
-
-    transaction.onabort = () => {
-      reject(
-        transaction.error ||
-          new Error("Transaction aborted")
-      );
-    };
-
-    const incomingIds = new Set(
-      items
-        .map((item) => item?.id)
-        .filter(
-          (id) =>
-            id !== undefined &&
-            id !== null
-        )
-    );
-
-    const getAllRequest = store.getAll();
-
-    getAllRequest.onsuccess = () => {
-      const existingItems =
-        getAllRequest.result || [];
-
-      existingItems.forEach((existingItem) => {
-        if (
-          !incomingIds.has(
-            existingItem?.id
-          )
-        ) {
-          store.delete(existingItem.id);
-        }
-      });
-
-      items.forEach((item) => {
-        store.put(item);
-      });
-    };
-
-    getAllRequest.onerror = () => {
-      reject(getAllRequest.error);
-    };
-  });
+  await Promise.all(items.map((item) => putItem(storeName, item)));
+  return items;
 }
 
 export async function clearStore(storeName) {
-  const db = await openDatabase();
-
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(
-      storeName,
-      "readwrite"
-    );
-
-    const store = transaction.objectStore(
-      storeName
-    );
-
-    const request = store.clear();
-
-    request.onsuccess = () => {
-      resolve(true);
-    };
-
-    request.onerror = () => {
-      reject(request.error);
-    };
-  });
+  const snapshot = await getDocs(getCollection(storeName));
+  await Promise.all(snapshot.docs.map((item) => deleteDoc(item.ref)));
+  return true;
 }
 
 /* =========================================================
    EXISTING PAGE HELPERS
 ========================================================= */
 
-export const getTopics = () =>
-  getItems(STORES.topics);
+export const getTopics = () => getItems(STORES.topics);
+export const saveTopics = (items) => saveItems(STORES.topics, items);
 
-export const saveTopics = (items) =>
-  saveItems(STORES.topics, items);
+export const getGoals = () => getItems(STORES.goals);
+export const saveGoals = (items) => saveItems(STORES.goals, items);
 
-export const getGoals = () =>
-  getItems(STORES.goals);
+export const getTimetable = () => getItems(STORES.timetable);
+export const saveTimetable = (items) => saveItems(STORES.timetable, items);
 
-export const saveGoals = (items) =>
-  saveItems(STORES.goals, items);
+export const getDiet = () => getItems(STORES.diet);
+export const saveDiet = (items) => saveItems(STORES.diet, items);
 
-export const getTimetable = () =>
-  getItems(STORES.timetable);
+export const getWater = () => getItems(STORES.water);
+export const saveWater = (items) => saveItems(STORES.water, items);
 
-export const saveTimetable = (items) =>
-  saveItems(STORES.timetable, items);
-
-export const getDiet = () =>
-  getItems(STORES.diet);
-
-export const saveDiet = (items) =>
-  saveItems(STORES.diet, items);
-
-export const getWater = () =>
-  getItems(STORES.water);
-
-export const saveWater = (items) =>
-  saveItems(STORES.water, items);
-
-export const getScreenTime = () =>
-  getItems(STORES.screenTime);
-
+export const getScreenTime = () => getItems(STORES.screenTime);
 export const saveScreenTime = (items) =>
   saveItems(STORES.screenTime, items);
 
-export const getActivities = () =>
-  getItems(STORES.activities);
-
+export const getActivities = () => getItems(STORES.activities);
 export const saveActivities = (items) =>
   saveItems(STORES.activities, items);
 
-export const getAssessments = () =>
-  getItems(STORES.assessments);
-
+export const getAssessments = () => getItems(STORES.assessments);
 export const saveAssessments = (items) =>
   saveItems(STORES.assessments, items);
 
-export const getQuickTasks = () =>
-  getItems(STORES.quickTasks);
-
+export const getQuickTasks = () => getItems(STORES.quickTasks);
 export const saveQuickTasks = (items) =>
   saveItems(STORES.quickTasks, items);
 
-export const getStreak = () =>
-  getItems(STORES.streak);
+export const getStreak = () => getItems(STORES.streak);
+export const saveStreak = (items) => saveItems(STORES.streak, items);
 
-export const saveStreak = (items) =>
-  saveItems(STORES.streak, items);
-
-/* =========================================================
-   QUICK NOTES
-========================================================= */
-
-export const getQuickNotes = () =>
-  getItems(STORES.quickNotes);
-
+export const getQuickNotes = () => getItems(STORES.quickNotes);
 export const saveQuickNotes = (items) =>
   saveItems(STORES.quickNotes, items);
 
@@ -383,28 +148,20 @@ export const updateQuickNote = (note) =>
 export const deleteQuickNote = (id) =>
   deleteItem(STORES.quickNotes, id);
 
-/* =========================================================
-   DAILY TARGETS
-========================================================= */
-
 export const getDailyTargets = () =>
   getItems(STORES.dailyTargets);
 
 export const saveDailyTargets = (items) =>
   saveItems(STORES.dailyTargets, items);
 
-export const addDailyTarget = (target) =>
-  putItem(STORES.dailyTargets, target);
+export const addDailyTarget = (item) =>
+  putItem(STORES.dailyTargets, item);
 
-export const updateDailyTarget = (target) =>
-  putItem(STORES.dailyTargets, target);
+export const updateDailyTarget = (item) =>
+  putItem(STORES.dailyTargets, item);
 
 export const deleteDailyTarget = (id) =>
   deleteItem(STORES.dailyTargets, id);
-
-/* =========================================================
-   REMINDERS
-========================================================= */
 
 export const getReminders = () =>
   getItems(STORES.reminders);
@@ -412,18 +169,14 @@ export const getReminders = () =>
 export const saveReminders = (items) =>
   saveItems(STORES.reminders, items);
 
-export const addReminder = (reminder) =>
-  putItem(STORES.reminders, reminder);
+export const addReminder = (item) =>
+  putItem(STORES.reminders, item);
 
-export const updateReminder = (reminder) =>
-  putItem(STORES.reminders, reminder);
+export const updateReminder = (item) =>
+  putItem(STORES.reminders, item);
 
 export const deleteReminder = (id) =>
   deleteItem(STORES.reminders, id);
-
-/* =========================================================
-   TODO LIST
-========================================================= */
 
 export const getTodoList = () =>
   getItems(STORES.todoList);
@@ -440,28 +193,20 @@ export const updateTodoItem = (item) =>
 export const deleteTodoItem = (id) =>
   deleteItem(STORES.todoList, id);
 
-/* =========================================================
-   STUDY SESSIONS
-========================================================= */
-
 export const getStudySessions = () =>
   getItems(STORES.studySessions);
 
 export const saveStudySessions = (items) =>
   saveItems(STORES.studySessions, items);
 
-export const addStudySession = (session) =>
-  putItem(STORES.studySessions, session);
+export const addStudySession = (item) =>
+  putItem(STORES.studySessions, item);
 
-export const updateStudySession = (session) =>
-  putItem(STORES.studySessions, session);
+export const updateStudySession = (item) =>
+  putItem(STORES.studySessions, item);
 
 export const deleteStudySession = (id) =>
   deleteItem(STORES.studySessions, id);
-
-/* =========================================================
-   CAREER
-========================================================= */
 
 export const getJobPreparation = () =>
   getItems(STORES.jobPreparation);
@@ -553,10 +298,6 @@ export const updateProject = (item) =>
 export const deleteProject = (id) =>
   deleteItem(STORES.projects, id);
 
-/* =========================================================
-   FINANCE
-========================================================= */
-
 export const getIncome = () =>
   getItems(STORES.income);
 
@@ -607,191 +348,50 @@ export const deleteBudget = (id) =>
 ========================================================= */
 
 export async function getSettings() {
-  return getItem(
-    STORES.settings,
-    "settings"
-  );
+  return getItem(STORES.settings, "settings");
 }
 
 export async function saveSettings(settings) {
-  if (!settings) {
-    throw new Error(
-      "Settings data is required"
-    );
-  }
-
-  return putItem(
-    STORES.settings,
-    {
-      ...settings,
-      id: "settings",
-    }
-  );
+  if (!settings) throw new Error("Settings data is required");
+  return putItem(STORES.settings, {
+    ...settings,
+    id: "settings",
+  });
 }
 
-export const updateSettings =
-  saveSettings;
+export const updateSettings = saveSettings;
 
 /* =========================================================
    PROFILE
 ========================================================= */
 
 export async function getProfile() {
-  const profile = await getItem(
-    STORES.profile,
-    "profile"
-  );
-
-  if (profile) {
-    return profile;
-  }
-
-  /*
-   * Migration fallback:
-   * If an older version saved the profile
-   * with another ID, find it and migrate it
-   * to the permanent "profile" ID.
-   */
-
-  const items = await getItems(
-    STORES.profile
-  );
-
-  if (!items.length) {
-    return null;
-  }
-
-  const oldProfile = items[0];
-
-  const migratedProfile = {
-    ...oldProfile,
-    id: "profile",
-  };
-
-  await saveProfile(
-    migratedProfile
-  );
-
-  return migratedProfile;
+  return getItem(STORES.profile, "profile");
 }
 
 export async function saveProfile(profile) {
-  if (!profile) {
-    throw new Error(
-      "Profile data is required"
-    );
-  }
-
-  /*
-   * PROFILE IS A SINGLE RECORD.
-   *
-   * Always use the same IndexedDB key:
-   * "profile"
-   */
+  if (!profile) throw new Error("Profile data is required");
 
   const profileData = {
     ...profile,
-
     id: "profile",
 
-    /*
-     * Keep only valid custom shortcuts
-     * and never allow more than 4.
-     */
-    customShortcuts:
-      Array.isArray(
-        profile.customShortcuts
-      )
-        ? profile.customShortcuts
-            .filter(
-              (shortcut) =>
-                shortcut?.name?.trim() &&
-                shortcut?.url?.trim()
-            )
-            .slice(0, 4)
-        : [],
+    customShortcuts: Array.isArray(
+      profile.customShortcuts
+    )
+      ? profile.customShortcuts
+          .filter(
+            (shortcut) =>
+              shortcut?.name?.trim() &&
+              shortcut?.url?.trim()
+          )
+          .slice(0, 4)
+      : [],
   };
 
-  const db =
-    await openDatabase();
-
-  return new Promise(
-    (resolve, reject) => {
-      const transaction =
-        db.transaction(
-          STORES.profile,
-          "readwrite"
-        );
-
-      const store =
-        transaction.objectStore(
-          STORES.profile
-        );
-
-      /*
-       * Remove old profile records first.
-       */
-      const getAllRequest =
-        store.getAll();
-
-      getAllRequest.onsuccess =
-        () => {
-          const existingProfiles =
-            getAllRequest.result ||
-            [];
-
-          existingProfiles.forEach(
-            (existingProfile) => {
-              if (
-                existingProfile?.id !==
-                "profile"
-              ) {
-                store.delete(
-                  existingProfile.id
-                );
-              }
-            }
-          );
-
-          /*
-           * Save exactly one profile.
-           */
-          store.put(
-            profileData
-          );
-        };
-
-      getAllRequest.onerror =
-        () => {
-          reject(
-            getAllRequest.error
-          );
-        };
-
-      transaction.oncomplete =
-        () => {
-          resolve(
-            profileData
-          );
-        };
-
-      transaction.onerror =
-        () => {
-          reject(
-            transaction.error
-          );
-        };
-
-      transaction.onabort =
-        () => {
-          reject(
-            transaction.error ||
-              new Error(
-                "Profile save transaction aborted"
-              )
-          );
-        };
-    }
+  return putItem(
+    STORES.profile,
+    profileData
   );
 }
 
@@ -805,13 +405,15 @@ function getLocalDateString(
   const year =
     date.getFullYear();
 
-  const month = String(
-    date.getMonth() + 1
-  ).padStart(2, "0");
+  const month =
+    String(
+      date.getMonth() + 1
+    ).padStart(2, "0");
 
-  const day = String(
-    date.getDate()
-  ).padStart(2, "0");
+  const day =
+    String(
+      date.getDate()
+    ).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
 }
@@ -1114,7 +716,6 @@ export async function saveDailyReport(
 
   return reportData;
 }
-
 /* =========================================================
    DAILY REPORT BUILDER
 ========================================================= */
@@ -1747,7 +1348,6 @@ export async function createDailyReportForDate(
     report
   );
 }
-
 /* =========================================================
    DAILY HISTORY
 ========================================================= */
@@ -2004,7 +1604,7 @@ export async function exportAllData() {
 
   return {
     version:
-      DB_VERSION,
+      1,
 
     exportedAt:
       new Date().toISOString(),

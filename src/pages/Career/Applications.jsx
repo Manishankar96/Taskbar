@@ -1,9 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { getApplications } from "../../utils/db";
-import {
-  saveAndSyncItem,
-  deleteAndSyncItem,
-} from "../../firebase/sync";
+import { getApplications, saveApplications } from "../../utils/db";
 import {
   Briefcase,
   CalendarDays,
@@ -14,7 +10,6 @@ import {
   X,
 } from "lucide-react";
 
-const STORAGE_KEY = "taskbar-job-applications";
 const APPLICATIONS_UPDATED_EVENT = "taskbarApplicationsUpdated";
 
 const STATUS_OPTIONS = [
@@ -40,35 +35,6 @@ function createId() {
   return Date.now() + Math.floor(Math.random() * 1000);
 }
 
-async function loadApplications() {
-  try {
-    const stored = await getApplications();
-
-    if (Array.isArray(stored) && stored.length > 0) {
-      return stored;
-    }
-
-    // One-time migration of existing localStorage data.
-    const saved = localStorage.getItem(STORAGE_KEY);
-
-    if (!saved) {
-      return [];
-    }
-
-    const parsed = JSON.parse(saved);
-    const localItems = Array.isArray(parsed) ? parsed : [];
-
-    for (const item of localItems) {
-      await saveAndSyncItem("applications", item);
-    }
-
-    return localItems;
-  } catch (error) {
-    console.error("Failed to load applications:", error);
-    return [];
-  }
-}
-
 export default function Applications() {
   const [applications, setApplications] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -80,10 +46,14 @@ export default function Applications() {
     let cancelled = false;
 
     async function loadData() {
-      const data = await loadApplications();
+      try {
+        const data = await getApplications();
 
-      if (!cancelled) {
-        setApplications(data);
+        if (!cancelled) {
+          setApplications(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        console.error("Failed to load applications:", error);
       }
     }
 
@@ -95,16 +65,7 @@ export default function Applications() {
   }, []);
 
   useEffect(() => {
-    if (applications.length > 0) {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(applications)
-      );
-    }
-
-    window.dispatchEvent(
-      new Event(APPLICATIONS_UPDATED_EVENT)
-    );
+    window.dispatchEvent(new Event(APPLICATIONS_UPDATED_EVENT));
   }, [applications]);
 
   const filteredApplications = useMemo(() => {
@@ -143,15 +104,19 @@ export default function Applications() {
   const stats = useMemo(() => {
     return {
       total: applications.length,
+
       applied: applications.filter(
         (item) => item.status === "Applied"
       ).length,
+
       interview: applications.filter(
         (item) => item.status === "Interview"
       ).length,
+
       selected: applications.filter(
         (item) => item.status === "Selected"
       ).length,
+
       rejected: applications.filter(
         (item) => item.status === "Rejected"
       ).length,
@@ -179,7 +144,7 @@ export default function Applications() {
     }));
   }
 
-  function saveApplication() {
+  async function saveApplication() {
     if (!form.company.trim() || !form.role.trim()) {
       alert("Please enter Company and Job Role.");
       return;
@@ -189,38 +154,34 @@ export default function Applications() {
       id: createId(),
       company: form.company.trim(),
       role: form.role.trim(),
-      appliedDate: form.appliedDate,
-      followUpDate: form.followUpDate,
-      status: form.status,
+      appliedDate: form.appliedDate || "",
+      followUpDate: form.followUpDate || "",
+      status: form.status || "Applied",
       jobLink: form.jobLink.trim(),
       notes: form.notes.trim(),
       createdAt: new Date().toISOString(),
     };
 
-    saveAndSyncItem(
-      "applications",
-      newApplication
-    )
-      .then((savedApplication) => {
-        setApplications((current) => [
-          savedApplication,
-          ...current,
-        ]);
-      })
-      .catch((error) => {
-        console.error(
-          "Failed to save application:",
-          error
-        );
-        alert(
-          "Application could not be saved. Please try again."
-        );
-      });
+    const updatedApplications = [
+      newApplication,
+      ...applications,
+    ];
 
-    closeForm();
+    try {
+      await saveApplications(updatedApplications);
+
+      setApplications(updatedApplications);
+      closeForm();
+    } catch (error) {
+      console.error("Failed to save application:", error);
+
+      alert(
+        "Application could not be saved. Please try again."
+      );
+    }
   }
 
-  function deleteApplication(id) {
+  async function deleteApplication(id) {
     const confirmed = window.confirm(
       "Delete this job application?"
     );
@@ -229,33 +190,27 @@ export default function Applications() {
       return;
     }
 
-    deleteAndSyncItem(
-      "applications",
-      id
-    )
-      .then(() => {
-        setApplications((current) =>
-          current.filter(
-            (application) => application.id !== id
-          )
-        );
-      })
-      .catch((error) => {
-        console.error(
-          "Failed to delete application:",
-          error
-        );
-        alert(
-          "Application could not be deleted. Please try again."
-        );
-      });
+    const updatedApplications = applications.filter(
+      (application) => application.id !== id
+    );
+
+    try {
+      await saveApplications(updatedApplications);
+
+      setApplications(updatedApplications);
+    } catch (error) {
+      console.error("Failed to delete application:", error);
+
+      alert(
+        "Application could not be deleted. Please try again."
+      );
+    }
   }
 
-  function updateStatus(id, status) {
-    const currentApplication =
-      applications.find(
-        (application) => application.id === id
-      );
+  async function updateStatus(id, status) {
+    const currentApplication = applications.find(
+      (application) => application.id === id
+    );
 
     if (!currentApplication) {
       return;
@@ -267,28 +222,27 @@ export default function Applications() {
       updatedAt: new Date().toISOString(),
     };
 
-    saveAndSyncItem(
-      "applications",
-      updatedApplication
-    )
-      .then((savedApplication) => {
-        setApplications((current) =>
-          current.map((application) =>
-            application.id === id
-              ? savedApplication
-              : application
-          )
-        );
-      })
-      .catch((error) => {
-        console.error(
-          "Failed to update application status:",
-          error
-        );
-        alert(
-          "Application status could not be updated."
-        );
-      });
+    const updatedApplications = applications.map(
+      (application) =>
+        application.id === id
+          ? updatedApplication
+          : application
+    );
+
+    try {
+      await saveApplications(updatedApplications);
+
+      setApplications(updatedApplications);
+    } catch (error) {
+      console.error(
+        "Failed to update application status:",
+        error
+      );
+
+      alert(
+        "Application status could not be updated."
+      );
+    }
   }
 
   return (
@@ -350,12 +304,17 @@ export default function Applications() {
       {/* Filters */}
       <div className="applications-filters">
         <div className="applications-search-wrap">
-          <Search size={18} className="applications-search-icon" />
+          <Search
+            size={18}
+            className="applications-search-icon"
+          />
 
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) =>
+              setSearch(e.target.value)
+            }
             placeholder="Search company or role..."
             className="applications-input applications-search-input"
           />
@@ -363,13 +322,20 @@ export default function Applications() {
 
         <select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={(e) =>
+            setStatusFilter(e.target.value)
+          }
           className="applications-input applications-select"
         >
-          <option value="All">All Statuses</option>
+          <option value="All">
+            All Statuses
+          </option>
 
           {STATUS_OPTIONS.map((status) => (
-            <option key={status} value={status}>
+            <option
+              key={status}
+              value={status}
+            >
               {status}
             </option>
           ))}
@@ -400,7 +366,10 @@ export default function Applications() {
                 type="text"
                 value={form.company}
                 onChange={(e) =>
-                  updateForm("company", e.target.value)
+                  updateForm(
+                    "company",
+                    e.target.value
+                  )
                 }
                 placeholder="Example: TCS"
                 className="applications-input"
@@ -412,7 +381,10 @@ export default function Applications() {
                 type="text"
                 value={form.role}
                 onChange={(e) =>
-                  updateForm("role", e.target.value)
+                  updateForm(
+                    "role",
+                    e.target.value
+                  )
                 }
                 placeholder="Example: Java Developer"
                 className="applications-input"
@@ -424,7 +396,10 @@ export default function Applications() {
                 type="date"
                 value={form.appliedDate}
                 onChange={(e) =>
-                  updateForm("appliedDate", e.target.value)
+                  updateForm(
+                    "appliedDate",
+                    e.target.value
+                  )
                 }
                 className="applications-input"
               />
@@ -435,7 +410,10 @@ export default function Applications() {
                 type="date"
                 value={form.followUpDate}
                 onChange={(e) =>
-                  updateForm("followUpDate", e.target.value)
+                  updateForm(
+                    "followUpDate",
+                    e.target.value
+                  )
                 }
                 className="applications-input"
               />
@@ -445,12 +423,18 @@ export default function Applications() {
               <select
                 value={form.status}
                 onChange={(e) =>
-                  updateForm("status", e.target.value)
+                  updateForm(
+                    "status",
+                    e.target.value
+                  )
                 }
                 className="applications-input applications-select"
               >
                 {STATUS_OPTIONS.map((status) => (
-                  <option key={status} value={status}>
+                  <option
+                    key={status}
+                    value={status}
+                  >
                     {status}
                   </option>
                 ))}
@@ -462,7 +446,10 @@ export default function Applications() {
                 type="url"
                 value={form.jobLink}
                 onChange={(e) =>
-                  updateForm("jobLink", e.target.value)
+                  updateForm(
+                    "jobLink",
+                    e.target.value
+                  )
                 }
                 placeholder="https://..."
                 className="applications-input"
@@ -475,7 +462,10 @@ export default function Applications() {
               <textarea
                 value={form.notes}
                 onChange={(e) =>
-                  updateForm("notes", e.target.value)
+                  updateForm(
+                    "notes",
+                    e.target.value
+                  )
                 }
                 placeholder="Add notes about this application..."
                 className="applications-input applications-textarea"
@@ -513,7 +503,9 @@ export default function Applications() {
 
           <p className="applications-list-count">
             {filteredApplications.length} application
-            {filteredApplications.length !== 1 ? "s" : ""}
+            {filteredApplications.length !== 1
+              ? "s"
+              : ""}
           </p>
         </div>
 
@@ -534,14 +526,16 @@ export default function Applications() {
           </div>
         ) : (
           <div className="applications-list">
-            {filteredApplications.map((application) => (
-              <ApplicationCard
-                key={application.id}
-                application={application}
-                onDelete={deleteApplication}
-                onStatusChange={updateStatus}
-              />
-            ))}
+            {filteredApplications.map(
+              (application) => (
+                <ApplicationCard
+                  key={application.id}
+                  application={application}
+                  onDelete={deleteApplication}
+                  onStatusChange={updateStatus}
+                />
+              )
+            )}
           </div>
         )}
       </section>
@@ -572,7 +566,9 @@ function ApplicationCard({
             <span>
               Applied:{" "}
               {application.appliedDate
-                ? formatDate(application.appliedDate)
+                ? formatDate(
+                    application.appliedDate
+                  )
                 : "Date not set"}
             </span>
           </div>
@@ -582,7 +578,10 @@ function ApplicationCard({
               <CalendarDays size={15} />
 
               <span>
-                Follow-up: {formatDate(application.followUpDate)}
+                Follow-up:{" "}
+                {formatDate(
+                  application.followUpDate
+                )}
               </span>
             </div>
           )}
@@ -599,7 +598,10 @@ function ApplicationCard({
           className="applications-input applications-select applications-status-select"
         >
           {STATUS_OPTIONS.map((status) => (
-            <option key={status} value={status}>
+            <option
+              key={status}
+              value={status}
+            >
               {status}
             </option>
           ))}
@@ -627,7 +629,9 @@ function ApplicationCard({
 
         <button
           type="button"
-          onClick={() => onDelete(application.id)}
+          onClick={() =>
+            onDelete(application.id)
+          }
           className="applications-action-button applications-delete-button"
         >
           <Trash2 size={15} />
@@ -665,25 +669,33 @@ function getTodayDate() {
   const date = new Date();
 
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(
-    2,
-    "0"
-  );
-  const day = String(date.getDate()).padStart(2, "0");
+
+  const month = String(
+    date.getMonth() + 1
+  ).padStart(2, "0");
+
+  const day = String(
+    date.getDate()
+  ).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
 }
 
 function formatDate(dateString) {
-  const date = new Date(`${dateString}T00:00:00`);
+  const date = new Date(
+    `${dateString}T00:00:00`
+  );
 
   if (Number.isNaN(date.getTime())) {
     return dateString;
   }
 
-  return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  return date.toLocaleDateString(
+    "en-IN",
+    {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }
+  );
 }

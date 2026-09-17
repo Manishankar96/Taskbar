@@ -14,29 +14,22 @@ import {
 } from "lucide-react";
 
 import {
-  getQuickNotes,
-  saveQuickNotes,
-} from "../../utils/db";
-
-import {
   getItemsFromFirestore,
   saveItemToFirestore,
   deleteItemFromFirestore,
   subscribeToFirestoreCollection,
 } from "../../firebase/firestore";
 
+const QUICK_NOTES_COLLECTION = "quickNotes";
 
 const emptyForm = {
   title: "",
   content: "",
 };
 
-
 function QuickNotes() {
   const [notes, setNotes] = useState([]);
-
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
 
   const [showForm, setShowForm] =
     useState(false);
@@ -50,157 +43,81 @@ function QuickNotes() {
   const [search, setSearch] =
     useState("");
 
-
   /* =========================================================
-     LOAD LOCAL + CLOUD DATA
+     LOAD FIRESTORE DATA
   ========================================================= */
 
   useEffect(() => {
     let mounted = true;
+    let unsubscribe = null;
 
     async function loadNotes() {
       try {
-        /* -----------------------------------------
-           STEP 1: Load IndexedDB first
-        ----------------------------------------- */
-
-        const localNotes =
-          await getQuickNotes();
-
-        if (mounted) {
-          setNotes(
-            Array.isArray(localNotes)
-              ? localNotes
-              : []
+        const cloudNotes =
+          await getItemsFromFirestore(
+            QUICK_NOTES_COLLECTION
           );
-        }
 
+        if (!mounted) return;
 
-        /* -----------------------------------------
-           STEP 2: Load Firestore
-        ----------------------------------------- */
-
-        try {
-          const cloudNotes =
-            await getItemsFromFirestore(
-              "quickNotes"
-            );
-
-          if (!mounted) {
-            return;
-          }
-
-
-          /* ---------------------------------------
-             Merge local + cloud
-
-             Cloud version wins when
-             the same ID exists.
-          --------------------------------------- */
-
-          const mergedMap =
-            new Map();
-
-
-          if (
-            Array.isArray(localNotes)
-          ) {
-            localNotes.forEach(
-              (item) => {
-                if (item?.id !== undefined) {
-                  mergedMap.set(
-                    String(item.id),
-                    item
-                  );
-                }
-              }
-            );
-          }
-
-
-          if (
-            Array.isArray(cloudNotes)
-          ) {
-            cloudNotes.forEach(
-              (item) => {
-                if (item?.id !== undefined) {
-                  mergedMap.set(
-                    String(item.id),
-                    item
-                  );
-                }
-              }
-            );
-          }
-
-
-          const mergedNotes =
-            Array.from(
-              mergedMap.values()
-            );
-
-
-          setNotes(mergedNotes);
-
-
-          /* ---------------------------------------
-             Upload local-only notes
-          --------------------------------------- */
-
-          const cloudIds =
-            new Set(
-              cloudNotes.map(
-                (item) =>
-                  String(item.id)
-              )
-            );
-
-
-          const localOnly =
-            localNotes.filter(
-              (item) =>
-                !cloudIds.has(
-                  String(item.id)
+        const normalizedNotes =
+          Array.isArray(cloudNotes)
+            ? cloudNotes
+                .filter(
+                  (item) =>
+                    item?.id !== undefined &&
+                    item?.id !== null
                 )
-            );
+                .map((item) => ({
+                  ...item,
+                  id: String(item.id),
+                }))
+            : [];
 
+        setNotes(normalizedNotes);
 
-          for (const item of localOnly) {
-            try {
-              await saveItemToFirestore(
-                "quickNotes",
-                item.id,
-                item
-              );
-            } catch (error) {
+        /* =====================================================
+           REAL-TIME FIRESTORE SYNC
+        ===================================================== */
+
+        unsubscribe =
+          subscribeToFirestoreCollection(
+            QUICK_NOTES_COLLECTION,
+            (cloudItems) => {
+              if (!mounted) return;
+
+              const normalizedItems =
+                Array.isArray(cloudItems)
+                  ? cloudItems
+                      .filter(
+                        (item) =>
+                          item?.id !== undefined &&
+                          item?.id !== null
+                      )
+                      .map((item) => ({
+                        ...item,
+                        id: String(item.id),
+                      }))
+                  : [];
+
+              setNotes(normalizedItems);
+            },
+            (error) => {
               console.error(
-                "Failed to upload local note:",
+                "Quick Notes real-time sync error:",
                 error
               );
             }
-          }
-
-
-          /* ---------------------------------------
-             Keep IndexedDB updated
-          --------------------------------------- */
-
-          await saveQuickNotes(
-            mergedNotes
           );
-
-        } catch (cloudError) {
-          console.error(
-            "Firestore unavailable. Using IndexedDB:",
-            cloudError
-          );
-        }
-
       } catch (error) {
         console.error(
-          "Failed to load quick notes:",
+          "Failed to load Quick Notes:",
           error
         );
+
+        if (mounted) {
+          setNotes([]);
+        }
       } finally {
         if (mounted) {
           setLoading(false);
@@ -208,112 +125,16 @@ function QuickNotes() {
       }
     }
 
-
     loadNotes();
-
 
     return () => {
       mounted = false;
-    };
-  }, []);
 
-
-  /* =========================================================
-     REAL-TIME FIRESTORE SYNC
-  ========================================================= */
-
-  useEffect(() => {
-    let unsubscribe;
-
-    try {
-      unsubscribe =
-        subscribeToFirestoreCollection(
-          "quickNotes",
-          async (cloudNotes) => {
-
-            setNotes(cloudNotes);
-
-            try {
-              await saveQuickNotes(
-                cloudNotes
-              );
-            } catch (error) {
-              console.error(
-                "Failed to update IndexedDB from Firestore:",
-                error
-              );
-            }
-          },
-          (error) => {
-            console.error(
-              "Quick Notes real-time sync error:",
-              error
-            );
-          }
-        );
-    } catch (error) {
-      console.error(
-        "Failed to start Quick Notes sync:",
-        error
-      );
-    }
-
-
-    return () => {
       if (unsubscribe) {
         unsubscribe();
       }
     };
   }, []);
-
-
-  /* =========================================================
-     SAVE LOCAL + FIRESTORE
-  ========================================================= */
-
-  async function persist(
-    updated,
-    changedNote = null
-  ) {
-    setNotes(updated);
-
-
-    /* -----------------------------------------
-       Always save locally first
-    ----------------------------------------- */
-
-    try {
-      await saveQuickNotes(
-        updated
-      );
-    } catch (error) {
-      console.error(
-        "Failed to save Quick Notes locally:",
-        error
-      );
-    }
-
-
-    /* -----------------------------------------
-       Then save changed item to Firestore
-    ----------------------------------------- */
-
-    if (changedNote) {
-      try {
-        await saveItemToFirestore(
-          "quickNotes",
-          changedNote.id,
-          changedNote
-        );
-      } catch (error) {
-        console.error(
-          "Failed to save Quick Note to Firestore:",
-          error
-        );
-      }
-    }
-  }
-
 
   /* =========================================================
      ADD FORM
@@ -321,10 +142,14 @@ function QuickNotes() {
 
   function openAddForm() {
     setEditingNote(null);
-    setForm(emptyForm);
+
+    setForm({
+      title: "",
+      content: "",
+    });
+
     setShowForm(true);
   }
-
 
   /* =========================================================
      EDIT FORM
@@ -341,7 +166,6 @@ function QuickNotes() {
     setShowForm(true);
   }
 
-
   /* =========================================================
      CLOSE FORM
   ========================================================= */
@@ -349,9 +173,47 @@ function QuickNotes() {
   function closeForm() {
     setShowForm(false);
     setEditingNote(null);
-    setForm(emptyForm);
+
+    setForm({
+      title: "",
+      content: "",
+    });
   }
 
+  /* =========================================================
+     SAVE NOTE
+  ========================================================= */
+
+  async function persistNote(
+    updatedNotes,
+    changedNote
+  ) {
+    setNotes(updatedNotes);
+
+    try {
+      await saveItemToFirestore(
+        QUICK_NOTES_COLLECTION,
+        String(changedNote.id),
+        {
+          ...changedNote,
+          id: String(changedNote.id),
+        }
+      );
+
+      return true;
+    } catch (error) {
+      console.error(
+        "Failed to save Quick Note:",
+        error
+      );
+
+      alert(
+        "Failed to save note. Please try again."
+      );
+
+      return false;
+    }
+  }
 
   /* =========================================================
      SUBMIT
@@ -360,7 +222,6 @@ function QuickNotes() {
   async function handleSubmit(event) {
     event.preventDefault();
 
-
     if (
       !form.title.trim() &&
       !form.content.trim()
@@ -368,20 +229,19 @@ function QuickNotes() {
       return;
     }
 
-
     const now =
       new Date().toISOString();
 
-
-    /* -----------------------------------------
+    /* =======================================================
        EDIT EXISTING NOTE
-    ----------------------------------------- */
+    ======================================================= */
 
     if (editingNote) {
-
       const updatedNote = {
         ...editingNote,
 
+        id: String(editingNote.id),
+
         title:
           form.title.trim() ||
           "Untitled Note",
@@ -392,57 +252,60 @@ function QuickNotes() {
         updatedAt: now,
       };
 
-
-      const updated =
-        notes.map(
-          (item) =>
-            String(item.id) ===
-            String(editingNote.id)
-              ? updatedNote
-              : item
+      const updatedNotes =
+        notes.map((item) =>
+          String(item.id) ===
+          String(editingNote.id)
+            ? updatedNote
+            : item
         );
 
+      const success =
+        await persistNote(
+          updatedNotes,
+          updatedNote
+        );
 
-      await persist(
-        updated,
-        updatedNote
-      );
+      if (success) {
+        closeForm();
+      }
 
-    } else {
-
-      /* ---------------------------------------
-         CREATE NEW NOTE
-      --------------------------------------- */
-
-      const newNote = {
-        id: Date.now(),
-
-        title:
-          form.title.trim() ||
-          "Untitled Note",
-
-        content:
-          form.content.trim(),
-
-        createdAt: now,
-
-        updatedAt: now,
-      };
-
-
-      await persist(
-        [
-          newNote,
-          ...notes,
-        ],
-        newNote
-      );
+      return;
     }
 
+    /* =======================================================
+       CREATE NEW NOTE
+    ======================================================= */
 
-    closeForm();
+    const newNote = {
+      id: String(Date.now()),
+
+      title:
+        form.title.trim() ||
+        "Untitled Note",
+
+      content:
+        form.content.trim(),
+
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const updatedNotes = [
+      newNote,
+      ...notes,
+    ];
+
+    const success =
+      await persistNote(
+        updatedNotes,
+        newNote
+      );
+
+    if (success) {
+      closeForm();
+    }
   }
-
 
   /* =========================================================
      DELETE NOTE
@@ -454,56 +317,34 @@ function QuickNotes() {
         `Delete "${note.title}"?`
       );
 
-
     if (!confirmed) {
       return;
     }
 
-
-    /* -----------------------------------------
-       Delete locally
-    ----------------------------------------- */
-
-    const updated =
-      notes.filter(
-        (item) =>
-          String(item.id) !==
-          String(note.id)
-      );
-
-
-    setNotes(updated);
-
-
-    try {
-      await saveQuickNotes(
-        updated
-      );
-    } catch (error) {
-      console.error(
-        "Failed to update local notes after delete:",
-        error
-      );
-    }
-
-
-    /* -----------------------------------------
-       Delete from Firestore
-    ----------------------------------------- */
-
     try {
       await deleteItemFromFirestore(
-        "quickNotes",
-        note.id
+        QUICK_NOTES_COLLECTION,
+        String(note.id)
+      );
+
+      setNotes((previous) =>
+        previous.filter(
+          (item) =>
+            String(item.id) !==
+            String(note.id)
+        )
       );
     } catch (error) {
       console.error(
-        "Failed to delete Quick Note from Firestore:",
+        "Failed to delete Quick Note:",
         error
+      );
+
+      alert(
+        "Failed to delete note. Please try again."
       );
     }
   }
-
 
   /* =========================================================
      SEARCH
@@ -511,17 +352,14 @@ function QuickNotes() {
 
   const filteredNotes =
     useMemo(() => {
-
       const query =
         search
           .trim()
           .toLowerCase();
 
-
       if (!query) {
         return notes;
       }
-
 
       return notes.filter(
         (note) =>
@@ -537,9 +375,7 @@ function QuickNotes() {
             .toLowerCase()
             .includes(query)
       );
-
     }, [notes, search]);
-
 
   /* =========================================================
      LOADING
@@ -548,7 +384,9 @@ function QuickNotes() {
   if (loading) {
     return (
       <div className="module-page">
-        <h1>📝 Quick Notes</h1>
+        <h1>
+          📝 Quick Notes
+        </h1>
 
         <p>
           Loading notes...
@@ -557,7 +395,6 @@ function QuickNotes() {
     );
   }
 
-
   /* =========================================================
      UI
   ========================================================= */
@@ -565,7 +402,9 @@ function QuickNotes() {
   return (
     <div className="module-page">
 
-      {/* HEADER */}
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
 
       <div className="page-header">
 
@@ -576,27 +415,26 @@ function QuickNotes() {
           </h1>
 
           <p>
-            Save useful information without turning it into a task.
+            Save useful information without
+            turning it into a task.
           </p>
 
         </div>
 
-
         <button
+          type="button"
           className="add-topic-button"
-          onClick={
-            openAddForm
-          }
+          onClick={openAddForm}
         >
           <Plus size={18} />
-
           New Note
         </button>
 
       </div>
 
-
-      {/* NOTE COUNT */}
+      {/* =====================================================
+          NOTE COUNT
+      ===================================================== */}
 
       <section className="stat-grid">
 
@@ -614,7 +452,6 @@ function QuickNotes() {
 
         </div>
 
-
         <div className="stat-card">
 
           <StickyNote size={25} />
@@ -631,8 +468,9 @@ function QuickNotes() {
 
       </section>
 
-
-      {/* SEARCH */}
+      {/* =====================================================
+          SEARCH
+      ===================================================== */}
 
       <section
         className="section-card"
@@ -650,7 +488,6 @@ function QuickNotes() {
         >
 
           <Search size={20} />
-
 
           <input
             type="text"
@@ -670,8 +507,9 @@ function QuickNotes() {
 
       </section>
 
-
-      {/* ADD / EDIT FORM */}
+      {/* =====================================================
+          ADD / EDIT FORM
+      ===================================================== */}
 
       {showForm && (
 
@@ -690,26 +528,22 @@ function QuickNotes() {
                 : "New Note"}
             </h2>
 
-
             <button
               type="button"
               className="close-button"
-              onClick={
-                closeForm
-              }
+              onClick={closeForm}
             >
               <X size={20} />
             </button>
 
           </div>
 
-
           <form
             className="grid-form"
-            onSubmit={
-              handleSubmit
-            }
+            onSubmit={handleSubmit}
           >
+
+            {/* TITLE */}
 
             <div className="form-group">
 
@@ -717,13 +551,10 @@ function QuickNotes() {
                 Title
               </label>
 
-
               <input
                 type="text"
                 placeholder="Example: Spring interview notes"
-                value={
-                  form.title
-                }
+                value={form.title}
                 onChange={(event) =>
                   setForm({
                     ...form,
@@ -735,6 +566,7 @@ function QuickNotes() {
 
             </div>
 
+            {/* CONTENT */}
 
             <div className="form-group">
 
@@ -742,13 +574,10 @@ function QuickNotes() {
                 Note
               </label>
 
-
               <textarea
                 rows="7"
                 placeholder="Write your note here..."
-                value={
-                  form.content
-                }
+                value={form.content}
                 onChange={(event) =>
                   setForm({
                     ...form,
@@ -759,7 +588,6 @@ function QuickNotes() {
               />
 
             </div>
-
 
             <button
               type="submit"
@@ -776,8 +604,9 @@ function QuickNotes() {
 
       )}
 
-
-      {/* NOTES */}
+      {/* =====================================================
+          NOTES
+      ===================================================== */}
 
       <section
         className="learning-section"
@@ -801,7 +630,6 @@ function QuickNotes() {
           </div>
 
         </div>
-
 
         <div className="topic-list">
 
@@ -828,13 +656,11 @@ function QuickNotes() {
                     {note.title}
                   </strong>
 
-
                   <span
                     style={{
                       whiteSpace:
                         "pre-wrap",
-                      lineHeight:
-                        1.6,
+                      lineHeight: 1.6,
                     }}
                   >
                     {note.content ||
@@ -843,17 +669,16 @@ function QuickNotes() {
 
                 </div>
 
-
                 <div className="topic-actions">
+
+                  {/* EDIT */}
 
                   <button
                     type="button"
                     className="edit-button"
                     title="Edit note"
                     onClick={() =>
-                      openEditForm(
-                        note
-                      )
+                      openEditForm(note)
                     }
                   >
                     <Pencil
@@ -861,15 +686,14 @@ function QuickNotes() {
                     />
                   </button>
 
+                  {/* DELETE */}
 
                   <button
                     type="button"
                     className="delete-button"
                     title="Delete note"
                     onClick={() =>
-                      deleteNote(
-                        note
-                      )
+                      deleteNote(note)
                     }
                   >
                     <Trash2
@@ -883,7 +707,6 @@ function QuickNotes() {
 
             )
           )}
-
 
           {filteredNotes.length ===
             0 && (
@@ -905,6 +728,5 @@ function QuickNotes() {
     </div>
   );
 }
-
 
 export default QuickNotes;

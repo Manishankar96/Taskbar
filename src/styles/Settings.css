@@ -862,3 +862,266 @@
     padding: 20px !important;
   }
 }
+
+/* =========================================================
+   CHANGE PIN / SECURITY
+   Red + glass effect — dedicated to Settings PIN section
+   ========================================================= */
+
+.settings-pin-box {
+  margin-top: 22px;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  background:
+    radial-gradient(
+      circle at 100% 0%,
+      rgba(229, 9, 20, .10),
+      transparent 38%
+    ),
+    rgba(0, 0, 0, .14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .035),
+    0 10px 28px rgba(0, 0, 0, .12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.settings-pin-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.settings-pin-heading-icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  color: #ff3e47;
+  background: rgba(229, 9, 20, .09);
+  border: 1px solid rgba(229, 9, 20, .18);
+  box-shadow: 0 7px 20px rgba(229, 9, 20, .08);
+}
+
+.settings-pin-heading h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 17px;
+  line-height: 1.25;
+}
+
+.settings-pin-heading p {
+  margin: 4px 0 0;
+  color: rgba(255, 255, 255, .50);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.settings-pin-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.settings-pin-field {
+  min-width: 0;
+}
+
+.settings-pin-field > label {
+  display: block;
+  margin-bottom: 7px;
+  color: rgba(255, 255, 255, .70);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.settings-pin-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.settings-pin-input-wrap input {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 10px 42px 10px 13px;
+  border-radius: 11px;
+  border: 1px solid rgba(255, 255, 255, .10);
+  outline: none;
+  background: rgba(0, 0, 0, .20);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  letter-spacing: .18em;
+  transition:
+    border-color .18s ease,
+    background .18s ease,
+    box-shadow .18s ease;
+}
+
+.settings-pin-input-wrap input::placeholder {
+  color: rgba(255, 255, 255, .25);
+  letter-spacing: normal;
+}
+
+.settings-pin-input-wrap input:hover {
+  border-color: rgba(229, 9, 20, .22);
+}
+
+.settings-pin-input-wrap input:focus {
+  border-color: rgba(255, 65, 75, .50);
+  background: rgba(229, 9, 20, .045);
+  box-shadow: 0 0 0 3px rgba(229, 9, 20, .07);
+}
+
+.settings-pin-input-wrap button {
+  position: absolute;
+  right: 7px;
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .035);
+  color: rgba(255, 255, 255, .55);
+  cursor: pointer;
+  transition:
+    color .18s ease,
+    background .18s ease,
+    border-color .18s ease;
+}
+
+.settings-pin-input-wrap button:hover {
+  color: #fff;
+  background: rgba(229, 9, 20, .10);
+  border-color: rgba(229, 9, 20, .22);
+}
+
+.settings-change-pin-button {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 11px;
+  padding: 10px 14px;
+  color: #fff;
+  background: linear-gradient(135deg, #ed1b27, #a7000a);
+  border: 1px solid rgba(255, 90, 90, .30);
+  box-shadow: 0 7px 17px rgba(229, 9, 20, .18);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    transform .18s ease,
+    box-shadow .18s ease,
+    opacity .18s ease;
+}
+
+.settings-change-pin-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 23px rgba(229, 9, 20, .27);
+}
+
+.settings-change-pin-button:active {
+  transform: translateY(0);
+}
+
+.settings-change-pin-button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.settings-pin-message {
+  margin-top: 13px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.settings-pin-error {
+  color: #ffb0b4;
+  background: rgba(229, 9, 20, .08);
+  border: 1px solid rgba(229, 9, 20, .20);
+}
+
+.settings-pin-success {
+  color: #a9f5c1;
+  background: rgba(30, 160, 85, .10);
+  border: 1px solid rgba(80, 220, 130, .20);
+}
+
+.settings-pin-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 13px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, .45);
+  background: rgba(255, 255, 255, .025);
+  border: 1px solid rgba(255, 255, 255, .05);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.settings-pin-note svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: #ff414b;
+}
+
+@media (max-width: 850px) {
+  .settings-pin-form {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .settings-pin-box {
+    margin-top: 18px;
+    padding: 15px;
+    border-radius: 14px;
+  }
+
+  .settings-pin-heading {
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+
+  .settings-pin-heading-icon {
+    width: 37px;
+    height: 37px;
+    flex-basis: 37px;
+  }
+
+  .settings-pin-heading h3 {
+    font-size: 16px;
+  }
+
+  .settings-pin-field > label {
+    font-size: 10px;
+  }
+
+  .settings-pin-input-wrap input {
+    min-height: 46px;
+  }
+
+  .settings-change-pin-button {
+    min-height: 46px;
+  }
+}

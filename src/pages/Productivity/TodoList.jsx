@@ -15,21 +15,6 @@ import {
 } from "lucide-react";
 
 import {
-  getTodoList,
-  saveTodoList,
-  getTopics,
-  saveTopics,
-  getGoals,
-  saveGoals,
-  getTimetable,
-  saveTimetable,
-  getAssessments,
-  saveAssessments,
-  getQuickTasks,
-  saveQuickTasks,
-} from "../../utils/db";
-
-import {
   getItemsFromFirestore,
   saveItemToFirestore,
   deleteItemFromFirestore,
@@ -38,61 +23,17 @@ import {
 
 import { getTodayLocalDateKey } from "../../utils/calculations";
 
+const TODO_COLLECTION = "todoList";
+const LEARNING_COLLECTION = "learning";
+const GOALS_COLLECTION = "goals";
+const TIMETABLE_COLLECTION = "timetable";
+const ASSESSMENTS_COLLECTION = "assessments";
+const QUICK_TASKS_COLLECTION = "quickTasks";
+
 const emptyForm = {
   title: "",
   date: getTodayLocalDateKey(),
 };
-
-const INTERVIEWS_STORAGE_KEY = "taskbar-interviews";
-const INTERVIEWS_UPDATED_EVENT = "taskbarInterviewsUpdated";
-
-const JOB_PREPARATION_STORAGE_KEY = "taskbar-job-preparation";
-const JOB_PREPARATION_UPDATED_EVENT = "taskbarJobPreparationUpdated";
-
-const APPLICATIONS_STORAGE_KEY = "taskbar-job-applications";
-const APPLICATIONS_UPDATED_EVENT = "taskbarApplicationsUpdated";
-
-const SAVED_JOBS_STORAGE_KEY = "taskbar-saved-jobs";
-const SAVED_JOBS_UPDATED_EVENT = "taskbarSavedJobsUpdated";
-
-function getInterviewsFromLocalStorage() {
-  try {
-    const saved = localStorage.getItem(INTERVIEWS_STORAGE_KEY);
-
-    if (!saved) {
-      return [];
-    }
-
-    const parsed = JSON.parse(saved);
-
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    console.error("Failed to load interviews for To-Do:", error);
-    return [];
-  }
-}
-
-function getJobPreparationFromLocalStorage() {
-  try {
-    const saved = localStorage.getItem(
-      JOB_PREPARATION_STORAGE_KEY
-    );
-
-    if (!saved) {
-      return [];
-    }
-
-    const parsed = JSON.parse(saved);
-
-    return Array.isArray(parsed?.tasks) ? parsed.tasks : [];
-  } catch (error) {
-    console.error(
-      "Failed to load Job Preparation tasks for To-Do:",
-      error
-    );
-    return [];
-  }
-}
 
 function formatDate(date) {
   if (!date) return "No date";
@@ -132,49 +73,6 @@ function getCurrentWeekday() {
 }
 
 
-function getSavedJobsFromLocalStorage() {
-  try {
-    const saved = localStorage.getItem(
-      SAVED_JOBS_STORAGE_KEY
-    );
-
-    if (!saved) {
-      return [];
-    }
-
-    const parsed = JSON.parse(saved);
-
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    console.error(
-      "Failed to load Saved Jobs for To-Do:",
-      error
-    );
-    return [];
-  }
-}
-
-function getApplicationsFromLocalStorage() {
-  try {
-    const saved = localStorage.getItem(
-      APPLICATIONS_STORAGE_KEY
-    );
-
-    if (!saved) {
-      return [];
-    }
-
-    const parsed = JSON.parse(saved);
-
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    console.error(
-      "Failed to load applications for To-Do:",
-      error
-    );
-    return [];
-  }
-}
 
 
 function TodoList() {
@@ -204,182 +102,106 @@ function TodoList() {
         timetable,
         assessments,
         quickTasks,
+        interviews,
+        jobPreparationItems,
+        applications,
+        savedJobs,
       ] = await Promise.all([
-        getTopics(),
-        getGoals(),
-        getTimetable(),
-        getAssessments(),
-        getQuickTasks(),
+        getItemsFromFirestore(LEARNING_COLLECTION),
+        getItemsFromFirestore(GOALS_COLLECTION),
+        getItemsFromFirestore(TIMETABLE_COLLECTION),
+        getItemsFromFirestore(ASSESSMENTS_COLLECTION),
+        getItemsFromFirestore(QUICK_TASKS_COLLECTION),
+        getItemsFromFirestore("interviews"),
+        getItemsFromFirestore("jobPreparation"),
+        getItemsFromFirestore("applications"),
+        getItemsFromFirestore("savedJobs"),
       ]);
-
-      const interviews = getInterviewsFromLocalStorage();
-      const jobPreparationTasks =
-        getJobPreparationFromLocalStorage();
-      const applications =
-        getApplicationsFromLocalStorage();
-
-      const savedJobs =
-        getSavedJobsFromLocalStorage();
 
       const unified = [];
 
-      /*
-       * --------------------------------------------------------
-       * LEARNING
-       * --------------------------------------------------------
-       */
+      (Array.isArray(topics) ? topics : []).forEach((topic) => {
+        if (!topic?.plannedDate) return;
+        unified.push({
+          id: `learning-${topic.id}`,
+          source: "learning",
+          sourceId: topic.id,
+          title: topic.name || "Learning Topic",
+          date: topic.plannedDate,
+          completed: topic.status === "completed",
+          type: "Learning",
+          icon: "learning",
+          skill: topic.skill || "",
+        });
+      });
 
-      (Array.isArray(topics) ? topics : []).forEach(
-        (topic) => {
-          if (!topic?.plannedDate) return;
+      (Array.isArray(goals) ? goals : []).forEach((goal) => {
+        if (!goal?.targetDate) return;
+        unified.push({
+          id: `goal-${goal.id}`,
+          source: "goals",
+          sourceId: goal.id,
+          title: goal.title || "Goal",
+          date: goal.targetDate,
+          completed: goal.status === "completed",
+          type: "Goal",
+          icon: "goal",
+          skill: goal.skill || "",
+        });
+      });
 
-          unified.push({
-            id: `learning-${topic.id}`,
-            source: "learning",
-            sourceId: topic.id,
-            title: topic.name || "Learning Topic",
-            date: topic.plannedDate,
-            completed: topic.status === "completed",
-            type: "Learning",
-            icon: "learning",
-            skill: topic.skill || "",
-          });
-        }
+      (Array.isArray(assessments) ? assessments : []).forEach((assessment) => {
+        if (!assessment?.date) return;
+        unified.push({
+          id: `assessment-${assessment.id}`,
+          source: "assessments",
+          sourceId: assessment.id,
+          title: assessment.title || "Assessment",
+          date: assessment.date,
+          completed: assessment.status === "completed",
+          type: "Assessment",
+          icon: "assessment",
+          skill: assessment.type || "",
+        });
+      });
+
+      (Array.isArray(quickTasks) ? quickTasks : []).forEach((task) => {
+        unified.push({
+          id: `quick-${task.id}`,
+          source: "quickTasks",
+          sourceId: task.id,
+          title: task.task || "Task",
+          date: task.dueDate || "",
+          completed: task.status === "completed",
+          type: "Task",
+          icon: "task",
+          skill: task.priority ? `${task.priority} Priority` : "",
+        });
+      });
+
+      (Array.isArray(interviews) ? interviews : []).forEach((interview) => {
+        if (!interview?.date) return;
+        const completedStatuses = ["Completed", "Passed", "Failed", "Cancelled"];
+        unified.push({
+          id: `interview-${interview.id}`,
+          source: "interviews",
+          sourceId: interview.id,
+          title: `Interview – ${interview.company || "Company"} – ${interview.role || "Job Role"}`,
+          date: interview.date,
+          completed: completedStatuses.includes(interview.status),
+          type: "Interview",
+          icon: "interview",
+          skill: interview.round || "",
+          startTime: interview.time || "",
+        });
+      });
+
+      const jobPreparationTasks = (Array.isArray(jobPreparationItems) ? jobPreparationItems : []).flatMap((item) =>
+        Array.isArray(item?.tasks) ? item.tasks : [item]
       );
 
-      /*
-       * --------------------------------------------------------
-       * GOALS
-       * --------------------------------------------------------
-       */
-
-      (Array.isArray(goals) ? goals : []).forEach(
-        (goal) => {
-          if (!goal?.targetDate) return;
-
-          unified.push({
-            id: `goal-${goal.id}`,
-            source: "goals",
-            sourceId: goal.id,
-            title: goal.title || "Goal",
-            date: goal.targetDate,
-            completed: goal.status === "completed",
-            type: "Goal",
-            icon: "goal",
-            skill: goal.skill || "",
-          });
-        }
-      );
-
-      /*
-       * --------------------------------------------------------
-       * ASSESSMENTS
-       * --------------------------------------------------------
-       */
-
-      (Array.isArray(assessments) ? assessments : []).forEach(
-        (assessment) => {
-          if (!assessment?.date) return;
-
-          unified.push({
-            id: `assessment-${assessment.id}`,
-            source: "assessments",
-            sourceId: assessment.id,
-            title:
-              assessment.title || "Assessment",
-            date: assessment.date,
-            completed:
-              assessment.status === "completed",
-            type: "Assessment",
-            icon: "assessment",
-            skill: assessment.type || "",
-          });
-        }
-      );
-
-      /*
-       * --------------------------------------------------------
-       * QUICK TASKS
-       * --------------------------------------------------------
-       */
-
-      (Array.isArray(quickTasks) ? quickTasks : []).forEach(
-        (task) => {
-          unified.push({
-            id: `quick-${task.id}`,
-            source: "quickTasks",
-            sourceId: task.id,
-            title: task.task || "Task",
-            date: task.dueDate || "",
-            completed:
-              task.status === "completed",
-            type: "Task",
-            icon: "task",
-            skill: task.priority
-              ? `${task.priority} Priority`
-              : "",
-          });
-        }
-      );
-
-      /*
-       * --------------------------------------------------------
-       * INTERVIEWS
-       * --------------------------------------------------------
-       * Interviews are scheduled career events.
-       * Scheduled/active interviews become To-Do items.
-       * Completed, Passed, Failed and Cancelled interviews are
-       * shown as completed items so the record is not lost.
-       * --------------------------------------------------------
-       */
-
-      (Array.isArray(interviews) ? interviews : []).forEach(
-        (interview) => {
-          if (!interview?.date) return;
-
-          const completedStatuses = [
-            "Completed",
-            "Passed",
-            "Failed",
-            "Cancelled",
-          ];
-
-          unified.push({
-            id: `interview-${interview.id}`,
-            source: "interviews",
-            sourceId: interview.id,
-            title: `Interview – ${
-              interview.company || "Company"
-            } – ${
-              interview.role || "Job Role"
-            }`,
-            date: interview.date,
-            completed: completedStatuses.includes(
-              interview.status
-            ),
-            type: "Interview",
-            icon: "interview",
-            skill: interview.round || "",
-            startTime: interview.time || "",
-          });
-        }
-      );
-
-      /*
-       * --------------------------------------------------------
-       * JOB PREPARATION
-       * --------------------------------------------------------
-       * Only preparation tasks with a due date are added to
-       * the central To-Do list.
-       * --------------------------------------------------------
-       */
-
-      (Array.isArray(jobPreparationTasks)
-        ? jobPreparationTasks
-        : []
-      ).forEach((task) => {
-        if (!task?.dueDate) return;
-
+      jobPreparationTasks.forEach((task) => {
+        if (!task?.id || !task?.dueDate) return;
         unified.push({
           id: `job-preparation-${task.id}`,
           source: "jobPreparation",
@@ -393,108 +215,48 @@ function TodoList() {
         });
       });
 
-      /*
-       * --------------------------------------------------------
-       * JOB APPLICATION FOLLOW-UPS
-       * --------------------------------------------------------
-       * Applications remain records. Only an explicit
-       * follow-up date becomes a To-Do task.
-       * --------------------------------------------------------
-       */
+      (Array.isArray(applications) ? applications : []).forEach((application) => {
+        if (!application?.followUpDate) return;
+        const closedStatus = application.status === "Rejected" || application.status === "Withdrawn";
+        unified.push({
+          id: `application-follow-up-${application.id}`,
+          source: "applications",
+          sourceId: application.id,
+          title: `Follow up: ${application.role || "Job Application"} – ${application.company || "Company"}`,
+          date: application.followUpDate,
+          completed: closedStatus || application.status === "Selected" || application.followUpCompleted === true,
+          type: "Application Follow-up",
+          icon: "task",
+          skill: application.company || "",
+        });
+      });
 
-      (Array.isArray(applications) ? applications : []).forEach(
-        (application) => {
-          if (!application?.followUpDate) return;
+      (Array.isArray(savedJobs) ? savedJobs : []).forEach((job) => {
+        if (!job?.actionDate || job.actionDate !== today) return;
+        unified.push({
+          id: `saved-job-action-${job.id}`,
+          source: "savedJobs",
+          sourceId: job.id,
+          title: `Apply: ${job.role || "Job"} – ${job.company || "Company"}`,
+          date: job.actionDate,
+          completed: job.actionCompleted === true,
+          type: "Saved Job Action",
+          icon: "task",
+          skill: job.company || "",
+        });
+      });
 
-          const closedStatus =
-            application.status === "Rejected" ||
-            application.status === "Withdrawn";
-
-          unified.push({
-            id: `application-follow-up-${application.id}`,
-            source: "applications",
-            sourceId: application.id,
-            title: `Follow up: ${application.role || "Job Application"} – ${application.company || "Company"}`,
-            date: application.followUpDate,
-            completed:
-              closedStatus ||
-              application.status === "Selected" ||
-              application.followUpCompleted === true,
-            type: "Application Follow-up",
-            icon: "task",
-            skill: application.company || "",
-          });
-        }
-      );
-
-      /*
-       * --------------------------------------------------------
-       * SAVED JOB ACTIONS
-       * --------------------------------------------------------
-       * Saved jobs remain bookmark/reference records.
-       * Only a job with an explicit Action Date becomes a
-       * central To-Do task.
-       * --------------------------------------------------------
-       */
-
-      (Array.isArray(savedJobs) ? savedJobs : []).forEach(
-        (job) => {
-          if (!job?.actionDate || job.actionDate !== today) {
-            return;
-          }
-
-          unified.push({
-            id: `saved-job-action-${job.id}`,
-            source: "savedJobs",
-            sourceId: job.id,
-            title: `Apply: ${job.role || "Job"} – ${job.company || "Company"}`,
-            date: job.actionDate,
-            completed: job.actionCompleted === true,
-            type: "Saved Job Action",
-            icon: "task",
-            skill: job.company || "",
-          });
-        }
-      );
-
-      /*
-       * --------------------------------------------------------
-       * TODAY'S TIMETABLE
-       *
-       * Timetable is recurring by weekday.
-       * Therefore only today's entries become today's tasks.
-       * --------------------------------------------------------
-       */
-
-      const currentWeekday =
-        getCurrentWeekday();
-
-      (Array.isArray(timetable)
-        ? timetable
-        : []
-      ).forEach((entry) => {
-        if (
-          entry?.day !== currentWeekday ||
-          !entry?.activity
-        ) {
-          return;
-        }
-
-        if (
-          entry.status === "completed" ||
-          entry.status === "missed"
-        ) {
-          return;
-        }
-
+      const currentWeekday = getCurrentWeekday();
+      (Array.isArray(timetable) ? timetable : []).forEach((entry) => {
+        if (entry?.day !== currentWeekday || !entry?.activity) return;
+        if (entry.status === "completed" || entry.status === "missed") return;
         unified.push({
           id: `timetable-${entry.id}-${today}`,
           source: "timetable",
           sourceId: entry.id,
           title: entry.activity,
           date: today,
-          completed:
-            entry.status === "completed",
+          completed: entry.status === "completed",
           type: "Timetable",
           icon: "timetable",
           skill: entry.category || "",
@@ -505,11 +267,7 @@ function TodoList() {
 
       setLinkedTasks(unified);
     } catch (error) {
-      console.error(
-        "Failed to load linked tasks:",
-        error
-      );
-
+      console.error("Failed to load linked tasks:", error);
       setLinkedTasks([]);
     }
   }
@@ -520,301 +278,70 @@ function TodoList() {
 
     async function load() {
       try {
-        /*
-         * ======================================================
-         * PERSONAL TO-DO LOAD
-         * ======================================================
-         */
-
-        const localData =
-          await getTodoList();
-
-        const localTodos =
-          Array.isArray(localData)
-            ? localData
-            : [];
-
-        if (isMounted) {
-          setTodos(
-            localTodos.map((item) => ({
+        let cloudTodos = await getItemsFromFirestore(TODO_COLLECTION);
+        cloudTodos = Array.isArray(cloudTodos)
+          ? cloudTodos.map((item) => ({
               ...item,
               id: String(item.id),
               date: item.date || "",
-              completed:
-                item.completed === true,
+              completed: item.completed === true,
             }))
-          );
-        }
-
-        /*
-         * ======================================================
-         * FIRESTORE
-         * ======================================================
-         */
-
-        let cloudTodos = [];
-
-        try {
-          cloudTodos =
-            await getItemsFromFirestore(
-              "todoList"
-            );
-
-          if (!Array.isArray(cloudTodos)) {
-            cloudTodos = [];
-          }
-        } catch (error) {
-          console.error(
-            "Failed to load todo list from Firestore:",
-            error
-          );
-        }
-
-        cloudTodos = cloudTodos.map(
-          (item) => ({
-            ...item,
-            id: String(item.id),
-            date: item.date || "",
-            completed:
-              item.completed === true,
-          })
-        );
-
-        /*
-         * ======================================================
-         * MERGE
-         * ======================================================
-         */
-
-        const mergedMap = new Map();
-
-        localTodos.forEach((item) => {
-          if (
-            item?.id !== undefined &&
-            item?.id !== null
-          ) {
-            mergedMap.set(
-              String(item.id),
-              {
-                ...item,
-                id: String(item.id),
-                date: item.date || "",
-                completed:
-                  item.completed === true,
-              }
-            );
-          }
-        });
-
-        cloudTodos.forEach((item) => {
-          if (
-            item?.id !== undefined &&
-            item?.id !== null
-          ) {
-            mergedMap.set(
-              String(item.id),
-              item
-            );
-          }
-        });
-
-        const mergedTodos =
-          Array.from(mergedMap.values());
+          : [];
 
         if (isMounted) {
-          setTodos(mergedTodos);
+          setTodos(cloudTodos);
         }
 
-        await saveTodoList(
-          mergedTodos
-        );
+        unsubscribe = subscribeToFirestoreCollection(
+          TODO_COLLECTION,
+          (firestoreItems) => {
+            if (!isMounted) return;
 
-        /*
-         * ======================================================
-         * UPLOAD LOCAL-ONLY TASKS
-         * ======================================================
-         */
-
-        const cloudIds = new Set(
-          cloudTodos.map((item) =>
-            String(item.id)
-          )
-        );
-
-        for (const item of localTodos) {
-          if (
-            item?.id === undefined ||
-            item?.id === null
-          ) {
-            continue;
-          }
-
-          const itemId =
-            String(item.id);
-
-          if (!cloudIds.has(itemId)) {
-            try {
-              await saveItemToFirestore(
-                "todoList",
-                itemId,
-                {
+            const normalized = Array.isArray(firestoreItems)
+              ? firestoreItems.map((item) => ({
                   ...item,
-                  id: itemId,
-                }
-              );
-            } catch (error) {
-              console.error(
-                "Failed to upload todo task:",
-                error
-              );
-            }
+                  id: String(item.id),
+                  date: item.date || "",
+                  completed: item.completed === true,
+                }))
+              : [];
+
+            setTodos(normalized);
           }
-        }
-
-        /*
-         * ======================================================
-         * FIRESTORE REAL-TIME LISTENER
-         * ======================================================
-         */
-
-        unsubscribe =
-          subscribeToFirestoreCollection(
-            "todoList",
-            async (firestoreItems) => {
-              if (!isMounted) {
-                return;
-              }
-
-              const normalized =
-                Array.isArray(
-                  firestoreItems
-                )
-                  ? firestoreItems.map(
-                      (item) => ({
-                        ...item,
-                        id: String(
-                          item.id
-                        ),
-                        date:
-                          item.date ||
-                          "",
-                        completed:
-                          item.completed ===
-                          true,
-                      })
-                    )
-                  : [];
-
-              setTodos(normalized);
-
-              try {
-                await saveTodoList(
-                  normalized
-                );
-              } catch (error) {
-                console.error(
-                  "Failed to update IndexedDB:",
-                  error
-                );
-              }
-            }
-          );
-
-        /*
-         * ======================================================
-         * LOAD LINKED SYSTEMS
-         * ======================================================
-         */
+        );
 
         await loadLinkedTasks();
       } catch (error) {
-        console.error(
-          "Failed to load todo list:",
-          error
-        );
+        console.error("Failed to load todo list:", error);
+        if (isMounted) setTodos([]);
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     }
 
     load();
 
-    /*
-     * Refresh when returning to the page/app.
-     */
-
     function refreshLinkedTasks() {
       loadLinkedTasks();
     }
 
-    window.addEventListener(
-      "focus",
-      refreshLinkedTasks
-    );
+    window.addEventListener("focus", refreshLinkedTasks);
+    document.addEventListener("visibilitychange", refreshLinkedTasks);
 
-    document.addEventListener(
-      "visibilitychange",
-      refreshLinkedTasks
-    );
-
-    window.addEventListener(
-      INTERVIEWS_UPDATED_EVENT,
-      refreshLinkedTasks
-    );
-
-    window.addEventListener(
-      JOB_PREPARATION_UPDATED_EVENT,
-      refreshLinkedTasks
-    );
-
-    window.addEventListener(
-      APPLICATIONS_UPDATED_EVENT,
-      refreshLinkedTasks
-    );
-
-    window.addEventListener(
-      SAVED_JOBS_UPDATED_EVENT,
-      refreshLinkedTasks
-    );
+    window.addEventListener("taskbarInterviewsUpdated", refreshLinkedTasks);
+    window.addEventListener("taskbarJobPreparationUpdated", refreshLinkedTasks);
+    window.addEventListener("taskbarApplicationsUpdated", refreshLinkedTasks);
+    window.addEventListener("taskbarSavedJobsUpdated", refreshLinkedTasks);
 
     return () => {
       isMounted = false;
-
-      if (unsubscribe) {
-        unsubscribe();
-      }
-
-      window.removeEventListener(
-        "focus",
-        refreshLinkedTasks
-      );
-
-      document.removeEventListener(
-        "visibilitychange",
-        refreshLinkedTasks
-      );
-
-      window.removeEventListener(
-        INTERVIEWS_UPDATED_EVENT,
-        refreshLinkedTasks
-      );
-
-      window.removeEventListener(
-        JOB_PREPARATION_UPDATED_EVENT,
-        refreshLinkedTasks
-      );
-
-      window.removeEventListener(
-        APPLICATIONS_UPDATED_EVENT,
-        refreshLinkedTasks
-      );
-
-      window.removeEventListener(
-        SAVED_JOBS_UPDATED_EVENT,
-        refreshLinkedTasks
-      );
+      if (unsubscribe) unsubscribe();
+      window.removeEventListener("focus", refreshLinkedTasks);
+      document.removeEventListener("visibilitychange", refreshLinkedTasks);
+      window.removeEventListener("taskbarInterviewsUpdated", refreshLinkedTasks);
+      window.removeEventListener("taskbarJobPreparationUpdated", refreshLinkedTasks);
+      window.removeEventListener("taskbarApplicationsUpdated", refreshLinkedTasks);
+      window.removeEventListener("taskbarSavedJobsUpdated", refreshLinkedTasks);
     };
   }, []);
 
@@ -824,50 +351,23 @@ function TodoList() {
    * ============================================================
    */
 
-  async function persist(
-    updated,
-    changedTodo = null
-  ) {
-    const normalized =
-      updated.map((item) => ({
-        ...item,
-        id: String(item.id),
-        date: item.date || "",
-        completed:
-          item.completed === true,
-      }));
+  async function persist(updated, changedTodo = null) {
+    const normalized = updated.map((item) => ({
+      ...item,
+      id: String(item.id),
+      date: item.date || "",
+      completed: item.completed === true,
+    }));
 
     setTodos(normalized);
 
-    try {
-      await saveTodoList(
-        normalized
-      );
-    } catch (error) {
-      console.error(
-        "Failed to save todo list locally:",
-        error
-      );
-    }
-
     if (changedTodo) {
-      try {
-        await saveItemToFirestore(
-          "todoList",
-          String(changedTodo.id),
-          {
-            ...changedTodo,
-            id: String(
-              changedTodo.id
-            ),
-          }
-        );
-      } catch (error) {
-        console.error(
-          "Failed to save todo task to Firestore:",
-          error
-        );
-      }
+      await saveItemToFirestore(TODO_COLLECTION, String(changedTodo.id), {
+        ...changedTodo,
+        id: String(changedTodo.id),
+        date: changedTodo.date || "",
+        completed: changedTodo.completed === true,
+      });
     }
   }
 
@@ -1020,360 +520,166 @@ function TodoList() {
    */
 
   async function toggleLinkedTask(task) {
-    const completed =
-      task.completed !== true;
+    const completed = task.completed !== true;
 
     try {
-      /*
-       * LEARNING
-       */
-
-      if (
-        task.source ===
-        "learning"
-      ) {
-        const topics =
-          await getTopics();
-
-        const updated =
-          topics.map((topic) =>
-            String(topic.id) ===
-            String(task.sourceId)
-              ? {
-                  ...topic,
-                  status:
-                    completed
-                      ? "completed"
-                      : "remaining",
-                  completedAt:
-                    completed
-                      ? topic.completedAt ||
-                        today
-                      : topic.completedAt,
-                }
-              : topic
-          );
-
-        await saveTopics(
-          updated
+      if (task.source === "learning") {
+        const topics = await getItemsFromFirestore(LEARNING_COLLECTION);
+        const updated = topics.map((topic) =>
+          String(topic.id) === String(task.sourceId)
+            ? {
+                ...topic,
+                status: completed ? "completed" : "remaining",
+                ...(completed
+                  ? { completedAt: topic.completedAt || today }
+                  : {}),
+              }
+            : topic
         );
-      }
-
-      /*
-       * GOALS
-       */
-
-      else if (
-        task.source ===
-        "goals"
-      ) {
-        const goals =
-          await getGoals();
-
-        const updated =
-          goals.map((goal) =>
-            String(goal.id) ===
-            String(task.sourceId)
-              ? {
-                  ...goal,
-                  status:
-                    completed
-                      ? "completed"
-                      : "pending",
-                }
-              : goal
-          );
-
-        await saveGoals(
-          updated
-        );
-      }
-
-      /*
-       * ASSESSMENTS
-       */
-
-      else if (
-        task.source ===
-        "assessments"
-      ) {
-        const assessments =
-          await getAssessments();
-
-        const updated =
-          assessments.map(
-            (assessment) =>
-              String(
-                assessment.id
-              ) ===
-              String(
-                task.sourceId
-              )
-                ? {
-                    ...assessment,
-                    status:
-                      completed
-                        ? "completed"
-                        : "upcoming",
-                  }
-                : assessment
-          );
-
-        await saveAssessments(
-          updated
-        );
-      }
-
-      /*
-       * QUICK TASKS
-       */
-
-      else if (
-        task.source ===
-        "quickTasks"
-      ) {
-        const quickTasks =
-          await getQuickTasks();
-
-        const updated =
-          quickTasks.map(
-            (item) =>
-              String(item.id) ===
-              String(
-                task.sourceId
-              )
-                ? {
-                    ...item,
-                    status:
-                      completed
-                        ? "completed"
-                        : "pending",
-                  }
-                : item
-          );
-
-        await saveQuickTasks(
-          updated
-        );
-      }
-
-      /*
-       * INTERVIEWS
-       */
-
-      else if (
-        task.source ===
-        "interviews"
-      ) {
-        const interviews =
-          getInterviewsFromLocalStorage();
-
-        const updated =
-          interviews.map(
-            (interview) =>
-              String(interview.id) ===
-              String(task.sourceId)
-                ? {
-                    ...interview,
-                    status:
-                      completed
-                        ? "Completed"
-                        : "Scheduled",
-                    updatedAt:
-                      new Date().toISOString(),
-                  }
-                : interview
-          );
-
-        localStorage.setItem(
-          INTERVIEWS_STORAGE_KEY,
-          JSON.stringify(updated)
-        );
-
-        window.dispatchEvent(
-          new Event(INTERVIEWS_UPDATED_EVENT)
-        );
-      }
-
-      /*
-       * JOB PREPARATION
-       */
-
-      else if (
-        task.source ===
-        "jobPreparation"
-      ) {
-        const saved =
-          localStorage.getItem(
-            JOB_PREPARATION_STORAGE_KEY
-          );
-
-        let jobPreparationData = null;
-
-        try {
-          jobPreparationData = saved
-            ? JSON.parse(saved)
-            : null;
-        } catch (error) {
-          console.error(
-            "Failed to parse Job Preparation data:",
-            error
-          );
-        }
-
-        if (
-          jobPreparationData &&
-          Array.isArray(
-            jobPreparationData.tasks
-          )
-        ) {
-          const updatedTasks =
-            jobPreparationData.tasks.map(
-              (item) =>
-                String(item.id) ===
-                String(task.sourceId)
-                  ? {
-                      ...item,
-                      completed,
-                      updatedAt:
-                        new Date().toISOString(),
-                    }
-                  : item
-            );
-
-          const updatedData = {
-            ...jobPreparationData,
-            tasks: updatedTasks,
-          };
-
-          localStorage.setItem(
-            JOB_PREPARATION_STORAGE_KEY,
-            JSON.stringify(updatedData)
-          );
-
-          window.dispatchEvent(
-            new Event(
-              JOB_PREPARATION_UPDATED_EVENT
+        await Promise.all(
+          updated.map((topic) =>
+            saveItemToFirestore(
+              LEARNING_COLLECTION,
+              String(topic.id),
+              topic
             )
-          );
+          )
+        );
+      } else if (task.source === "goals") {
+        const goals = await getItemsFromFirestore(GOALS_COLLECTION);
+        const updated = goals.map((goal) =>
+          String(goal.id) === String(task.sourceId)
+            ? { ...goal, status: completed ? "completed" : "pending" }
+            : goal
+        );
+        await Promise.all(
+          updated.map((goal) =>
+            saveItemToFirestore(
+              GOALS_COLLECTION,
+              String(goal.id),
+              goal
+            )
+          )
+        );
+      } else if (task.source === "assessments") {
+        const assessments = await getItemsFromFirestore(ASSESSMENTS_COLLECTION);
+        const updated = assessments.map((assessment) =>
+          String(assessment.id) === String(task.sourceId)
+            ? { ...assessment, status: completed ? "completed" : "upcoming" }
+            : assessment
+        );
+        await Promise.all(
+          updated.map((assessment) =>
+            saveItemToFirestore(
+              ASSESSMENTS_COLLECTION,
+              String(assessment.id),
+              assessment
+            )
+          )
+        );
+      } else if (task.source === "quickTasks") {
+        const quickTasks = await getItemsFromFirestore(QUICK_TASKS_COLLECTION);
+        const updated = quickTasks.map((item) =>
+          String(item.id) === String(task.sourceId)
+            ? { ...item, status: completed ? "completed" : "pending" }
+            : item
+        );
+        await Promise.all(
+          updated.map((item) =>
+            saveItemToFirestore(
+              QUICK_TASKS_COLLECTION,
+              String(item.id),
+              item
+            )
+          )
+        );
+      } else if (task.source === "interviews") {
+        const interviews = await getItemsFromFirestore("interviews");
+        const interview = interviews.find(
+          (item) => String(item.id) === String(task.sourceId)
+        );
+        if (interview) {
+          await saveItemToFirestore("interviews", String(interview.id), {
+            ...interview,
+            status: completed ? "Completed" : "Scheduled",
+            updatedAt: new Date().toISOString(),
+          });
+          window.dispatchEvent(new Event("taskbarInterviewsUpdated"));
         }
-      }
+      } else if (task.source === "jobPreparation") {
+        const items = await getItemsFromFirestore("jobPreparation");
+        const container = items.find((item) => Array.isArray(item?.tasks));
 
-      /*
-       * APPLICATION FOLLOW-UP
-       */
-
-      else if (
-        task.source ===
-        "applications"
-      ) {
-        const applications =
-          getApplicationsFromLocalStorage();
-
-        const updated =
-          applications.map(
-            (application) =>
-              String(application.id) ===
-              String(task.sourceId)
-                ? {
-                    ...application,
-                    followUpCompleted:
-                      completed,
-                    updatedAt:
-                      new Date().toISOString(),
-                  }
-                : application
+        if (container) {
+          const updatedTasks = container.tasks.map((item) =>
+            String(item.id) === String(task.sourceId)
+              ? { ...item, completed, updatedAt: new Date().toISOString() }
+              : item
           );
-
-        localStorage.setItem(
-          APPLICATIONS_STORAGE_KEY,
-          JSON.stringify(updated)
+          await saveItemToFirestore("jobPreparation", String(container.id), {
+            ...container,
+            tasks: updatedTasks,
+          });
+        } else {
+          const jobTask = items.find(
+            (item) => String(item.id) === String(task.sourceId)
+          );
+          if (jobTask) {
+            await saveItemToFirestore("jobPreparation", String(jobTask.id), {
+              ...jobTask,
+              completed,
+              updatedAt: new Date().toISOString(),
+            });
+          }
+        }
+        window.dispatchEvent(new Event("taskbarJobPreparationUpdated"));
+      } else if (task.source === "applications") {
+        const applications = await getItemsFromFirestore("applications");
+        const application = applications.find(
+          (item) => String(item.id) === String(task.sourceId)
         );
-
-        window.dispatchEvent(
-          new Event(
-            APPLICATIONS_UPDATED_EVENT
+        if (application) {
+          await saveItemToFirestore("applications", String(application.id), {
+            ...application,
+            followUpCompleted: completed,
+            updatedAt: new Date().toISOString(),
+          });
+          window.dispatchEvent(new Event("taskbarApplicationsUpdated"));
+        }
+      } else if (task.source === "savedJobs") {
+        const savedJobs = await getItemsFromFirestore("savedJobs");
+        const job = savedJobs.find(
+          (item) => String(item.id) === String(task.sourceId)
+        );
+        if (job) {
+          await saveItemToFirestore("savedJobs", String(job.id), {
+            ...job,
+            actionCompleted: completed,
+            updatedAt: new Date().toISOString(),
+          });
+          window.dispatchEvent(new Event("taskbarSavedJobsUpdated"));
+        }
+      } else if (task.source === "timetable") {
+        const timetable = await getItemsFromFirestore(TIMETABLE_COLLECTION);
+        const updated = timetable.map((entry) =>
+          String(entry.id) === String(task.sourceId)
+            ? { ...entry, status: completed ? "completed" : "planned" }
+            : entry
+        );
+        await Promise.all(
+          updated.map((entry) =>
+            saveItemToFirestore(
+              TIMETABLE_COLLECTION,
+              String(entry.id),
+              entry
+            )
           )
-        );
-      }
-
-      /*
-       * SAVED JOB ACTION
-       */
-
-      else if (
-        task.source ===
-        "savedJobs"
-      ) {
-        const savedJobs =
-          getSavedJobsFromLocalStorage();
-
-        const updated =
-          savedJobs.map(
-            (job) =>
-              String(job.id) ===
-              String(task.sourceId)
-                ? {
-                    ...job,
-                    actionCompleted:
-                      completed,
-                    updatedAt:
-                      new Date().toISOString(),
-                  }
-                : job
-          );
-
-        localStorage.setItem(
-          SAVED_JOBS_STORAGE_KEY,
-          JSON.stringify(updated)
-        );
-
-        window.dispatchEvent(
-          new Event(
-            SAVED_JOBS_UPDATED_EVENT
-          )
-        );
-      }
-
-      /*
-       * TIMETABLE
-       */
-
-      else if (
-        task.source ===
-        "timetable"
-      ) {
-        const timetable =
-          await getTimetable();
-
-        const updated =
-          timetable.map(
-            (entry) =>
-              String(entry.id) ===
-              String(
-                task.sourceId
-              )
-                ? {
-                    ...entry,
-                    status:
-                      completed
-                        ? "completed"
-                        : "planned",
-                  }
-                : entry
-          );
-
-        await saveTimetable(
-          updated
         );
       }
 
       await loadLinkedTasks();
     } catch (error) {
-      console.error(
-        "Failed to update linked task:",
-        error
-      );
+      console.error("Failed to update linked task:", error);
     }
   }
 
@@ -1407,26 +713,9 @@ function TodoList() {
     setTodos(updated);
 
     try {
-      await saveTodoList(
-        updated
-      );
+      await deleteItemFromFirestore(TODO_COLLECTION, String(todo.id));
     } catch (error) {
-      console.error(
-        "Failed to delete todo locally:",
-        error
-      );
-    }
-
-    try {
-      await deleteItemFromFirestore(
-        "todoList",
-        String(todo.id)
-      );
-    } catch (error) {
-      console.error(
-        "Failed to delete todo from Firestore:",
-        error
-      );
+      console.error("Failed to delete todo from Firestore:", error);
     }
   }
 

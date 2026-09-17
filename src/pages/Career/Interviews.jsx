@@ -9,7 +9,13 @@ import {
   X,
 } from "lucide-react";
 
-const STORAGE_KEY = "taskbar-interviews";
+import {
+  getItemsFromFirestore,
+  saveItemsToFirestore,
+  deleteItemFromFirestore,
+} from "../../firebase/firestore";
+
+const INTERVIEWS_COLLECTION = "interviews";
 const INTERVIEWS_UPDATED_EVENT = "taskbarInterviewsUpdated";
 
 function notifyInterviewsUpdated() {
@@ -59,23 +65,6 @@ function getTodayDate() {
   return `${year}-${month}-${day}`;
 }
 
-function loadInterviews() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-
-    if (!saved) {
-      return [];
-    }
-
-    const parsed = JSON.parse(saved);
-
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    console.error("Failed to load interviews:", error);
-    return [];
-  }
-}
-
 function formatDate(dateString) {
   if (!dateString) {
     return "Date not set";
@@ -104,26 +93,18 @@ function formatTime(timeString) {
   const hour = Number(hourString);
   const minute = Number(minuteString);
 
-  if (
-    Number.isNaN(hour) ||
-    Number.isNaN(minute)
-  ) {
+  if (Number.isNaN(hour) || Number.isNaN(minute)) {
     return timeString;
   }
 
   const period = hour >= 12 ? "PM" : "AM";
   const displayHour = hour % 12 || 12;
 
-  return `${displayHour}:${String(minute).padStart(
-    2,
-    "0"
-  )} ${period}`;
+  return `${displayHour}:${String(minute).padStart(2, "0")} ${period}`;
 }
 
 export default function Interviews() {
-  const [interviews, setInterviews] = useState(
-    loadInterviews
-  );
+  const [interviews, setInterviews] = useState([]);
 
   const [showForm, setShowForm] = useState(false);
 
@@ -135,15 +116,66 @@ export default function Interviews() {
 
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(interviews)
-    );
+  const [loading, setLoading] = useState(true);
 
-    // Keep the central To-Do list in sync immediately.
-    notifyInterviewsUpdated();
-  }, [interviews]);
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadInterviewsFromFirebase() {
+      try {
+        setLoading(true);
+
+        const data = await getItemsFromFirestore(
+          INTERVIEWS_COLLECTION
+        );
+
+        if (mounted) {
+          setInterviews(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        console.error(
+          "Failed to load interviews from Firebase:",
+          error
+        );
+
+        if (mounted) {
+          setInterviews([]);
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadInterviewsFromFirebase();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  async function persistInterviews(updatedInterviews) {
+    try {
+      await saveItemsToFirestore(
+        INTERVIEWS_COLLECTION,
+        updatedInterviews
+      );
+
+      notifyInterviewsUpdated();
+    } catch (error) {
+      console.error(
+        "Failed to save interviews to Firebase:",
+        error
+      );
+
+      alert(
+        "Failed to save interview data. Please check your Firebase connection and try again."
+      );
+
+      throw error;
+    }
+  }
 
   const filteredInterviews = useMemo(() => {
     const searchText = search.trim().toLowerCase();
@@ -174,13 +206,9 @@ export default function Interviews() {
         );
       })
       .sort((a, b) => {
-        const first = `${a.date || ""} ${
-          a.time || ""
-        }`;
+        const first = `${a.date || ""} ${a.time || ""}`;
 
-        const second = `${b.date || ""} ${
-          b.time || ""
-        }`;
+        const second = `${b.date || ""} ${b.time || ""}`;
 
         return first.localeCompare(second);
       });
@@ -250,7 +278,7 @@ export default function Interviews() {
     }));
   }
 
-  function saveInterview() {
+  async function saveInterview() {
     if (
       !form.company.trim() ||
       !form.role.trim() ||
@@ -263,28 +291,25 @@ export default function Interviews() {
       return;
     }
 
+    let updatedInterviews;
+
     if (editingId) {
-      setInterviews((current) =>
-        current.map((interview) =>
-          interview.id === editingId
-            ? {
-                ...interview,
-                company: form.company.trim(),
-                role: form.role.trim(),
-                date: form.date,
-                time: form.time,
-                round: form.round,
-                status: form.status,
-                interviewer:
-                  form.interviewer.trim(),
-                meetingLink:
-                  form.meetingLink.trim(),
-                notes: form.notes.trim(),
-                updatedAt:
-                  new Date().toISOString(),
-              }
-            : interview
-        )
+      updatedInterviews = interviews.map((interview) =>
+        interview.id === editingId
+          ? {
+              ...interview,
+              company: form.company.trim(),
+              role: form.role.trim(),
+              date: form.date,
+              time: form.time,
+              round: form.round,
+              status: form.status,
+              interviewer: form.interviewer.trim(),
+              meetingLink: form.meetingLink.trim(),
+              notes: form.notes.trim(),
+              updatedAt: new Date().toISOString(),
+            }
+          : interview
       );
     } else {
       const newInterview = {
@@ -302,16 +327,24 @@ export default function Interviews() {
         updatedAt: new Date().toISOString(),
       };
 
-      setInterviews((current) => [
-        ...current,
+      updatedInterviews = [
+        ...interviews,
         newInterview,
-      ]);
+      ];
     }
 
-    closeForm();
+    try {
+      await persistInterviews(updatedInterviews);
+
+      setInterviews(updatedInterviews);
+
+      closeForm();
+    } catch (error) {
+      // Keep the existing UI state unchanged if Firebase save fails.
+    }
   }
 
-  function deleteInterview(id) {
+  async function deleteInterview(id) {
     const confirmed = window.confirm(
       "Delete this interview?"
     );
@@ -320,16 +353,34 @@ export default function Interviews() {
       return;
     }
 
-    setInterviews((current) =>
-      current.filter(
+    try {
+      await deleteItemFromFirestore(
+        INTERVIEWS_COLLECTION,
+        id
+      );
+
+      const updatedInterviews = interviews.filter(
         (interview) => interview.id !== id
-      )
-    );
+      );
+
+      setInterviews(updatedInterviews);
+
+      notifyInterviewsUpdated();
+    } catch (error) {
+      console.error(
+        "Failed to delete interview from Firebase:",
+        error
+      );
+
+      alert(
+        "Failed to delete interview. Please try again."
+      );
+    }
   }
 
-  function updateStatus(id, status) {
-    setInterviews((current) =>
-      current.map((interview) =>
+  async function updateStatus(id, status) {
+    const updatedInterviews = interviews.map(
+      (interview) =>
         interview.id === id
           ? {
               ...interview,
@@ -337,8 +388,15 @@ export default function Interviews() {
               updatedAt: new Date().toISOString(),
             }
           : interview
-      )
     );
+
+    try {
+      await persistInterviews(updatedInterviews);
+
+      setInterviews(updatedInterviews);
+    } catch (error) {
+      // Keep existing state if Firebase update fails.
+    }
   }
 
   return (
@@ -417,10 +475,7 @@ export default function Interviews() {
           <option value="All">All Statuses</option>
 
           {STATUS_OPTIONS.map((status) => (
-            <option
-              key={status}
-              value={status}
-            >
+            <option key={status} value={status}>
               {status}
             </option>
           ))}
@@ -429,9 +484,7 @@ export default function Interviews() {
 
       {/* Form */}
       {showForm && (
-        <section
-          className="interviews-card interviews-form-card"
-        >
+        <section className="interviews-card interviews-form-card">
           <div className="interviews-form-header">
             <div>
               <h2>
@@ -644,7 +697,22 @@ export default function Interviews() {
           </p>
         </div>
 
-        {filteredInterviews.length === 0 ? (
+        {loading ? (
+          <div className="interviews-empty-state">
+            <CalendarDays
+              size={44}
+              className="interviews-empty-icon"
+            />
+
+            <h3 className="interviews-empty-title">
+              Loading interviews...
+            </h3>
+
+            <p className="interviews-empty-text">
+              Loading your interview data from Firebase.
+            </p>
+          </div>
+        ) : filteredInterviews.length === 0 ? (
           <div className="interviews-empty-state">
             <CalendarDays
               size={44}
@@ -656,22 +724,21 @@ export default function Interviews() {
             </h3>
 
             <p className="interviews-empty-text">
-              Add an interview when you receive an opportunity.
+              Add an interview when you receive an
+              opportunity.
             </p>
           </div>
         ) : (
           <div className="interviews-list">
-            {filteredInterviews.map(
-              (interview) => (
-                <InterviewCard
-                  key={interview.id}
-                  interview={interview}
-                  onEdit={openEditForm}
-                  onDelete={deleteInterview}
-                  onStatusChange={updateStatus}
-                />
-              )
-            )}
+            {filteredInterviews.map((interview) => (
+              <InterviewCard
+                key={interview.id}
+                interview={interview}
+                onEdit={openEditForm}
+                onDelete={deleteInterview}
+                onStatusChange={updateStatus}
+              />
+            ))}
           </div>
         )}
       </section>
@@ -698,17 +765,13 @@ function InterviewCard({
           </p>
 
           <div className="interviews-meta">
-            <span
-              className="interviews-meta-item"
-            >
+            <span className="interviews-meta-item">
               <CalendarDays size={15} />
               {formatDate(interview.date)}
             </span>
 
             {interview.time && (
-              <span
-                className="interviews-meta-item"
-              >
+              <span className="interviews-meta-item">
                 <Clock3 size={15} />
                 {formatTime(interview.time)}
               </span>
@@ -742,9 +805,7 @@ function InterviewCard({
       {interview.interviewer && (
         <div className="interviews-extra-field">
           Interviewer:{" "}
-          <strong>
-            {interview.interviewer}
-          </strong>
+          <strong>{interview.interviewer}</strong>
         </div>
       )}
 
@@ -777,9 +838,7 @@ function InterviewCard({
 
         <button
           type="button"
-          onClick={() =>
-            onDelete(interview.id)
-          }
+          onClick={() => onDelete(interview.id)}
           className="interviews-action-button interviews-delete-button"
         >
           <Trash2 size={15} />
@@ -807,9 +866,7 @@ function StatCard({ label, value }) {
 function FormField({ label, children }) {
   return (
     <label className="interviews-form-field">
-      <span>
-        {label}
-      </span>
+      <span>{label}</span>
 
       {children}
     </label>

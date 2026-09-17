@@ -10,7 +10,15 @@ import {
   X,
 } from "lucide-react";
 
-const STORAGE_KEY = "taskbar-resumes";
+import {
+  getItemsFromFirestore,
+  saveItemsToFirestore,
+  deleteItemFromFirestore,
+} from "../../firebase/firestore";
+
+const RESUMES_COLLECTION = "resumes";
+
+const RESUMES_UPDATED_EVENT = "taskbarResumesUpdated";
 
 const EMPTY_FORM = {
   name: "",
@@ -27,27 +35,18 @@ function getTodayDate() {
   const date = new Date();
 
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+
+  const month = String(date.getMonth() + 1).padStart(
+    2,
+    "0"
+  );
+
+  const day = String(date.getDate()).padStart(
+    2,
+    "0"
+  );
 
   return `${year}-${month}-${day}`;
-}
-
-function loadResumes() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-
-    if (!saved) {
-      return [];
-    }
-
-    const parsed = JSON.parse(saved);
-
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    console.error("Failed to load resumes:", error);
-    return [];
-  }
 }
 
 function formatDate(dateString) {
@@ -55,7 +54,9 @@ function formatDate(dateString) {
     return "Date not set";
   }
 
-  const date = new Date(`${dateString}T00:00:00`);
+  const date = new Date(
+    `${dateString}T00:00:00`
+  );
 
   if (Number.isNaN(date.getTime())) {
     return dateString;
@@ -69,17 +70,60 @@ function formatDate(dateString) {
 }
 
 export default function Resumes() {
-  const [resumes, setResumes] = useState(loadResumes);
+  const [resumes, setResumes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(resumes));
+    let cancelled = false;
+
+    async function loadResumes() {
+      try {
+        const data = await getItemsFromFirestore(
+          RESUMES_COLLECTION
+        );
+
+        if (!cancelled) {
+          setResumes(
+            Array.isArray(data) ? data : []
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Failed to load resumes from Firebase:",
+          error
+        );
+
+        if (!cancelled) {
+          setResumes([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadResumes();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    window.dispatchEvent(
+      new Event(RESUMES_UPDATED_EVENT)
+    );
   }, [resumes]);
 
   const primaryResume = useMemo(
-    () => resumes.find((resume) => resume.isPrimary),
+    () =>
+      resumes.find(
+        (resume) => resume.isPrimary
+      ),
     [resumes]
   );
 
@@ -96,6 +140,7 @@ export default function Resumes() {
       link: resume.link || "",
       notes: resume.notes || "",
     });
+
     setEditingId(resume.id);
     setShowForm(true);
   }
@@ -113,58 +158,110 @@ export default function Resumes() {
     }));
   }
 
-  function saveResume() {
-    if (!form.name.trim() || !form.targetRole.trim()) {
-      alert("Please enter Resume Name and Target Role.");
+  async function saveResume() {
+    if (
+      !form.name.trim() ||
+      !form.targetRole.trim()
+    ) {
+      alert(
+        "Please enter Resume Name and Target Role."
+      );
       return;
     }
 
-    if (editingId !== null) {
-      setResumes((current) =>
-        current.map((resume) =>
-          resume.id === editingId
-            ? {
-                ...resume,
-                name: form.name.trim(),
-                targetRole: form.targetRole.trim(),
-                link: form.link.trim(),
-                notes: form.notes.trim(),
-                updatedDate: getTodayDate(),
-              }
-            : resume
-        )
+    try {
+      if (editingId !== null) {
+        const updatedResumes = resumes.map(
+          (resume) =>
+            resume.id === editingId
+              ? {
+                  ...resume,
+                  name: form.name.trim(),
+                  targetRole:
+                    form.targetRole.trim(),
+                  link: form.link.trim(),
+                  notes: form.notes.trim(),
+                  updatedDate: getTodayDate(),
+                }
+              : resume
+        );
+
+        await saveItemsToFirestore(
+          RESUMES_COLLECTION,
+          updatedResumes
+        );
+
+        setResumes(updatedResumes);
+        closeForm();
+
+        return;
+      }
+
+      const today = getTodayDate();
+
+      const newResume = {
+        id: createId(),
+        name: form.name.trim(),
+        targetRole: form.targetRole.trim(),
+        link: form.link.trim(),
+        notes: form.notes.trim(),
+        createdDate: today,
+        updatedDate: today,
+        isPrimary: resumes.length === 0,
+      };
+
+      const updatedResumes = [
+        newResume,
+        ...resumes,
+      ];
+
+      await saveItemsToFirestore(
+        RESUMES_COLLECTION,
+        updatedResumes
       );
 
+      setResumes(updatedResumes);
       closeForm();
-      return;
+    } catch (error) {
+      console.error(
+        "Failed to save resume to Firebase:",
+        error
+      );
+
+      alert(
+        "Resume could not be saved. Please try again."
+      );
     }
-
-    const newResume = {
-      id: createId(),
-      name: form.name.trim(),
-      targetRole: form.targetRole.trim(),
-      link: form.link.trim(),
-      notes: form.notes.trim(),
-      createdDate: getTodayDate(),
-      updatedDate: getTodayDate(),
-      isPrimary: resumes.length === 0,
-    };
-
-    setResumes((current) => [newResume, ...current]);
-
-    closeForm();
   }
 
-  function setPrimary(id) {
-    setResumes((current) =>
-      current.map((resume) => ({
+  async function setPrimary(id) {
+    const updatedResumes = resumes.map(
+      (resume) => ({
         ...resume,
         isPrimary: resume.id === id,
-      }))
+      })
     );
+
+    try {
+      await saveItemsToFirestore(
+        RESUMES_COLLECTION,
+        updatedResumes
+      );
+
+      setResumes(updatedResumes);
+    } catch (error) {
+      console.error(
+        "Failed to set primary resume:",
+        error
+      );
+
+      alert(
+        "Primary resume could not be updated."
+      );
+    }
   }
 
-  function deleteResume(id) {
+  async function deleteResume(id) {
     const resume = resumes.find(
       (item) => item.id === id
     );
@@ -181,8 +278,8 @@ export default function Resumes() {
       return;
     }
 
-    setResumes((current) => {
-      const remaining = current.filter(
+    try {
+      const remaining = resumes.filter(
         (item) => item.id !== id
       );
 
@@ -190,15 +287,57 @@ export default function Resumes() {
         resume.isPrimary &&
         remaining.length > 0
       ) {
-        return remaining.map((item, index) =>
-          index === 0
-            ? { ...item, isPrimary: true }
-            : item
+        remaining[0] = {
+          ...remaining[0],
+          isPrimary: true,
+        };
+      }
+
+      await deleteItemFromFirestore(
+        RESUMES_COLLECTION,
+        id
+      );
+
+      if (remaining.length > 0) {
+        await saveItemsToFirestore(
+          RESUMES_COLLECTION,
+          remaining
         );
       }
 
-      return remaining;
-    });
+      setResumes(remaining);
+    } catch (error) {
+      console.error(
+        "Failed to delete resume from Firebase:",
+        error
+      );
+
+      alert(
+        "Resume could not be deleted. Please try again."
+      );
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="resumes-page">
+        <div className="resumes-header">
+          <div>
+            <div className="resumes-title-row">
+              <FileText size={28} />
+
+              <h1>
+                Resumes
+              </h1>
+            </div>
+
+            <p className="resumes-subtitle">
+              Loading resumes...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -209,9 +348,7 @@ export default function Resumes() {
           <div className="resumes-title-row">
             <FileText size={28} />
 
-            <h1
-             
-            >
+            <h1>
               Resumes
             </h1>
           </div>
@@ -221,7 +358,11 @@ export default function Resumes() {
           </p>
         </div>
 
-        <button type="button" onClick={openAddForm} className="resumes-button resumes-button-primary">
+        <button
+          type="button"
+          onClick={openAddForm}
+          className="resumes-button resumes-button-primary"
+        >
           <Plus size={18} />
           Add Resume
         </button>
@@ -246,17 +387,21 @@ export default function Resumes() {
         />
       </div>
 
-      {/* Add Form */}
+      {/* Add / Edit Form */}
       {showForm && (
         <section className="resumes-card resumes-form-card">
           <div className="resumes-form-header">
             <div>
               <h2 className="resumes-form-title">
-                {editingId !== null ? "Edit Resume" : "Add Resume"}
+                {editingId !== null
+                  ? "Edit Resume"
+                  : "Add Resume"}
               </h2>
 
               <p className="resumes-form-subtitle">
-                {editingId !== null ? "Update your resume version." : "Add a resume version to your career profile."}
+                {editingId !== null
+                  ? "Update your resume version."
+                  : "Add a resume version to your career profile."}
               </p>
             </div>
 
@@ -276,7 +421,10 @@ export default function Resumes() {
                 type="text"
                 value={form.name}
                 onChange={(e) =>
-                  updateForm("name", e.target.value)
+                  updateForm(
+                    "name",
+                    e.target.value
+                  )
                 }
                 placeholder="Example: Java Full Stack Resume"
                 className="resumes-input"
@@ -303,7 +451,10 @@ export default function Resumes() {
                 type="url"
                 value={form.link}
                 onChange={(e) =>
-                  updateForm("link", e.target.value)
+                  updateForm(
+                    "link",
+                    e.target.value
+                  )
                 }
                 placeholder="https://drive.google.com/..."
                 className="resumes-input"
@@ -316,7 +467,10 @@ export default function Resumes() {
               <textarea
                 value={form.notes}
                 onChange={(e) =>
-                  updateForm("notes", e.target.value)
+                  updateForm(
+                    "notes",
+                    e.target.value
+                  )
                 }
                 placeholder="Example: Used for Java Full Stack applications."
                 className="resumes-input resumes-textarea"
@@ -325,9 +479,20 @@ export default function Resumes() {
           </div>
 
           <div className="resumes-form-actions">
-            <button type="button" onClick={saveResume} className="resumes-button resumes-button-primary">
-              {editingId !== null ? <Pencil size={17} /> : <Plus size={17} />}
-              {editingId !== null ? "Update Resume" : "Save Resume"}
+            <button
+              type="button"
+              onClick={saveResume}
+              className="resumes-button resumes-button-primary"
+            >
+              {editingId !== null ? (
+                <Pencil size={17} />
+              ) : (
+                <Plus size={17} />
+              )}
+
+              {editingId !== null
+                ? "Update Resume"
+                : "Save Resume"}
             </button>
 
             <button
@@ -344,9 +509,7 @@ export default function Resumes() {
       {/* Resume List */}
       <section className="resumes-card">
         <div className="resumes-list-header">
-          <h2
-           
-          >
+          <h2>
             My Resumes
           </h2>
 
@@ -362,15 +525,11 @@ export default function Resumes() {
               className="resumes-empty-icon"
             />
 
-            <h3
-             
-            >
+            <h3>
               No resumes yet
             </h3>
 
-            <p
-             
-            >
+            <p>
               Add your first resume version.
             </p>
           </div>
@@ -419,21 +578,28 @@ function ResumeCard({
           </p>
         </div>
 
-        <FileText size={21} className="resumes-item-icon" />
+        <FileText
+          size={21}
+          className="resumes-item-icon"
+        />
       </div>
 
       <div className="resumes-item-meta">
         <div>
           <CalendarDays size={15} />
+
           <span>
-            Created: {formatDate(resume.createdDate)}
+            Created:{" "}
+            {formatDate(resume.createdDate)}
           </span>
         </div>
 
         <div>
           <CalendarDays size={15} />
+
           <span>
-            Updated: {formatDate(resume.updatedDate)}
+            Updated:{" "}
+            {formatDate(resume.updatedDate)}
           </span>
         </div>
       </div>
@@ -460,7 +626,9 @@ function ResumeCard({
         {!resume.isPrimary && (
           <button
             type="button"
-            onClick={() => onSetPrimary(resume.id)}
+            onClick={() =>
+              onSetPrimary(resume.id)
+            }
             className="resumes-action-button resumes-primary-button"
           >
             <Star size={15} />
@@ -479,7 +647,9 @@ function ResumeCard({
 
         <button
           type="button"
-          onClick={() => onDelete(resume.id)}
+          onClick={() =>
+            onDelete(resume.id)
+          }
           className="resumes-action-button resumes-delete-button"
         >
           <Trash2 size={15} />
@@ -490,11 +660,16 @@ function ResumeCard({
   );
 }
 
-function SummaryCard({ label, value, icon }) {
+function SummaryCard({
+  label,
+  value,
+  icon,
+}) {
   return (
     <div className="resumes-summary-card">
       <div className="resumes-summary-label">
         {icon}
+
         <span>
           {label}
         </span>
@@ -507,7 +682,10 @@ function SummaryCard({ label, value, icon }) {
   );
 }
 
-function FormField({ label, children }) {
+function FormField({
+  label,
+  children,
+}) {
   return (
     <label className="resumes-form-field">
       <span>{label}</span>

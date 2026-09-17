@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+
 import {
   CheckSquare,
   Plus,
@@ -11,13 +12,7 @@ import {
 } from "lucide-react";
 
 import {
-  getQuickTasks,
-  saveQuickTasks,
-} from "../../utils/db";
-
-import {
   getItemsFromFirestore,
-  saveItemsToFirestore,
   saveItemToFirestore,
   deleteItemFromFirestore,
   subscribeToFirestoreCollection,
@@ -29,6 +24,7 @@ import {
   getLocalDateKey,
 } from "../../utils/calculations";
 
+const QUICK_TASKS_COLLECTION = "quickTasks";
 
 const emptyForm = {
   task: "",
@@ -38,7 +34,6 @@ const emptyForm = {
   pinned: false,
 };
 
-
 function QuickTasks() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -46,82 +41,85 @@ function QuickTasks() {
   const [editingTask, setEditingTask] = useState(null);
   const [form, setForm] = useState(emptyForm);
 
+  /* =========================================================
+     NORMALIZE TASKS
+  ========================================================= */
+
+  function normalizeTasks(items) {
+    return (Array.isArray(items) ? items : [])
+      .filter(
+        (task) =>
+          task?.id !== undefined &&
+          task?.id !== null
+      )
+      .map((task) => ({
+        ...task,
+        id: String(task.id),
+        pinned: task.pinned === true,
+        status:
+          task.status === "completed"
+            ? "completed"
+            : "pending",
+      }));
+  }
 
   /* =========================================================
-     LOAD TASKS
+     LOAD TASKS FROM FIRESTORE
   ========================================================= */
 
   useEffect(() => {
-    let unsubscribe = () => {};
     let mounted = true;
+    let unsubscribe = null;
 
     async function load() {
       try {
-        const localTasks = await getQuickTasks();
-        const cloudTasks = await getItemsFromFirestore("quickTasks");
+        const cloudTasks =
+          await getItemsFromFirestore(
+            QUICK_TASKS_COLLECTION
+          );
 
-        const normalize = (items) =>
-          (Array.isArray(items) ? items : []).map((task) => ({
-            ...task,
-            id: String(task.id),
-            pinned: task.pinned === true,
-          }));
-
-        const local = normalize(localTasks);
-        const cloud = normalize(cloudTasks);
-
-        const mergedMap = new Map();
-        local.forEach((task) => mergedMap.set(task.id, task));
-        cloud.forEach((task) => mergedMap.set(task.id, task));
-
-        const merged = Array.from(mergedMap.values());
+        const normalized =
+          normalizeTasks(cloudTasks);
 
         if (!mounted) return;
-        setTasks(merged);
-        await saveQuickTasks(merged);
 
-        // Upload tasks that existed only on this device.
-        const cloudIds = new Set(cloud.map((task) => task.id));
-        const localOnly = local.filter((task) => !cloudIds.has(task.id));
-        if (localOnly.length > 0) {
-          await saveItemsToFirestore("quickTasks", localOnly);
-        }
+        setTasks(normalized);
 
-        unsubscribe = subscribeToFirestoreCollection(
-          "quickTasks",
-          async (items) => {
-            if (!mounted) return;
+        /* =====================================================
+           REAL-TIME FIRESTORE SYNC
+        ===================================================== */
 
-            const normalized = normalize(items);
-            setTasks(normalized);
-            await saveQuickTasks(normalized);
-          }
-        );
+        unsubscribe =
+          subscribeToFirestoreCollection(
+            QUICK_TASKS_COLLECTION,
+            (items) => {
+              if (!mounted) return;
+
+              const normalizedItems =
+                normalizeTasks(items);
+
+              setTasks(normalizedItems);
+            },
+            (error) => {
+              console.error(
+                "Quick Tasks real-time sync error:",
+                error
+              );
+            }
+          );
       } catch (error) {
         console.error(
           "Failed to load quick tasks:",
           error
         );
 
-        try {
-          const savedTasks = await getQuickTasks();
-          const normalizedTasks = (
-            Array.isArray(savedTasks) ? savedTasks : []
-          ).map((task) => ({
-            ...task,
-            id: String(task.id),
-            pinned: task.pinned === true,
-          }));
-
-          if (mounted) setTasks(normalizedTasks);
-        } catch (localError) {
-          console.error(
-            "Failed to load local quick tasks:",
-            localError
-          );
+        if (mounted) {
+          setTasks([]);
         }
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     }
 
@@ -129,104 +127,52 @@ function QuickTasks() {
 
     return () => {
       mounted = false;
-      unsubscribe();
+
+      if (unsubscribe) {
+        unsubscribe();
+      }
     };
   }, []);
 
-
   /* =========================================================
-     SAVE TASKS
+     SAVE SINGLE TASK TO FIRESTORE
   ========================================================= */
 
-  async function persist(updated, changedTask = null) {
-    const normalized = updated.map((task) => ({
+  async function persistTask(task) {
+    const normalizedTask = {
       ...task,
       id: String(task.id),
       pinned: task.pinned === true,
-    }));
-
-    setTasks(normalized);
+      status:
+        task.status === "completed"
+          ? "completed"
+          : "pending",
+    };
 
     try {
-      await saveQuickTasks(normalized);
+      await saveItemToFirestore(
+        QUICK_TASKS_COLLECTION,
+        String(normalizedTask.id),
+        normalizedTask
+      );
 
-      if (changedTask) {
-        await saveItemToFirestore(
-          "quickTasks",
-          String(changedTask.id),
-          {
-            ...changedTask,
-            id: String(changedTask.id),
-            pinned: changedTask.pinned === true,
-          }
-        );
-      }
+      return true;
     } catch (error) {
       console.error(
         "Failed to save quick task:",
         error
       );
+
+      alert(
+        "Failed to save task. Please try again."
+      );
+
+      return false;
     }
   }
 
-
-  const today = getTodayLocalDateKey();
-
-
   /* =========================================================
-     GROUP TASKS
-  ========================================================= */
-
-  const grouped = useMemo(() => {
-    const pending = tasks.filter(
-      (task) =>
-        task.status !== "completed"
-    );
-
-    const todays = pending.filter(
-      (task) =>
-        task.dueDate === today
-    );
-
-    const overdue = pending.filter(
-      (task) =>
-        task.dueDate &&
-        task.dueDate < today
-    );
-
-    const upcoming = pending.filter(
-      (task) =>
-        !task.dueDate ||
-        task.dueDate > today
-    );
-
-    const completed = tasks.filter(
-      (task) =>
-        task.status === "completed"
-    );
-
-    /*
-      Pinned tasks are shown separately.
-      Completed tasks are not included in the
-      pinned section.
-    */
-    const pinned = pending.filter(
-      (task) =>
-        task.pinned === true
-    );
-
-    return {
-      todays,
-      overdue,
-      upcoming,
-      completed,
-      pinned,
-    };
-  }, [tasks, today]);
-
-
-  /* =========================================================
-     ADD
+     ADD FORM
   ========================================================= */
 
   function openAddForm() {
@@ -239,25 +185,25 @@ function QuickTasks() {
     setShowForm(true);
   }
 
-
   /* =========================================================
-     EDIT
+     EDIT FORM
   ========================================================= */
 
   function openEditForm(task) {
     setEditingTask(task);
 
     setForm({
-      task: task.task,
+      task: task.task || "",
       dueDate: task.dueDate || "",
-      priority: task.priority || "Medium",
-      status: task.status || "pending",
+      priority:
+        task.priority || "Medium",
+      status:
+        task.status || "pending",
       pinned: task.pinned === true,
     });
 
     setShowForm(true);
   }
-
 
   /* =========================================================
      CLOSE FORM
@@ -272,134 +218,310 @@ function QuickTasks() {
     });
   }
 
-
   /* =========================================================
      SUBMIT
   ========================================================= */
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
     if (!form.task.trim()) {
       return;
     }
 
+    const now =
+      new Date().toISOString();
+
+    /* =======================================================
+       EDIT EXISTING TASK
+    ======================================================= */
+
     if (editingTask) {
       const updatedTask = {
         ...editingTask,
-        ...form,
+
         id: String(editingTask.id),
+
         task: form.task.trim(),
-        pinned: form.pinned === true,
+
+        dueDate:
+          form.dueDate || "",
+
+        priority:
+          form.priority || "Medium",
+
+        status:
+          form.status === "completed"
+            ? "completed"
+            : "pending",
+
+        pinned:
+          form.pinned === true,
+
+        updatedAt: now,
       };
 
-      persist(
-        tasks.map((task) =>
-          String(task.id) === String(editingTask.id)
-            ? updatedTask
-            : task
-        ),
-        updatedTask
-      );
-    } else {
-      const newTask = {
-        id: String(Date.now()),
-        ...form,
-        task: form.task.trim(),
-        pinned: form.pinned === true,
-      };
+      /* Avoid undefined values in Firestore */
+      if (
+        updatedTask.status ===
+        "completed"
+      ) {
+        updatedTask.completedAt =
+          editingTask.completedAt ||
+          getLocalDateKey();
+      } else {
+        updatedTask.completedAt =
+          null;
+      }
 
-      persist(
-        [...tasks, newTask],
-        newTask
-      );
+      const success =
+        await persistTask(
+          updatedTask
+        );
+
+      if (success) {
+        setTasks((previous) =>
+          previous.map((task) =>
+            String(task.id) ===
+            String(editingTask.id)
+              ? updatedTask
+              : task
+          )
+        );
+
+        closeForm();
+      }
+
+      return;
     }
 
-    closeForm();
-  }
+    /* =======================================================
+       CREATE NEW TASK
+    ======================================================= */
 
+    const newTask = {
+      id: String(Date.now()),
+
+      task: form.task.trim(),
+
+      dueDate:
+        form.dueDate || "",
+
+      priority:
+        form.priority || "Medium",
+
+      status:
+        form.status === "completed"
+          ? "completed"
+          : "pending",
+
+      pinned:
+        form.pinned === true,
+
+      createdAt: now,
+      updatedAt: now,
+
+      completedAt:
+        form.status === "completed"
+          ? getLocalDateKey()
+          : null,
+    };
+
+    const success =
+      await persistTask(newTask);
+
+    if (success) {
+      setTasks((previous) => [
+        ...previous,
+        newTask,
+      ]);
+
+      closeForm();
+    }
+  }
 
   /* =========================================================
      DELETE
   ========================================================= */
 
-  function deleteTask(task) {
-    const confirmed = window.confirm(
-      `Delete "${task.task}"?`
-    );
+  async function deleteTask(task) {
+    const confirmed =
+      window.confirm(
+        `Delete "${task.task}"?`
+      );
 
     if (!confirmed) {
       return;
     }
 
-    persist(
-      tasks.filter(
-        (item) =>
-          String(item.id) !== String(task.id)
-      )
-    );
+    try {
+      await deleteItemFromFirestore(
+        QUICK_TASKS_COLLECTION,
+        String(task.id)
+      );
 
-    deleteItemFromFirestore(
-      "quickTasks",
-      String(task.id)
-    ).catch((error) => {
+      setTasks((previous) =>
+        previous.filter(
+          (item) =>
+            String(item.id) !==
+            String(task.id)
+        )
+      );
+    } catch (error) {
       console.error(
-        "Failed to delete quick task from Firestore:",
+        "Failed to delete quick task:",
         error
       );
-    });
-  }
 
+      alert(
+        "Failed to delete task. Please try again."
+      );
+    }
+  }
 
   /* =========================================================
      COMPLETE
   ========================================================= */
 
-  function toggleComplete(task) {
+  async function toggleComplete(task) {
     const isCurrentlyCompleted =
       task.status === "completed";
 
     const updatedTask = {
       ...task,
-      status: isCurrentlyCompleted
-        ? "pending"
-        : "completed",
-      completedAt: isCurrentlyCompleted
-        ? undefined
-        : getLocalDateKey(),
+
+      id: String(task.id),
+
+      status:
+        isCurrentlyCompleted
+          ? "pending"
+          : "completed",
+
+      completedAt:
+        isCurrentlyCompleted
+          ? null
+          : getLocalDateKey(),
+
+      updatedAt:
+        new Date().toISOString(),
     };
 
-    persist(
-      tasks.map((item) =>
-        String(item.id) === String(task.id)
-          ? updatedTask
-          : item
-      ),
-      updatedTask
-    );
-  }
+    const success =
+      await persistTask(
+        updatedTask
+      );
 
+    if (success) {
+      setTasks((previous) =>
+        previous.map((item) =>
+          String(item.id) ===
+          String(task.id)
+            ? updatedTask
+            : item
+        )
+      );
+    }
+  }
 
   /* =========================================================
      PIN / UNPIN
   ========================================================= */
 
-  function togglePin(task) {
+  async function togglePin(task) {
     const updatedTask = {
       ...task,
-      pinned: task.pinned !== true,
+
+      id: String(task.id),
+
+      pinned:
+        task.pinned !== true,
+
+      updatedAt:
+        new Date().toISOString(),
     };
 
-    persist(
-      tasks.map((item) =>
-        String(item.id) === String(task.id)
-          ? updatedTask
-          : item
-      ),
-      updatedTask
-    );
+    const success =
+      await persistTask(
+        updatedTask
+      );
+
+    if (success) {
+      setTasks((previous) =>
+        previous.map((item) =>
+          String(item.id) ===
+          String(task.id)
+            ? updatedTask
+            : item
+        )
+      );
+    }
   }
 
+  /* =========================================================
+     TODAY
+  ========================================================= */
+
+  const today =
+    getTodayLocalDateKey();
+
+  /* =========================================================
+     GROUP TASKS
+  ========================================================= */
+
+  const grouped = useMemo(() => {
+    const pending =
+      tasks.filter(
+        (task) =>
+          task.status !==
+          "completed"
+      );
+
+    const todays =
+      pending.filter(
+        (task) =>
+          task.dueDate === today
+      );
+
+    const overdue =
+      pending.filter(
+        (task) =>
+          task.dueDate &&
+          task.dueDate < today
+      );
+
+    const upcoming =
+      pending.filter(
+        (task) =>
+          !task.dueDate ||
+          task.dueDate > today
+      );
+
+    const completed =
+      tasks.filter(
+        (task) =>
+          task.status ===
+          "completed"
+      );
+
+    /*
+      Pinned tasks are shown separately.
+      Completed tasks are not included in
+      the pinned section.
+    */
+    const pinned =
+      pending.filter(
+        (task) =>
+          task.pinned === true
+      );
+
+    return {
+      todays,
+      overdue,
+      upcoming,
+      completed,
+      pinned,
+    };
+  }, [tasks, today]);
 
   /* =========================================================
      TASK ROW
@@ -418,7 +540,8 @@ function QuickTasks() {
     return (
       <div
         className={`topic-row priority-${(
-          task.priority || "Medium"
+          task.priority ||
+          "Medium"
         ).toLowerCase()}`}
       >
 
@@ -429,7 +552,8 @@ function QuickTasks() {
             <input
               type="checkbox"
               checked={
-                task.status === "completed"
+                task.status ===
+                "completed"
               }
               onChange={() =>
                 toggleComplete(task)
@@ -438,7 +562,8 @@ function QuickTasks() {
 
             <strong
               className={
-                task.status === "completed"
+                task.status ===
+                "completed"
                   ? "strike"
                   : ""
               }
@@ -448,26 +573,28 @@ function QuickTasks() {
 
           </label>
 
-
           <span>
 
             <span
               className={`badge badge-priority-${(
-                task.priority || "Medium"
+                task.priority ||
+                "Medium"
               ).toLowerCase()}`}
             >
-              {task.priority || "Medium"}
+              {task.priority ||
+                "Medium"}
             </span>
-
 
             {task.dueDate &&
               ` • Due ${new Date(
                 `${task.dueDate}T00:00:00`
-              ).toLocaleDateString("en-IN")}`}
-
+              ).toLocaleDateString(
+                "en-IN"
+              )}`}
 
             {days !== null &&
-              task.status !== "completed" &&
+              task.status !==
+                "completed" &&
               days < 0 &&
               " • Overdue"}
 
@@ -475,12 +602,12 @@ function QuickTasks() {
 
         </div>
 
-
         <div className="topic-actions">
 
           {/* PIN / UNPIN */}
 
           <button
+            type="button"
             className="edit-button"
             onClick={() =>
               togglePin(task)
@@ -511,10 +638,10 @@ function QuickTasks() {
             )}
           </button>
 
-
           {/* COMPLETE */}
 
           <button
+            type="button"
             className="edit-button"
             onClick={() =>
               toggleComplete(task)
@@ -524,10 +651,10 @@ function QuickTasks() {
             <Check size={17} />
           </button>
 
-
           {/* EDIT */}
 
           <button
+            type="button"
             className="edit-button"
             onClick={() =>
               openEditForm(task)
@@ -537,10 +664,10 @@ function QuickTasks() {
             <Pencil size={17} />
           </button>
 
-
           {/* DELETE */}
 
           <button
+            type="button"
             className="delete-button"
             onClick={() =>
               deleteTask(task)
@@ -556,7 +683,6 @@ function QuickTasks() {
     );
   }
 
-
   /* =========================================================
      LOADING
   ========================================================= */
@@ -564,12 +690,16 @@ function QuickTasks() {
   if (loading) {
     return (
       <div className="module-page">
-        <h1>⚡ Quick Tasks</h1>
-        <p>Loading tasks...</p>
+        <h1>
+          ⚡ Quick Tasks
+        </h1>
+
+        <p>
+          Loading tasks...
+        </p>
       </div>
     );
   }
-
 
   /* =========================================================
      UI
@@ -585,20 +715,29 @@ function QuickTasks() {
       <div className="page-header">
 
         <div>
-          <h1>⚡ Quick Tasks</h1>
+
+          <h1>
+            ⚡ Quick Tasks
+          </h1>
 
           <p>
             Small, fast to-dos that don't
             deserve their own project.
           </p>
 
-          <small style={{ opacity: 0.7 }}>
-            Synced with your Taskbar account.
+          <small
+            style={{
+              opacity: 0.7,
+            }}
+          >
+            Synced with your Taskbar
+            account.
           </small>
+
         </div>
 
-
         <button
+          type="button"
           className="add-topic-button"
           onClick={openAddForm}
         >
@@ -608,7 +747,6 @@ function QuickTasks() {
 
       </div>
 
-
       {/* =====================================================
           STATISTICS
       ===================================================== */}
@@ -616,19 +754,24 @@ function QuickTasks() {
       <section className="stat-grid">
 
         <div className="stat-card">
+
           <CheckSquare size={25} />
 
-          <span>Today</span>
+          <span>
+            Today
+          </span>
 
           <strong>
             {grouped.todays.length}
           </strong>
-        </div>
 
+        </div>
 
         <div className="stat-card">
 
-          <span>Overdue</span>
+          <span>
+            Overdue
+          </span>
 
           <strong>
             {grouped.overdue.length}
@@ -636,10 +779,11 @@ function QuickTasks() {
 
         </div>
 
-
         <div className="stat-card">
 
-          <span>Upcoming</span>
+          <span>
+            Upcoming
+          </span>
 
           <strong>
             {grouped.upcoming.length}
@@ -647,10 +791,11 @@ function QuickTasks() {
 
         </div>
 
-
         <div className="stat-card">
 
-          <span>Completed</span>
+          <span>
+            Completed
+          </span>
 
           <strong>
             {grouped.completed.length}
@@ -659,7 +804,6 @@ function QuickTasks() {
         </div>
 
       </section>
-
 
       {/* =====================================================
           ADD / EDIT FORM
@@ -677,7 +821,6 @@ function QuickTasks() {
                 : "Add Task"}
             </h2>
 
-
             <button
               type="button"
               className="close-button"
@@ -688,11 +831,12 @@ function QuickTasks() {
 
           </div>
 
-
           <form
             className="grid-form"
             onSubmit={handleSubmit}
           >
+
+            {/* TASK */}
 
             <div className="form-group">
 
@@ -707,13 +851,15 @@ function QuickTasks() {
                 onChange={(event) =>
                   setForm({
                     ...form,
-                    task: event.target.value,
+                    task:
+                      event.target.value,
                   })
                 }
               />
 
             </div>
 
+            {/* DUE DATE */}
 
             <div className="form-group">
 
@@ -735,6 +881,7 @@ function QuickTasks() {
 
             </div>
 
+            {/* PRIORITY */}
 
             <div className="form-group">
 
@@ -752,6 +899,7 @@ function QuickTasks() {
                   })
                 }
               >
+
                 <option value="Low">
                   Low
                 </option>
@@ -763,10 +911,12 @@ function QuickTasks() {
                 <option value="High">
                   High
                 </option>
+
               </select>
 
             </div>
 
+            {/* STATUS */}
 
             <div className="form-group">
 
@@ -796,7 +946,6 @@ function QuickTasks() {
               </select>
 
             </div>
-
 
             {/* PIN OPTION */}
 
@@ -831,7 +980,6 @@ function QuickTasks() {
 
             </label>
 
-
             <button
               type="submit"
               className="save-topic-button"
@@ -845,7 +993,6 @@ function QuickTasks() {
 
         </section>
       )}
-
 
       {/* =====================================================
           PINNED TASKS
@@ -863,7 +1010,6 @@ function QuickTasks() {
 
           </div>
 
-
           <div className="topic-list">
 
             {grouped.pinned.map(
@@ -879,7 +1025,6 @@ function QuickTasks() {
 
         </section>
       )}
-
 
       {/* =====================================================
           TODAY & OVERDUE
@@ -903,7 +1048,6 @@ function QuickTasks() {
 
         </div>
 
-
         <div className="topic-list">
 
           {[
@@ -918,9 +1062,10 @@ function QuickTasks() {
 
           ))}
 
-
-          {grouped.overdue.length === 0 &&
-            grouped.todays.length === 0 && (
+          {grouped.overdue.length ===
+            0 &&
+            grouped.todays.length ===
+              0 && (
 
               <p className="empty-topics">
                 Nothing due today. Nice.
@@ -931,7 +1076,6 @@ function QuickTasks() {
         </div>
 
       </section>
-
 
       {/* =====================================================
           UPCOMING
@@ -952,7 +1096,6 @@ function QuickTasks() {
 
         </div>
 
-
         <div className="topic-list">
 
           {grouped.upcoming.map(
@@ -964,8 +1107,8 @@ function QuickTasks() {
             )
           )}
 
-
-          {grouped.upcoming.length === 0 && (
+          {grouped.upcoming.length ===
+            0 && (
 
             <p className="empty-topics">
               No upcoming tasks.
@@ -976,7 +1119,6 @@ function QuickTasks() {
         </div>
 
       </section>
-
 
       {/* =====================================================
           COMPLETED
@@ -997,7 +1139,6 @@ function QuickTasks() {
 
         </div>
 
-
         <div className="topic-list">
 
           {grouped.completed.map(
@@ -1009,8 +1150,8 @@ function QuickTasks() {
             )
           )}
 
-
-          {grouped.completed.length === 0 && (
+          {grouped.completed.length ===
+            0 && (
 
             <p className="empty-topics">
               No completed tasks yet.
@@ -1025,6 +1166,5 @@ function QuickTasks() {
     </div>
   );
 }
-
 
 export default QuickTasks;

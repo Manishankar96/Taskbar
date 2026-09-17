@@ -13,9 +13,14 @@ import {
   Edit3,
 } from "lucide-react";
 
-const INCOME_KEY = "taskbar-income";
-const EXPENSE_KEY = "taskbar-expenses";
-const BUDGET_KEY = "taskbar-budget";
+import { getIncome } from "../../utils/db";
+import {
+  getItemsFromFirestore,
+  saveItemsToFirestore,
+  deleteItemFromFirestore,
+} from "../../firebase/firestore";
+
+const BUDGET_COLLECTION = "budgets";
 const FINANCE_EVENT = "taskbar-finance-updated";
 
 function formatCurrency(amount) {
@@ -27,10 +32,9 @@ function formatCurrency(amount) {
 function getCurrentMonth() {
   const now = new Date();
 
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
-    2,
-    "0"
-  )}`;
+  return `${now.getFullYear()}-${String(
+    now.getMonth() + 1
+  ).padStart(2, "0")}`;
 }
 
 function getMonthName(monthValue) {
@@ -48,39 +52,10 @@ function getMonthName(monthValue) {
   });
 }
 
-function getStoredList(key) {
-  try {
-    const saved = localStorage.getItem(key);
-
-    if (!saved) return [];
-
-    const parsed = JSON.parse(saved);
-
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    console.error(`Failed to load ${key}:`, error);
-    return [];
-  }
-}
-
-function getStoredBudget() {
-  try {
-    const saved = localStorage.getItem(BUDGET_KEY);
-
-    if (!saved) return null;
-
-    const parsed = JSON.parse(saved);
-
-    return parsed && typeof parsed === "object" ? parsed : null;
-  } catch (error) {
-    console.error("Failed to load budget:", error);
-    return null;
-  }
-}
-
 export default function Budget() {
   const [incomeList, setIncomeList] = useState([]);
   const [expenseList, setExpenseList] = useState([]);
+  const [budgetList, setBudgetList] = useState([]);
 
   const [selectedMonth, setSelectedMonth] = useState(
     getCurrentMonth()
@@ -88,31 +63,69 @@ export default function Budget() {
 
   const [budgetAmount, setBudgetAmount] = useState("");
 
-  const [showBudgetForm, setShowBudgetForm] = useState(false);
+  const [showBudgetForm, setShowBudgetForm] =
+    useState(false);
+
+  const [loading, setLoading] = useState(true);
 
   /* =========================================================
-     LOAD FINANCE DATA
+     LOAD FINANCE DATA FROM FIREBASE
      ========================================================= */
 
-  function loadFinanceData() {
-    setIncomeList(getStoredList(INCOME_KEY));
-    setExpenseList(getStoredList(EXPENSE_KEY));
+  async function loadFinanceData() {
+    try {
+      setLoading(true);
 
-    const savedBudget = getStoredBudget();
+      const [income, expenses, budgets] =
+        await Promise.all([
+          getIncome(),
+          getItemsFromFirestore("expenses"),
+          getItemsFromFirestore(BUDGET_COLLECTION),
+        ]);
 
-    if (savedBudget) {
-      setSelectedMonth(
-        savedBudget.month || getCurrentMonth()
+      setIncomeList(
+        Array.isArray(income) ? income : []
       );
 
-      setBudgetAmount(
-        savedBudget.amount || ""
+      setExpenseList(
+        Array.isArray(expenses) ? expenses : []
       );
+
+      const validBudgets = Array.isArray(budgets)
+        ? budgets
+        : [];
+
+      setBudgetList(validBudgets);
+
+      const currentMonth = getCurrentMonth();
+
+      const currentBudget = validBudgets.find(
+        (item) => item.month === currentMonth
+      );
+
+      if (currentBudget) {
+        setBudgetAmount(
+          currentBudget.amount != null
+            ? String(currentBudget.amount)
+            : ""
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Failed to load finance data:",
+        error
+      );
+
+      setIncomeList([]);
+      setExpenseList([]);
+      setBudgetList([]);
+    } finally {
+      setLoading(false);
     }
   }
 
   /* =========================================================
-     SYNC WITH INCOME / EXPENSES
+     SYNC WITH FINANCE
      ========================================================= */
 
   useEffect(() => {
@@ -122,24 +135,9 @@ export default function Budget() {
       loadFinanceData();
     };
 
-    const handleStorageUpdate = (event) => {
-      if (
-        event.key === INCOME_KEY ||
-        event.key === EXPENSE_KEY ||
-        event.key === BUDGET_KEY
-      ) {
-        loadFinanceData();
-      }
-    };
-
     window.addEventListener(
       FINANCE_EVENT,
       handleFinanceUpdate
-    );
-
-    window.addEventListener(
-      "storage",
-      handleStorageUpdate
     );
 
     return () => {
@@ -147,13 +145,20 @@ export default function Budget() {
         FINANCE_EVENT,
         handleFinanceUpdate
       );
-
-      window.removeEventListener(
-        "storage",
-        handleStorageUpdate
-      );
     };
   }, []);
+
+  /* =========================================================
+     CURRENT MONTH BUDGET
+     ========================================================= */
+
+  const currentBudgetData = useMemo(() => {
+    return (
+      budgetList.find(
+        (item) => item.month === selectedMonth
+      ) || null
+    );
+  }, [budgetList, selectedMonth]);
 
   /* =========================================================
      MONTHLY INCOME
@@ -234,6 +239,16 @@ export default function Budget() {
      ========================================================= */
 
   function openBudgetForm() {
+    if (currentBudgetData) {
+      setBudgetAmount(
+        currentBudgetData.amount != null
+          ? String(currentBudgetData.amount)
+          : ""
+      );
+    } else {
+      setBudgetAmount("");
+    }
+
     setShowBudgetForm(true);
   }
 
@@ -241,19 +256,24 @@ export default function Budget() {
     setShowBudgetForm(false);
   }
 
+  /* =========================================================
+     MONTH CHANGE
+     ========================================================= */
+
   function handleMonthChange(event) {
     const month = event.target.value;
 
     setSelectedMonth(month);
 
-    const savedBudget = getStoredBudget();
+    const savedBudget = budgetList.find(
+      (item) => item.month === month
+    );
 
-    if (
-      savedBudget &&
-      savedBudget.month === month
-    ) {
+    if (savedBudget) {
       setBudgetAmount(
-        savedBudget.amount || ""
+        savedBudget.amount != null
+          ? String(savedBudget.amount)
+          : ""
       );
     } else {
       setBudgetAmount("");
@@ -264,7 +284,7 @@ export default function Budget() {
      SAVE BUDGET
      ========================================================= */
 
-  function handleSaveBudget(event) {
+  async function handleSaveBudget(event) {
     event.preventDefault();
 
     if (!selectedMonth) {
@@ -281,16 +301,41 @@ export default function Budget() {
     }
 
     const budgetData = {
+      id:
+        currentBudgetData?.id ||
+        `budget-${selectedMonth}`,
+
       month: selectedMonth,
+
       amount: Number(budgetAmount),
-      updatedAt: new Date().toISOString(),
+
+      updatedAt:
+        new Date().toISOString(),
     };
 
     try {
-      localStorage.setItem(
-        BUDGET_KEY,
-        JSON.stringify(budgetData)
+      await saveItemsToFirestore(
+        BUDGET_COLLECTION,
+        [
+          ...budgetList.filter(
+            (item) =>
+              item.id !== budgetData.id &&
+              item.month !== selectedMonth
+          ),
+          budgetData,
+        ]
       );
+
+      const nextBudgets = [
+        ...budgetList.filter(
+          (item) =>
+            item.id !== budgetData.id &&
+            item.month !== selectedMonth
+        ),
+        budgetData,
+      ];
+
+      setBudgetList(nextBudgets);
 
       setBudgetAmount(
         String(Number(budgetAmount))
@@ -315,7 +360,12 @@ export default function Budget() {
      DELETE BUDGET
      ========================================================= */
 
-  function handleDeleteBudget() {
+  async function handleDeleteBudget() {
+    if (!currentBudgetData?.id) {
+      setBudgetAmount("");
+      return;
+    }
+
     const confirmed = window.confirm(
       "Are you sure you want to remove this monthly budget?"
     );
@@ -323,7 +373,17 @@ export default function Budget() {
     if (!confirmed) return;
 
     try {
-      localStorage.removeItem(BUDGET_KEY);
+      await deleteItemFromFirestore(
+        BUDGET_COLLECTION,
+        currentBudgetData.id
+      );
+
+      const nextBudgets = budgetList.filter(
+        (item) =>
+          item.id !== currentBudgetData.id
+      );
+
+      setBudgetList(nextBudgets);
 
       setBudgetAmount("");
 
@@ -335,6 +395,8 @@ export default function Budget() {
         "Failed to remove budget:",
         error
       );
+
+      alert("Failed to remove budget.");
     }
   }
 
@@ -686,11 +748,6 @@ export default function Budget() {
                 </span>
 
               </div>
-
-              {/* IMPORTANT:
-                  Unique Finance progress track/fill
-                  classes are used here.
-              */}
 
               <div className="progress-track">
 

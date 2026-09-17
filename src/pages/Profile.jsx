@@ -21,12 +21,10 @@ import {
 } from "lucide-react";
 
 import {
-  getProfile,
-  saveProfile,
-  exportAllData,
-  validateBackup,
-  importAllData,
-} from "../utils/db";
+  getItemsFromFirestore,
+  saveItemToFirestore,
+  deleteItemFromFirestore,
+} from "../firebase/firestore";
 
 import {
   getTodayLocalDateKey,
@@ -43,6 +41,222 @@ const shortcutIcons = {
   GraduationCap,
   Terminal,
 };
+
+const PROFILE_COLLECTION = "profile";
+
+const BACKUP_COLLECTIONS = [
+  "topics",
+  "goals",
+  "timetable",
+  "diet",
+  "water",
+  "screenTime",
+  "activities",
+  "assessments",
+  "quickTasks",
+  "streak",
+  "dailyReports",
+  "quickNotes",
+  "dailyTargets",
+  "reminders",
+  "todoList",
+  "studySessions",
+  "jobPreparation",
+  "applications",
+  "savedJobs",
+  "resumes",
+  "interviews",
+  "projects",
+  "income",
+  "expenses",
+  "budgets",
+];
+
+const SETTINGS_COLLECTION = "settings";
+
+async function getFirebaseProfile() {
+  const items = await getItemsFromFirestore(PROFILE_COLLECTION);
+  return Array.isArray(items) && items.length > 0
+    ? items[0]
+    : null;
+}
+
+async function saveFirebaseProfile(profileData) {
+  const normalized = {
+    ...(profileData || {}),
+    id: "profile",
+  };
+
+  await saveItemToFirestore(
+    PROFILE_COLLECTION,
+    "profile",
+    normalized
+  );
+
+  return normalized;
+}
+
+async function deleteAllFirestoreItems(collectionName) {
+  const items = await getItemsFromFirestore(collectionName);
+
+  if (!Array.isArray(items)) {
+    return;
+  }
+
+  for (const item of items) {
+    if (item?.id === undefined || item?.id === null) {
+      continue;
+    }
+
+    await deleteItemFromFirestore(
+      collectionName,
+      String(item.id)
+    );
+  }
+}
+
+async function exportAllFirebaseData() {
+  const collectionResults = await Promise.all(
+    BACKUP_COLLECTIONS.map(async (collectionName) => [
+      collectionName,
+      await getItemsFromFirestore(collectionName),
+    ])
+  );
+
+  const backup = {
+    version: 9,
+    exportedAt: new Date().toISOString(),
+  };
+
+  for (const [collectionName, items] of collectionResults) {
+    backup[collectionName] = Array.isArray(items)
+      ? items
+      : [];
+  }
+
+  backup.profile = await getFirebaseProfile();
+
+  const settingsItems =
+    await getItemsFromFirestore(SETTINGS_COLLECTION);
+
+  backup.settings =
+    Array.isArray(settingsItems) && settingsItems.length > 0
+      ? settingsItems[0]
+      : null;
+
+  return backup;
+}
+
+function validateFirebaseBackup(data) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return {
+      valid: false,
+      reason: "Backup data must be a JSON object.",
+    };
+  }
+
+  for (const key of BACKUP_COLLECTIONS) {
+    if (
+      data[key] !== undefined &&
+      !Array.isArray(data[key])
+    ) {
+      return {
+        valid: false,
+        reason: `"${key}" must be an array.`,
+      };
+    }
+  }
+
+  if (
+    data.profile !== undefined &&
+    data.profile !== null &&
+    (typeof data.profile !== "object" ||
+      Array.isArray(data.profile))
+  ) {
+    return {
+      valid: false,
+      reason: '"profile" must be an object or null.',
+    };
+  }
+
+  if (
+    data.settings !== undefined &&
+    data.settings !== null &&
+    (typeof data.settings !== "object" ||
+      Array.isArray(data.settings))
+  ) {
+    return {
+      valid: false,
+      reason: '"settings" must be an object or null.',
+    };
+  }
+
+  return {
+    valid: true,
+    reason: "",
+  };
+}
+
+async function importAllFirebaseData(data) {
+  const validation = validateFirebaseBackup(data);
+
+  if (!validation.valid) {
+    throw new Error(validation.reason);
+  }
+
+  /*
+   * Only sections that actually exist in the backup
+   * are replaced. This preserves the previous import
+   * behavior for partial backups.
+   */
+  for (const collectionName of BACKUP_COLLECTIONS) {
+    if (!Array.isArray(data[collectionName])) {
+      continue;
+    }
+
+    await deleteAllFirestoreItems(collectionName);
+
+    for (const item of data[collectionName]) {
+      if (!item || item.id === undefined || item.id === null) {
+        continue;
+      }
+
+      await saveItemToFirestore(
+        collectionName,
+        String(item.id),
+        {
+          ...item,
+          id: String(item.id),
+        }
+      );
+    }
+  }
+
+  if (data.profile !== undefined && data.profile !== null) {
+    await deleteAllFirestoreItems(PROFILE_COLLECTION);
+
+    await saveFirebaseProfile(data.profile);
+  }
+
+  if (
+    data.settings !== undefined &&
+    data.settings !== null
+  ) {
+    await deleteAllFirestoreItems(SETTINGS_COLLECTION);
+
+    await saveItemToFirestore(
+      SETTINGS_COLLECTION,
+      "settings",
+      {
+        ...data.settings,
+        id: "settings",
+      }
+    );
+  }
+
+  return true;
+}
+
 
 const emptyProfile = {
   name: "",
@@ -91,7 +305,7 @@ function Profile() {
     async function load() {
       try {
         const savedProfile =
-          await getProfile();
+          await getFirebaseProfile();
 
         if (savedProfile) {
           const legacyShortcut =
@@ -201,9 +415,9 @@ function Profile() {
           : [],
       };
 
-      await saveProfile(normalizedProfile);
+      await saveFirebaseProfile(normalizedProfile);
 
-      const savedProfile = await getProfile();
+      const savedProfile = await getFirebaseProfile();
 
       if (savedProfile) {
         setProfile({
@@ -244,7 +458,7 @@ function Profile() {
   async function handleExport() {
     try {
       const backup =
-        await exportAllData();
+        await exportAllFirebaseData();
 
       const blob = new Blob(
         [
@@ -326,7 +540,7 @@ function Profile() {
     }
 
     const result =
-      validateBackup(parsed);
+      validateFirebaseBackup(parsed);
 
     if (!result.valid) {
       setImportMessage({
@@ -346,7 +560,7 @@ function Profile() {
     if (!confirmed) return;
 
     try {
-      await importAllData(parsed);
+      await importAllFirebaseData(parsed);
 
       setImportMessage({
         type: "success",
@@ -428,7 +642,7 @@ function Profile() {
 
   async function persistProfile(nextProfile) {
     try {
-      await saveProfile(nextProfile);
+      await saveFirebaseProfile(nextProfile);
       return true;
     } catch (error) {
       console.error("Failed to persist profile:", error);

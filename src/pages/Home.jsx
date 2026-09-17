@@ -30,17 +30,10 @@ import {
 } from "recharts";
 
 import {
-  getTopics,
-  getGoals,
-  getWater,
-  getScreenTime,
-  getActivities,
-  getAssessments,
-  getTimetable,
-  getProfile,
-  getStudySessions,
-  saveStreak,
-} from "../utils/db";
+  getItemsFromFirestore,
+  saveItemToFirestore,
+  subscribeToFirestoreCollection,
+} from "../firebase/firestore";
 
 import {
   calculatePercentage,
@@ -54,6 +47,22 @@ import {
   getWeekdayLabel,
   sumBy,
 } from "../utils/calculations";
+
+const TOPICS_COLLECTION = "topics";
+const GOALS_COLLECTION = "goals";
+const WATER_COLLECTION = "water";
+const SCREEN_TIME_COLLECTION = "screenTime";
+const ACTIVITIES_COLLECTION = "activities";
+const ASSESSMENTS_COLLECTION = "assessments";
+const TIMETABLE_COLLECTION = "timetable";
+const PROFILE_COLLECTION = "profile";
+const STUDY_SESSIONS_COLLECTION = "studySessions";
+const STREAK_COLLECTION = "streak";
+const TODO_COLLECTION = "todoList";
+const JOB_PREPARATION_COLLECTION = "jobPreparation";
+const APPLICATIONS_COLLECTION = "applications";
+const SAVED_JOBS_COLLECTION = "savedJobs";
+const INTERVIEWS_COLLECTION = "interviews";
 
 
 function Home() {
@@ -103,15 +112,15 @@ function Home() {
           timetableData,
           profileData,
         ] = await Promise.all([
-          getTopics(),
-          getGoals(),
-          getWater(),
-          getScreenTime(),
-          getStudySessions(),
-          getActivities(),
-          getAssessments(),
-          getTimetable(),
-          getProfile(),
+          getItemsFromFirestore(TOPICS_COLLECTION),
+          getItemsFromFirestore(GOALS_COLLECTION),
+          getItemsFromFirestore(WATER_COLLECTION),
+          getItemsFromFirestore(SCREEN_TIME_COLLECTION),
+          getItemsFromFirestore(STUDY_SESSIONS_COLLECTION),
+          getItemsFromFirestore(ACTIVITIES_COLLECTION),
+          getItemsFromFirestore(ASSESSMENTS_COLLECTION),
+          getItemsFromFirestore(TIMETABLE_COLLECTION),
+          getItemsFromFirestore(PROFILE_COLLECTION),
         ]);
 
         setTopics(
@@ -162,7 +171,11 @@ function Home() {
             : []
         );
 
-        setProfile(profileData);
+        setProfile(
+          Array.isArray(profileData)
+            ? profileData[0] || null
+            : profileData || null
+        );
       } catch (error) {
         console.error(
           "Failed to load dashboard data:",
@@ -174,6 +187,35 @@ function Home() {
     }
 
     loadAll();
+
+    const unsubscribers = [
+      [TOPICS_COLLECTION, setTopics],
+      [GOALS_COLLECTION, setGoals],
+      [WATER_COLLECTION, setWater],
+      [SCREEN_TIME_COLLECTION, setScreenTime],
+      [STUDY_SESSIONS_COLLECTION, setStudySessions],
+      [ACTIVITIES_COLLECTION, setActivities],
+      [ASSESSMENTS_COLLECTION, setAssessments],
+      [TIMETABLE_COLLECTION, setTimetable],
+    ].map(([collection, setter]) =>
+      subscribeToFirestoreCollection(
+        collection,
+        (items) => setter(Array.isArray(items) ? items : []),
+        (error) =>
+          console.error(
+            `Home real-time sync error (${collection}):`,
+            error
+          )
+      )
+    );
+
+    return () => {
+      unsubscribers.forEach((unsubscribe) => {
+        if (typeof unsubscribe === "function") {
+          unsubscribe();
+        }
+      });
+    };
   }, []);
 
 
@@ -565,13 +607,15 @@ function Home() {
 
   useEffect(() => {
     if (!loading) {
-      saveStreak([
+      saveItemToFirestore(
+        STREAK_COLLECTION,
+        "streak",
         {
           id: "streak",
           current: streak.current,
           best: streak.best,
-        },
-      ]).catch((error) => {
+        }
+      ).catch((error) => {
         console.error(
           "Failed to persist streak:",
           error
@@ -1019,25 +1063,24 @@ function Home() {
           goalsData,
           assessmentsData,
           timetableData,
+          todoData,
+          jobPreparationData,
+          applicationsData,
+          savedJobsData,
+          interviewsData,
         ] = await Promise.all([
-          getTopics(),
-          getGoals(),
-          getAssessments(),
-          getTimetable(),
+          getItemsFromFirestore(TOPICS_COLLECTION),
+          getItemsFromFirestore(GOALS_COLLECTION),
+          getItemsFromFirestore(ASSESSMENTS_COLLECTION),
+          getItemsFromFirestore(TIMETABLE_COLLECTION),
+          getItemsFromFirestore(TODO_COLLECTION),
+          getItemsFromFirestore(JOB_PREPARATION_COLLECTION),
+          getItemsFromFirestore(APPLICATIONS_COLLECTION),
+          getItemsFromFirestore(SAVED_JOBS_COLLECTION),
+          getItemsFromFirestore(INTERVIEWS_COLLECTION),
         ]);
 
         const todayKey = getTodayLocalDateKey();
-
-        const readLocalList = (key) => {
-          try {
-            const value = JSON.parse(
-              localStorage.getItem(key) || "[]"
-            );
-            return Array.isArray(value) ? value : [];
-          } catch {
-            return [];
-          }
-        };
 
         const tasks = [];
 
@@ -1143,7 +1186,7 @@ function Home() {
         /*
          * Personal To-Do
          */
-        readLocalList("taskbar-todo-list").forEach(
+        (Array.isArray(todoData) ? todoData : []).forEach(
           (task) => {
             const date =
               task.date ||
@@ -1169,10 +1212,16 @@ function Home() {
         /*
          * Job Preparation
          */
-        readLocalList(
-          "taskbar-job-preparation"
-        ).forEach((task) => {
-          if (!task?.dueDate) return;
+        const jobPreparationTasks = (
+          Array.isArray(jobPreparationData)
+            ? jobPreparationData
+            : []
+        ).flatMap((item) =>
+          Array.isArray(item?.tasks) ? item.tasks : [item]
+        );
+
+        jobPreparationTasks.forEach((task) => {
+          if (!task?.id || !task?.dueDate) return;
 
           tasks.push({
             id: `job-preparation-${task.id}`,
@@ -1189,9 +1238,7 @@ function Home() {
         /*
          * Applications
          */
-        readLocalList(
-          "taskbar-job-applications"
-        ).forEach((application) => {
+        (Array.isArray(applicationsData) ? applicationsData : []).forEach((application) => {
           if (!application?.followUpDate) return;
 
           const closed =
@@ -1221,9 +1268,7 @@ function Home() {
          * Same special Central To-Do rule:
          * only Action Date = TODAY becomes a task.
          */
-        readLocalList(
-          "taskbar-saved-jobs"
-        ).forEach((job) => {
+        (Array.isArray(savedJobsData) ? savedJobsData : []).forEach((job) => {
           if (job?.actionDate !== todayKey) return;
 
           tasks.push({
@@ -1243,9 +1288,7 @@ function Home() {
         /*
          * Interviews
          */
-        readLocalList(
-          "taskbar-interviews"
-        ).forEach((interview) => {
+        (Array.isArray(interviewsData) ? interviewsData : []).forEach((interview) => {
           if (!interview?.date) return;
 
           const completedStatuses = [

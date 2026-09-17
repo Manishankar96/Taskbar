@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { getIncome } from "../../utils/db";
 import {
-  saveAndSyncItem,
-  deleteAndSyncItem,
-} from "../../firebase/sync";
+  getIncome,
+} from "../../utils/db";
+import {
+  getItemsFromFirestore,
+  saveItemsToFirestore,
+  deleteItemFromFirestore,
+} from "../../firebase/firestore";
 import {
   Wallet,
   Plus,
@@ -18,9 +21,13 @@ import {
   FileText,
 } from "lucide-react";
 
-const STORAGE_KEY = "taskbar-income";
-const EXPENSE_KEY = "taskbar-expenses";
+const INCOME_COLLECTION = "income";
+const EXPENSE_COLLECTION = "expenses";
 const FINANCE_EVENT = "taskbar-finance-updated";
+
+function notifyFinanceUpdated() {
+  window.dispatchEvent(new Event(FINANCE_EVENT));
+}
 
 const emptyForm = {
   source: "",
@@ -48,26 +55,20 @@ function formatCurrency(amount) {
 function formatDate(date) {
   if (!date) return "-";
 
-  return new Date(`${date}T00:00:00`).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  return new Date(`${date}T00:00:00`).toLocaleDateString(
+    "en-IN",
+    {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }
+  );
 }
 
-function getStoredList(key) {
-  try {
-    const saved = localStorage.getItem(key);
-
-    if (!saved) return [];
-
-    const parsed = JSON.parse(saved);
-
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    console.error(`Failed to load ${key}:`, error);
-    return [];
-  }
+function createId() {
+  return `${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2, 8)}`;
 }
 
 export default function Income() {
@@ -80,37 +81,53 @@ export default function Income() {
 
   const [editingId, setEditingId] = useState(null);
 
-  /* =========================================================
-     LOAD FINANCE DATA
-     ========================================================= */
+  const [loading, setLoading] = useState(true);
+
+  /*
+   * =========================================================
+   * LOAD FINANCE DATA FROM FIREBASE
+   * =========================================================
+   */
 
   async function loadFinanceData() {
     try {
-      const storedIncome = await getIncome();
+      setLoading(true);
 
-      if (Array.isArray(storedIncome) && storedIncome.length > 0) {
-        setIncomeList(storedIncome);
-      } else {
-        // One-time migration of existing localStorage income data.
-        const localIncome = getStoredList(STORAGE_KEY);
+      const [storedIncome, storedExpenses] =
+        await Promise.all([
+          getIncome(),
+          getItemsFromFirestore(EXPENSE_COLLECTION),
+        ]);
 
-        for (const item of localIncome) {
-          await saveAndSyncItem("income", item);
-        }
+      setIncomeList(
+        Array.isArray(storedIncome)
+          ? storedIncome
+          : []
+      );
 
-        setIncomeList(localIncome);
-      }
+      setExpenseList(
+        Array.isArray(storedExpenses)
+          ? storedExpenses
+          : []
+      );
     } catch (error) {
-      console.error("Failed to load income:", error);
-      setIncomeList(getStoredList(STORAGE_KEY));
-    }
+      console.error(
+        "Failed to load finance data:",
+        error
+      );
 
-    setExpenseList(getStoredList(EXPENSE_KEY));
+      setIncomeList([]);
+      setExpenseList([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  /* =========================================================
-     SYNC INCOME + EXPENSES
-     ========================================================= */
+  /*
+   * =========================================================
+   * FINANCE SYNC EVENT
+   * =========================================================
+   */
 
   useEffect(() => {
     loadFinanceData();
@@ -119,23 +136,9 @@ export default function Income() {
       loadFinanceData();
     };
 
-    const handleStorageUpdate = (event) => {
-      if (
-        event.key === STORAGE_KEY ||
-        event.key === EXPENSE_KEY
-      ) {
-        loadFinanceData();
-      }
-    };
-
     window.addEventListener(
       FINANCE_EVENT,
       handleFinanceUpdate
-    );
-
-    window.addEventListener(
-      "storage",
-      handleStorageUpdate
     );
 
     return () => {
@@ -143,41 +146,31 @@ export default function Income() {
         FINANCE_EVENT,
         handleFinanceUpdate
       );
-
-      window.removeEventListener(
-        "storage",
-        handleStorageUpdate
-      );
     };
   }, []);
 
-  /* =========================================================
-     SAVE INCOME
-     ========================================================= */
+  /*
+   * =========================================================
+   * SAVE INCOME TO FIREBASE
+   * =========================================================
+   */
 
-  function persistIncome(nextList) {
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(nextList)
-      );
+  async function persistIncome(nextList) {
+    await saveItemsToFirestore(
+      INCOME_COLLECTION,
+      nextList
+    );
 
-      setIncomeList(nextList);
+    setIncomeList(nextList);
 
-      window.dispatchEvent(
-        new Event(FINANCE_EVENT)
-      );
-    } catch (error) {
-      console.error(
-        "Failed to save income:",
-        error
-      );
-    }
+    notifyFinanceUpdated();
   }
 
-  /* =========================================================
-     TOTAL INCOME
-     ========================================================= */
+  /*
+   * =========================================================
+   * TOTAL INCOME
+   * =========================================================
+   */
 
   const totalIncome = useMemo(() => {
     return incomeList.reduce(
@@ -187,9 +180,11 @@ export default function Income() {
     );
   }, [incomeList]);
 
-  /* =========================================================
-     CURRENT MONTH INCOME
-     ========================================================= */
+  /*
+   * =========================================================
+   * CURRENT MONTH INCOME
+   * =========================================================
+   */
 
   const currentMonthIncome = useMemo(() => {
     const now = new Date();
@@ -214,9 +209,11 @@ export default function Income() {
       );
   }, [incomeList]);
 
-  /* =========================================================
-     CURRENT MONTH EXPENSES
-     ========================================================= */
+  /*
+   * =========================================================
+   * CURRENT MONTH EXPENSES
+   * =========================================================
+   */
 
   const currentMonthExpenses = useMemo(() => {
     const now = new Date();
@@ -241,17 +238,21 @@ export default function Income() {
       );
   }, [expenseList]);
 
-  /* =========================================================
-     CURRENT MONTH BALANCE
-     ========================================================= */
+  /*
+   * =========================================================
+   * CURRENT MONTH BALANCE
+   * =========================================================
+   */
 
   const currentMonthBalance =
     currentMonthIncome -
     currentMonthExpenses;
 
-  /* =========================================================
-     SAVINGS RATE
-     ========================================================= */
+  /*
+   * =========================================================
+   * SAVINGS RATE
+   * =========================================================
+   */
 
   const savingsRate =
     currentMonthIncome > 0
@@ -263,15 +264,19 @@ export default function Income() {
         )
       : 0;
 
-  /* =========================================================
-     INCOME COUNT
-     ========================================================= */
+  /*
+   * =========================================================
+   * INCOME COUNT
+   * =========================================================
+   */
 
   const incomeCount = incomeList.length;
 
-  /* =========================================================
-     SORT INCOME
-     ========================================================= */
+  /*
+   * =========================================================
+   * SORT INCOME
+   * =========================================================
+   */
 
   const sortedIncome = useMemo(() => {
     return [...incomeList].sort((a, b) => {
@@ -282,9 +287,11 @@ export default function Income() {
     });
   }, [incomeList]);
 
-  /* =========================================================
-     ADD FORM
-     ========================================================= */
+  /*
+   * =========================================================
+   * ADD FORM
+   * =========================================================
+   */
 
   function openAddForm() {
     setEditingId(null);
@@ -299,9 +306,11 @@ export default function Income() {
     setShowForm(true);
   }
 
-  /* =========================================================
-     EDIT FORM
-     ========================================================= */
+  /*
+   * =========================================================
+   * EDIT FORM
+   * =========================================================
+   */
 
   function openEditForm(item) {
     setEditingId(item.id);
@@ -321,9 +330,11 @@ export default function Income() {
     setShowForm(true);
   }
 
-  /* =========================================================
-     CLOSE FORM
-     ========================================================= */
+  /*
+   * =========================================================
+   * CLOSE FORM
+   * =========================================================
+   */
 
   function closeForm() {
     setShowForm(false);
@@ -338,9 +349,11 @@ export default function Income() {
     });
   }
 
-  /* =========================================================
-     FORM CHANGE
-     ========================================================= */
+  /*
+   * =========================================================
+   * FORM CHANGE
+   * =========================================================
+   */
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -351,11 +364,13 @@ export default function Income() {
     }));
   }
 
-  /* =========================================================
-     SUBMIT INCOME
-     ========================================================= */
+  /*
+   * =========================================================
+   * SUBMIT INCOME
+   * =========================================================
+   */
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
     if (!form.source.trim()) {
@@ -376,19 +391,21 @@ export default function Income() {
       return;
     }
 
-    /* UPDATE */
+    /*
+     * UPDATE
+     */
 
     if (editingId) {
-      const updatedIncome = incomeList.find(
+      const existingIncome = incomeList.find(
         (item) => item.id === editingId
       );
 
-      if (!updatedIncome) {
+      if (!existingIncome) {
         return;
       }
 
-      const itemToSave = {
-        ...updatedIncome,
+      const updatedIncome = {
+        ...existingIncome,
         source: form.source.trim(),
         amount: Number(form.amount),
         date: form.date,
@@ -397,127 +414,118 @@ export default function Income() {
         updatedAt: new Date().toISOString(),
       };
 
-      saveAndSyncItem(
-        "income",
-        itemToSave
-      )
-        .then((savedIncome) => {
-          const nextList = incomeList.map(
-            (item) =>
-              item.id === editingId
-                ? savedIncome
-                : item
-          );
+      const nextList = incomeList.map(
+        (item) =>
+          item.id === editingId
+            ? updatedIncome
+            : item
+      );
 
-          persistIncome(nextList);
-        })
-        .catch((error) => {
-          console.error(
-            "Failed to update income:",
-            error
-          );
-          alert(
-            "Income could not be updated. Please try again."
-          );
-        });
+      try {
+        await persistIncome(nextList);
+
+        closeForm();
+      } catch (error) {
+        console.error(
+          "Failed to update income:",
+          error
+        );
+
+        alert(
+          "Income could not be updated. Please try again."
+        );
+      }
+
+      return;
     }
 
-    /* ADD */
+    /*
+     * ADD
+     */
 
-    else {
-      const newIncome = {
-        id: `${Date.now()}-${Math.random()
-          .toString(36)
-          .slice(2, 8)}`,
+    const newIncome = {
+      id: createId(),
+      source: form.source.trim(),
+      amount: Number(form.amount),
+      date: form.date,
+      category: form.category,
+      notes: form.notes.trim(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
 
-        source: form.source.trim(),
+    const nextList = [
+      newIncome,
+      ...incomeList,
+    ];
 
-        amount: Number(form.amount),
+    try {
+      await persistIncome(nextList);
 
-        date: form.date,
+      closeForm();
+    } catch (error) {
+      console.error(
+        "Failed to save income:",
+        error
+      );
 
-        category: form.category,
-
-        notes: form.notes.trim(),
-
-        createdAt:
-          new Date().toISOString(),
-      };
-
-      saveAndSyncItem(
-        "income",
-        newIncome
-      )
-        .then((savedIncome) => {
-          persistIncome([
-            savedIncome,
-            ...incomeList,
-          ]);
-        })
-        .catch((error) => {
-          console.error(
-            "Failed to save income:",
-            error
-          );
-          alert(
-            "Income could not be saved. Please try again."
-          );
-        });
+      alert(
+        "Income could not be saved. Please try again."
+      );
     }
-
-    closeForm();
   }
 
-  /* =========================================================
-     DELETE INCOME
-     ========================================================= */
+  /*
+   * =========================================================
+   * DELETE INCOME
+   * =========================================================
+   */
 
-  function deleteIncome(id) {
+  async function deleteIncome(id) {
     const confirmed = window.confirm(
       "Are you sure you want to delete this income?"
     );
 
     if (!confirmed) return;
 
-    deleteAndSyncItem(
-      "income",
-      id
-    )
-      .then(() => {
-        const nextList = incomeList.filter(
-          (item) => item.id !== id
-        );
+    try {
+      await deleteItemFromFirestore(
+        INCOME_COLLECTION,
+        id
+      );
 
-        persistIncome(nextList);
-      })
-      .catch((error) => {
-        console.error(
-          "Failed to delete income:",
-          error
-        );
-        alert(
-          "Income could not be deleted. Please try again."
-        );
-      });
+      const nextList = incomeList.filter(
+        (item) => item.id !== id
+      );
+
+      setIncomeList(nextList);
+
+      notifyFinanceUpdated();
+    } catch (error) {
+      console.error(
+        "Failed to delete income:",
+        error
+      );
+
+      alert(
+        "Income could not be deleted. Please try again."
+      );
+    }
   }
 
   return (
     <div className="finance-page page-container">
-
       {/* =====================================================
           HEADER
           ===================================================== */}
 
       <div className="page-header">
-
         <div className="page-header-left">
-
           <div className="page-header-icon">
             <Wallet size={23} />
           </div>
 
           <div>
-
             <h1 className="page-title">
               Income
             </h1>
@@ -525,9 +533,7 @@ export default function Income() {
             <p className="page-subtitle">
               Track your income and earnings.
             </p>
-
           </div>
-
         </div>
 
         <button
@@ -538,7 +544,6 @@ export default function Income() {
           <Plus size={18} />
           Add Income
         </button>
-
       </div>
 
       {/* =====================================================
@@ -546,15 +551,12 @@ export default function Income() {
           ===================================================== */}
 
       <div className="stats-grid">
-
         <div className="stat-card">
-
           <div className="stat-icon">
             <TrendingUp size={22} />
           </div>
 
           <div>
-
             <span className="stat-label">
               Total Income
             </span>
@@ -562,19 +564,15 @@ export default function Income() {
             <strong className="stat-value">
               {formatCurrency(totalIncome)}
             </strong>
-
           </div>
-
         </div>
 
         <div className="stat-card">
-
           <div className="stat-icon">
             <CalendarDays size={22} />
           </div>
 
           <div>
-
             <span className="stat-label">
               This Month
             </span>
@@ -584,19 +582,15 @@ export default function Income() {
                 currentMonthIncome
               )}
             </strong>
-
           </div>
-
         </div>
 
         <div className="stat-card">
-
           <div className="stat-icon">
             <IndianRupee size={22} />
           </div>
 
           <div>
-
             <span className="stat-label">
               Total Entries
             </span>
@@ -604,11 +598,8 @@ export default function Income() {
             <strong className="stat-value">
               {incomeCount}
             </strong>
-
           </div>
-
         </div>
-
       </div>
 
       {/* =====================================================
@@ -616,11 +607,8 @@ export default function Income() {
           ===================================================== */}
 
       <div className="content-card finance-card">
-
         <div className="section-header">
-
           <div>
-
             <h2 className="section-title">
               This Month&apos;s Money Flow
             </h2>
@@ -629,15 +617,11 @@ export default function Income() {
               Income is automatically compared
               with your expenses.
             </p>
-
           </div>
-
         </div>
 
         <div className="money-flow">
-
           <div className="flow-box flow-income">
-
             <span className="flow-label">
               Monthly Income
             </span>
@@ -647,11 +631,9 @@ export default function Income() {
                 currentMonthIncome
               )}
             </div>
-
           </div>
 
           <div className="flow-box flow-expense">
-
             <span className="flow-label">
               Monthly Expenses
             </span>
@@ -661,11 +643,9 @@ export default function Income() {
                 currentMonthExpenses
               )}
             </div>
-
           </div>
 
           <div className="flow-box flow-balance">
-
             <span className="flow-label">
               Remaining Balance
             </span>
@@ -681,20 +661,15 @@ export default function Income() {
                 currentMonthBalance
               )}
             </div>
-
           </div>
-
         </div>
 
         {/* =================================================
             SAVINGS PROGRESS
-            UNIQUE FINANCE CLASS
             ================================================= */}
 
         <div className="progress-section">
-
           <div className="progress-header">
-
             <span className="progress-label">
               Savings Rate
             </span>
@@ -704,11 +679,9 @@ export default function Income() {
                 ? `${savingsRate.toFixed(1)}%`
                 : "0%"}
             </span>
-
           </div>
 
           <div className="progress-track">
-
             <div
               className="finance-progress-fill"
               style={{
@@ -721,21 +694,16 @@ export default function Income() {
                 )}%`,
               }}
             />
-
           </div>
-
         </div>
 
         {currentMonthBalance < 0 && (
-
           <div className="finance-alert">
-
             <div className="finance-alert-icon">
               <TrendingDown size={20} />
             </div>
 
             <div>
-
               <div className="finance-alert-title">
                 Expenses are higher than income
               </div>
@@ -745,13 +713,9 @@ export default function Income() {
                 greater than your income. Review
                 your Expenses and Budget pages.
               </div>
-
             </div>
-
           </div>
-
         )}
-
       </div>
 
       {/* =====================================================
@@ -759,11 +723,8 @@ export default function Income() {
           ===================================================== */}
 
       <div className="content-card list-card">
-
         <div className="section-header">
-
           <div>
-
             <h2 className="section-title">
               Income History
             </h2>
@@ -771,24 +732,32 @@ export default function Income() {
             <p className="section-description">
               Your recorded income entries.
             </p>
-
           </div>
 
           <span className="list-count">
-
             {incomeCount}{" "}
             {incomeCount === 1
               ? "entry"
               : "entries"}
-
           </span>
-
         </div>
 
-        {sortedIncome.length === 0 ? (
-
+        {loading ? (
           <div className="empty-state">
+            <div className="empty-state-icon">
+              <Wallet size={25} />
+            </div>
 
+            <h3 className="empty-state-title">
+              Loading income
+            </h3>
+
+            <p className="empty-state-text">
+              Loading your income data from Firebase.
+            </p>
+          </div>
+        ) : sortedIncome.length === 0 ? (
+          <div className="empty-state">
             <div className="empty-state-icon">
               <Wallet size={25} />
             </div>
@@ -810,34 +779,25 @@ export default function Income() {
               <Plus size={18} />
               Add Income
             </button>
-
           </div>
-
         ) : (
-
           <div className="finance-list income-list">
-
             {sortedIncome.map((item) => (
-
               <div
                 className="finance-list-item income-item"
                 key={item.id}
               >
-
                 <div className="item-left income-main">
-
                   <div className="item-icon income-icon">
                     <TrendingUp size={20} />
                   </div>
 
                   <div className="item-info">
-
                     <h3 className="item-title">
                       {item.source}
                     </h3>
 
                     <div className="item-meta income-meta">
-
                       <span className="category-badge">
                         {item.category}
                       </span>
@@ -847,27 +807,18 @@ export default function Income() {
                       <span>
                         {formatDate(item.date)}
                       </span>
-
                     </div>
 
                     {item.notes && (
-
                       <p className="income-notes">
-
                         <FileText size={14} />
-
                         {item.notes}
-
                       </p>
-
                     )}
-
                   </div>
-
                 </div>
 
                 <div className="item-right income-right">
-
                   <strong className="item-amount">
                     {formatCurrency(
                       item.amount
@@ -875,7 +826,6 @@ export default function Income() {
                   </strong>
 
                   <div className="income-actions">
-
                     <button
                       type="button"
                       className="edit-btn"
@@ -897,19 +847,12 @@ export default function Income() {
                     >
                       <Trash2 size={17} />
                     </button>
-
                   </div>
-
                 </div>
-
               </div>
-
             ))}
-
           </div>
-
         )}
-
       </div>
 
       {/* =====================================================
@@ -917,39 +860,29 @@ export default function Income() {
           ===================================================== */}
 
       {showForm && (
-
         <div
           className="modal-overlay finance-modal-overlay"
           onMouseDown={closeForm}
         >
-
           <div
             className="modal-card finance-modal"
             onMouseDown={(event) =>
               event.stopPropagation()
             }
           >
-
             <div className="modal-header">
-
               <div>
-
                 <h2 className="modal-title">
-
                   {editingId
                     ? "Edit Income"
                     : "Add Income"}
-
                 </h2>
 
                 <p className="section-description">
-
                   {editingId
                     ? "Update this income entry."
                     : "Record a new income entry."}
-
                 </p>
-
               </div>
 
               <button
@@ -960,13 +893,10 @@ export default function Income() {
               >
                 <X size={20} />
               </button>
-
             </div>
 
             <form onSubmit={handleSubmit}>
-
               <div className="form-group">
-
                 <label className="form-label">
                   Income Source
                 </label>
@@ -979,19 +909,13 @@ export default function Income() {
                   placeholder="Example: Salary"
                   autoFocus
                 />
-
               </div>
 
               <div className="form-row form-grid">
-
                 <div className="form-group">
-
                   <label className="form-label">
-
                     <IndianRupee size={16} />
-
                     Amount
-
                   </label>
 
                   <input
@@ -1003,17 +927,12 @@ export default function Income() {
                     min="0"
                     step="0.01"
                   />
-
                 </div>
 
                 <div className="form-group">
-
                   <label className="form-label">
-
                     <CalendarDays size={16} />
-
                     Date
-
                   </label>
 
                   <input
@@ -1022,13 +941,10 @@ export default function Income() {
                     value={form.date}
                     onChange={handleChange}
                   />
-
                 </div>
-
               </div>
 
               <div className="form-group">
-
                 <label className="form-label">
                   Category
                 </label>
@@ -1038,32 +954,23 @@ export default function Income() {
                   value={form.category}
                   onChange={handleChange}
                 >
-
                   {categories.map(
                     (category) => (
-
                       <option
                         key={category}
                         value={category}
                       >
                         {category}
                       </option>
-
                     )
                   )}
-
                 </select>
-
               </div>
 
               <div className="form-group">
-
                 <label className="form-label">
-
                   <FileText size={16} />
-
                   Notes
-
                 </label>
 
                 <textarea
@@ -1073,11 +980,9 @@ export default function Income() {
                   placeholder="Optional notes..."
                   rows="4"
                 />
-
               </div>
 
               <div className="modal-actions button-row">
-
                 <button
                   type="button"
                   className="secondary-button secondary-btn"
@@ -1090,25 +995,17 @@ export default function Income() {
                   type="submit"
                   className="primary-button primary-btn save-btn"
                 >
-
                   <Save size={18} />
 
                   {editingId
                     ? "Update Income"
                     : "Save Income"}
-
                 </button>
-
               </div>
-
             </form>
-
           </div>
-
         </div>
-
       )}
-
     </div>
   );
 }

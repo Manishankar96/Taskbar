@@ -9,7 +9,13 @@ import {
   FolderGit2,
 } from "lucide-react";
 
-const STORAGE_KEY = "taskbar-career-projects";
+import {
+  getItemsFromFirestore,
+  saveItemsToFirestore,
+  deleteItemFromFirestore,
+} from "../../firebase/firestore";
+
+const PROJECTS_COLLECTION = "careerProjects";
 
 const STATUS_OPTIONS = [
   "Planned",
@@ -32,41 +38,62 @@ function createId() {
   return Date.now() + Math.floor(Math.random() * 1000);
 }
 
-function loadProjects() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-
-    if (!saved) {
-      return [];
-    }
-
-    const parsed = JSON.parse(saved);
-
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    console.error("Failed to load projects:", error);
-    return [];
-  }
-}
-
 export default function Projects() {
-  const [projects, setProjects] = useState(loadProjects);
+  const [projects, setProjects] = useState([]);
+
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
 
+  const [loading, setLoading] = useState(true);
+
+  // Load projects from Firebase
   useEffect(() => {
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(projects)
-      );
-    } catch (error) {
-      console.error("Failed to save projects:", error);
+    let mounted = true;
+
+    async function loadProjects() {
+      try {
+        setLoading(true);
+
+        const data = await getItemsFromFirestore(
+          PROJECTS_COLLECTION
+        );
+
+        if (mounted) {
+          setProjects(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        console.error(
+          "Failed to load projects from Firebase:",
+          error
+        );
+
+        if (mounted) {
+          setProjects([]);
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
     }
-  }, [projects]);
+
+    loadProjects();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  async function persistProjects(updatedProjects) {
+    await saveItemsToFirestore(
+      PROJECTS_COLLECTION,
+      updatedProjects
+    );
+  }
 
   const filteredProjects = useMemo(() => {
     const searchText = search.trim().toLowerCase();
@@ -151,31 +178,29 @@ export default function Projects() {
     }));
   }
 
-  function saveProject() {
+  async function saveProject() {
     if (!form.name.trim()) {
       alert("Please enter a Project Name.");
       return;
     }
 
+    let updatedProjects;
+
     if (editingId) {
-      setProjects((current) =>
-        current.map((project) =>
-          project.id === editingId
-            ? {
-                ...project,
-                name: form.name.trim(),
-                description: form.description.trim(),
-                technologies:
-                  form.technologies.trim(),
-                githubLink:
-                  form.githubLink.trim(),
-                liveLink: form.liveLink.trim(),
-                status: form.status,
-                notes: form.notes.trim(),
-                updatedAt: new Date().toISOString(),
-              }
-            : project
-        )
+      updatedProjects = projects.map((project) =>
+        project.id === editingId
+          ? {
+              ...project,
+              name: form.name.trim(),
+              description: form.description.trim(),
+              technologies: form.technologies.trim(),
+              githubLink: form.githubLink.trim(),
+              liveLink: form.liveLink.trim(),
+              status: form.status,
+              notes: form.notes.trim(),
+              updatedAt: new Date().toISOString(),
+            }
+          : project
       );
     } else {
       const newProject = {
@@ -191,16 +216,30 @@ export default function Projects() {
         updatedAt: new Date().toISOString(),
       };
 
-      setProjects((current) => [
+      updatedProjects = [
         newProject,
-        ...current,
-      ]);
+        ...projects,
+      ];
     }
 
-    closeForm();
+    try {
+      await persistProjects(updatedProjects);
+
+      setProjects(updatedProjects);
+      closeForm();
+    } catch (error) {
+      console.error(
+        "Failed to save project:",
+        error
+      );
+
+      alert(
+        "Failed to save project. Please check your Firebase connection and try again."
+      );
+    }
   }
 
-  function deleteProject(id) {
+  async function deleteProject(id) {
     const project = projects.find(
       (item) => item.id === id
     );
@@ -217,14 +256,32 @@ export default function Projects() {
       return;
     }
 
-    setProjects((current) =>
-      current.filter((project) => project.id !== id)
-    );
+    try {
+      await deleteItemFromFirestore(
+        PROJECTS_COLLECTION,
+        id
+      );
+
+      const updatedProjects = projects.filter(
+        (project) => project.id !== id
+      );
+
+      setProjects(updatedProjects);
+    } catch (error) {
+      console.error(
+        "Failed to delete project:",
+        error
+      );
+
+      alert(
+        "Failed to delete project. Please try again."
+      );
+    }
   }
 
-  function updateStatus(id, status) {
-    setProjects((current) =>
-      current.map((project) =>
+  async function updateStatus(id, status) {
+    const updatedProjects = projects.map(
+      (project) =>
         project.id === id
           ? {
               ...project,
@@ -232,8 +289,22 @@ export default function Projects() {
               updatedAt: new Date().toISOString(),
             }
           : project
-      )
     );
+
+    try {
+      await persistProjects(updatedProjects);
+
+      setProjects(updatedProjects);
+    } catch (error) {
+      console.error(
+        "Failed to update project status:",
+        error
+      );
+
+      alert(
+        "Failed to update project status. Please try again."
+      );
+    }
   }
 
   return (
@@ -255,7 +326,11 @@ export default function Projects() {
           </p>
         </div>
 
-        <button type="button" onClick={openAddForm} className="projects-button projects-button-primary">
+        <button
+          type="button"
+          onClick={openAddForm}
+          className="projects-button projects-button-primary"
+        >
           <Plus size={18} />
           Add Project
         </button>
@@ -294,7 +369,6 @@ export default function Projects() {
             setSearch(e.target.value)
           }
           placeholder="Search projects or technologies..."
-         
         />
 
         <select
@@ -303,9 +377,10 @@ export default function Projects() {
           onChange={(e) =>
             setStatusFilter(e.target.value)
           }
-         
         >
-          <option value="All">All Statuses</option>
+          <option value="All">
+            All Statuses
+          </option>
 
           {STATUS_OPTIONS.map((status) => (
             <option
@@ -369,7 +444,7 @@ export default function Projects() {
                     e.target.value
                   )
                 }
-               
+                className="projects-input projects-select"
               >
                 {STATUS_OPTIONS.map((status) => (
                   <option
@@ -461,7 +536,11 @@ export default function Projects() {
           </div>
 
           <div className="projects-form-actions">
-            <button type="button" onClick={saveProject} className="projects-button projects-button-primary">
+            <button
+              type="button"
+              onClick={saveProject}
+              className="projects-button projects-button-primary"
+            >
               <Plus size={17} />
 
               {editingId
@@ -495,7 +574,22 @@ export default function Projects() {
           </p>
         </div>
 
-        {filteredProjects.length === 0 ? (
+        {loading ? (
+          <div className="projects-empty-state">
+            <FolderGit2
+              size={44}
+              className="projects-empty-icon"
+            />
+
+            <h3 className="projects-empty-title">
+              Loading projects...
+            </h3>
+
+            <p className="projects-empty-text">
+              Loading your projects from Firebase.
+            </p>
+          </div>
+        ) : filteredProjects.length === 0 ? (
           <div className="projects-empty-state">
             <FolderGit2
               size={44}
@@ -547,7 +641,10 @@ function ProjectCard({
           </p>
         </div>
 
-        <FolderGit2 size={21} className="projects-item-icon" />
+        <FolderGit2
+          size={21}
+          className="projects-item-icon"
+        />
       </div>
 
       {project.description && (
@@ -671,9 +768,7 @@ function StatCard({ label, value }) {
 function FormField({ label, children }) {
   return (
     <label className="projects-form-field">
-      <span>
-        {label}
-      </span>
+      <span>{label}</span>
 
       {children}
     </label>

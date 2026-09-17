@@ -13,3 +13,18 @@ body,
 body {
   font-family: Arial, sans-serif;
 }
+/* =========================================================
+   MOBILE HORIZONTAL SCROLL PREVENTION
+   ========================================================= */
+
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+}
